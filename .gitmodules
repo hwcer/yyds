@@ -1,0 +1,21 @@
+[submodule "cosgo"]
+	path = cosgo
+	url = https://github.com/hwcer/cosgo.git
+[submodule "cosmo"]
+	path = cosmo
+	url = https://github.com/hwcer/cosmo.git
+[submodule "cosnet"]
+	path = cosnet
+	url = https://github.com/hwcer/cosnet.git
+[submodule "cosrpc"]
+	path = cosrpc
+	url = https://github.com/hwcer/cosrpc.git
+[submodule "cosweb"]
+	path = cosweb
+	url = https://github.com/hwcer/cosweb.git
+[submodule "logger"]
+	path = logger
+	url = https://github.com/hwcer/logger.git
+[submodule "updater"]
+	path = updater
+	url = https://github.com/hwcer/updater.git
