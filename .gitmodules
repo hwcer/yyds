@@ -28,3 +28,9 @@
 [submodule "registry"]
 	path = registry
 	url = https://github.com/hwcer/registry.git
+[submodule "coswss"]
+	path = coswss
+	url = https://github.com/hwcer/coswss.git
+[submodule "gate"]
+	path = gate
+	url = https://github.com/hwcer/gate.git
