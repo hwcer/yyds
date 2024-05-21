@@ -34,3 +34,6 @@
 [submodule "gate"]
 	path = gate
 	url = https://github.com/hwcer/gate.git
+[submodule "uuid"]
+	path = uuid
+	url = https://github.com/hwcer/uuid
