@@ -37,3 +37,6 @@
 [submodule "uuid"]
 	path = uuid
 	url = https://github.com/hwcer/uuid
+[submodule "xlsx"]
+	path = xlsx
+	url = https://github.com/hwcer/xlsx
