@@ -40,3 +40,6 @@
 [submodule "xlsx"]
 	path = xlsx
 	url = https://github.com/hwcer/xlsx
+[submodule "options"]
+	path = options
+	url = https://github.com/hwcer/options.git
