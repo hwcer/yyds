@@ -2,10 +2,10 @@ package share
 
 import (
 	"errors"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/request"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/logger"
 	"strings"
 	"sync"
 )

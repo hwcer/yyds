@@ -1,8 +1,8 @@
 package players
 
 import (
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/logger"
 	"golang.org/x/net/context"
 	"net"
 	"runtime/debug"

@@ -3,10 +3,10 @@ package share
 import (
 	"errors"
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc/xserver"
-	"github.com/hwcer/logger"
 )
 
 var mod *Module

@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/hwcer/logger"
+	"github.com/hwcer/cosgo/logger"
 	"strings"
 )
 

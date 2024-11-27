@@ -1,13 +1,11 @@
 package itypes
 
-import (
-	"server/define"
-)
+import "github.com/hwcer/yyds/game/share"
 
-var ITypeEquip = newItemsIType(define.ITypeEquip)
+var Equip = NewItemsIType(share.ITypeEquip)
 
 func init() {
-	ITypeEquip.SetStacked(false)
+	Equip.SetStacked(false)
 	//ITypeEquip.SetAttach(itemsEquipAttach)
 }
 

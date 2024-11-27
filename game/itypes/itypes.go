@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/operator"
+	"github.com/hwcer/yyds/game/model"
 )
 
 type ITypeUnique func(u *updater.Updater, iid int32) (string, error)
@@ -31,8 +32,12 @@ func (this *IType) Id() int32 {
 }
 
 func (this *IType) New(u *updater.Updater, op *operator.Operator) (any, error) {
+	return this.Create(u, op.IID, op.Value)
+}
+
+func (this *IType) Create(u *updater.Updater, iid int32, val int64) (any, error) {
 	if this.creator != nil {
-		return this.creator(u, op.IID, op.Value)
+		return this.creator(u, iid, val)
 	} else {
 		return nil, errors.New("create fail")
 	}
@@ -47,9 +52,9 @@ func (this *IType) ObjectId(u *updater.Updater, iid int32) (string, error) {
 		return this.unique(u, iid)
 	}
 	if this.stacked {
-		return Unique(u, iid)
+		return model.Unique(u, iid)
 	} else {
-		return UUID.New(uint32(iid)), nil
+		return model.Builder.New(uint32(iid)), nil
 	}
 }
 

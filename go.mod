@@ -3,27 +3,19 @@ module github.com/hwcer/yyds
 go 1.22.2
 
 replace (
-	github.com/hwcer/cosgo v1.0.7 => ./cosgo
+	github.com/hwcer/cosgo v1.1.0 => ./cosgo
 	github.com/hwcer/cosmo v1.0.5 => ./cosmo
 	github.com/hwcer/cosrpc v0.0.6 => ./cosrpc
-	github.com/hwcer/registry v0.0.6 => ./registry
-	github.com/hwcer/scc v0.0.7 => ./scc
-	github.com/hwcer/schema v0.0.4 => ./schema
 	github.com/hwcer/updater v1.0.5 => ./updater
-	github.com/hwcer/uuid v0.0.0 => ./uuid
 )
 
 require (
-	github.com/hwcer/cosgo v1.0.7
+	github.com/hwcer/cosgo v1.1.0
 	github.com/hwcer/cosmo v1.0.5
 	github.com/hwcer/cosrpc v0.0.6
-	github.com/hwcer/logger v0.0.5
-	github.com/hwcer/registry v0.0.6
-	github.com/hwcer/scc v0.0.7
 	github.com/hwcer/updater v1.0.5
-	github.com/hwcer/uuid v0.0.0
 	github.com/smallnest/rpcx v1.8.30
-	golang.org/x/net v0.24.0
+	golang.org/x/net v0.31.0
 )
 
 require (
@@ -57,12 +49,11 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hwcer/schema v0.0.4 // indirect
 	github.com/jamiealquiza/tachymeter v2.0.0+incompatible // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/klauspost/reedsolomon v1.12.1 // indirect
 	github.com/libp2p/go-sockaddr v0.2.0 // indirect
@@ -110,18 +101,18 @@ require (
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/xtaci/kcp-go v5.4.20+incompatible // indirect
-	github.com/youmark/pkcs8 v0.0.0-20240424034433-3c2c7870ae76 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.mongodb.org/mongo-driver v1.15.0 // indirect
+	go.mongodb.org/mongo-driver v1.17.1 // indirect
 	go.uber.org/mock v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
-	golang.org/x/tools v0.20.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
+	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/tools v0.27.0 // indirect
 	google.golang.org/protobuf v1.34.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

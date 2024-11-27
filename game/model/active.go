@@ -1,9 +1,9 @@
 package model
 
 import (
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo/update"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
@@ -13,8 +13,7 @@ import (
 )
 
 func init() {
-	im := &Active{}
-	Register(im)
+	Register(&Active{})
 }
 
 // Active 运营活动

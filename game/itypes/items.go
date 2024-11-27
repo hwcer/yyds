@@ -1,129 +1,74 @@
-package model
+package itypes
 
 import (
-	"errors"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/updater/dataset"
-	"github.com/hwcer/updater/operator"
-	"server/config"
-	"server/define"
-	"strings"
+	"github.com/hwcer/yyds/game/model"
+	"github.com/hwcer/yyds/game/share"
 )
 
-var ITypeItems = newItemsIType(define.ITypeItems)
-var ITypeViper = newItemsIType(define.ITypeViper)
+var Items = NewItemsIType(share.ITypeItems)
+var Viper = NewItemsIType(share.ITypeViper)
 
 func init() {
-	im := &Item{}
-	Register(im)
-	types := []updater.IType{ITypeItems, ITypeViper, ITypeGacha, ITypeTicket}
-	types = append(types, ITypeEquip, ITypeHero)
-	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeAlways, im, types...); err != nil {
+	im := &model.Items{}
+	its := []updater.IType{Items, Viper, Gacha, Ticket}
+	its = append(its, Equip, Hero)
+	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeAlways, im, its...); err != nil {
 		logger.Panic(err)
 	}
 }
 
-type Item struct {
-	Model  `bson:"inline"`
-	Value  int64         `bson:"val" json:"val"`
-	Attach values.Values `bson:"att" json:"att"` //通用字段
+func NewItemsIType(id int32) *ItemsIType {
+	i := &ItemsIType{}
+	i.IType.id = id
+	i.IType.stacked = true
+	i.IType.creator = i.creator
+	return i
 }
 
-func (this *Item) Get(k string) (any, bool) {
-	if i := strings.Index(k, "."); i > 0 && k[0:i] == "att" {
-		return this.Attach.Get(k[i+1:]), true
-	}
-	switch k {
-	case "Value", "val":
-		return this.Value, true
-	case "Attach", "att":
-		return this.Attach, true
-	default:
-		return this.Model.Get(k)
-	}
+type ItemsIType struct {
+	IType
+	attach  func(u *updater.Updater, item *model.Items) (any, error) //设置attach
+	resolve func(u *updater.Updater, iid int32, val int64) error     //分解
 }
 
-func (this *Item) Set(k string, v any) (any, bool) {
-	if i := strings.Index(k, "."); i > 0 && k[0:i] == "att" {
-		return this.marshal(k[i+1:], v), true
-	}
-	switch k {
-	case "Value", "val":
-		this.Value = dataset.ParseInt64(v)
-	case "Attach", "att":
-		this.Attach = v.(values.Values)
-	default:
-		return this.Model.Set(k, v)
-	}
-	return v, true
+func (this *ItemsIType) SetAttach(attach func(u *updater.Updater, item *model.Items) (any, error)) {
+	this.attach = attach
 }
 
-func (this *Item) marshal(k string, v any) any {
-	if r, err := this.Attach.Marshal(k, v); err != nil {
-		logger.Error(err)
-		return dataset.Update{} //返回空Update不会向数据库写入错误数据
-	} else {
-		return r
-	}
+func (this *ItemsIType) SetResolve(resolve func(u *updater.Updater, iid int32, val int64) error) {
+	this.resolve = resolve
 }
 
-func (this *Item) Copy() *Item {
-	i := this.Clone()
-	return i.(*Item)
-}
-
-// Clone 复制对象,可以将NEW新对象与SET操作解绑
-func (this *Item) Clone() any {
-	r := *this
-	r.Attach = this.Attach.Clone()
-	return &r
-}
-
-func (this *Item) IType(iid int32) int32 {
-	return config.Data.GetIType(iid)
-}
-
-func (this *Item) Upsert(u *updater.Updater, op *operator.Operator) bool {
-	return false
-}
-
-func (this *Item) Getter(u *updater.Updater, coll *dataset.Collection, keys []string) error {
-	uid := GetUid(u)
-	if uid == 0 {
-		return errors.New("Item.Getter uid not found")
-	}
-	var rows []*Item
-	tx := DB.Model(this).Where("uid = ?", uid)
-	tx = tx.Omit("uid", "update")
-	if len(keys) > 0 {
-		tx = tx.Where("_id IN ?", keys)
-	}
-	if tx = tx.Find(&rows); tx.Error != nil {
-		return tx.Error
-	} else {
-		for _, v := range rows {
-			coll.Receive(v.OID, v)
-		}
+// Resolve 自动分解
+func (this *ItemsIType) Resolve(u *updater.Updater, iid int32, val int64) error {
+	if this.resolve != nil {
+		return this.resolve(u, iid, val)
 	}
 	return nil
 }
-func (this *Item) Setter(u *updater.Updater, bw dataset.BulkWrite) error {
-	return bw.Save()
+
+func (this *ItemsIType) Create(u *updater.Updater, iid int32, val int64) (*model.Items, error) {
+	if i, err := this.creator(u, iid, val); err != nil {
+		return nil, err
+	} else {
+		return i.(*model.Items), nil
+	}
 }
 
-func (this *Item) BulkWrite(u *updater.Updater) dataset.BulkWrite {
-	bw := NewBulkWrite(this)
-	return bw
-}
-
-// TableName 数据库表名
-func (*Item) TableName() string {
-	return "items"
-}
-
-// TableOrder 初始化时的排序，DESC
-func (*Item) TableOrder() int32 {
-	return 99
+func (this *ItemsIType) creator(u *updater.Updater, iid int32, val int64) (any, error) {
+	r := &model.Items{}
+	r.Init(u, iid)
+	var err error
+	if r.OID, err = this.IType.ObjectId(u, iid); err != nil {
+		return nil, err
+	}
+	r.Value = val
+	r.Attach = values.Values{}
+	if this.attach != nil {
+		return this.attach(u, r)
+	}
+	return r, nil
 }

@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/uuid"
 	"net"
 	"reflect"
-	"server/config"
-	"strconv"
 	"strings"
 	"sync/atomic"
 )
@@ -32,24 +30,12 @@ func (p *Player) Loading(init bool) (err error) {
 		}
 	}()
 	if p.Updater == nil {
-		p.uuid = &uuid.UUID{}
-		if err = p.uuid.Parse(strconv.FormatUint(p.uid, 10), 10); err != nil {
-			return err
-		}
-		p.Updater = updater.New(p)
+		p.Updater = updater.New(p.uid)
 	}
 	if err = p.Updater.Loading(init); err != nil {
 		return err
 	}
 	p.initialize()
-	if init && p.workers == nil {
-		p.workers = make(map[string]any, len(workers))
-		for k, f := range workers {
-			if v := f(p); v != nil {
-				p.workers[k] = v
-			}
-		}
-	}
 	return nil
 }
 

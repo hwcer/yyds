@@ -2,9 +2,9 @@ package players
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/logger"
-	"github.com/hwcer/scc"
 	"net"
 	"server/define"
 	"server/game/model"

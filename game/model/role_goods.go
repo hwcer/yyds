@@ -3,46 +3,40 @@ package model
 import (
 	"errors"
 	"fmt"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
-	"server/define"
+	"github.com/hwcer/yyds/game/share"
 )
 
 const roleGoodsField = "goods"
 const roleGoodsFormat = "goods.%v"
 
-func init() {
-	im := &roleGoods{}
-	it := NewIType(define.ITypeGoods)
-	if err := updater.Register(updater.ParserTypeValues, updater.RAMTypeAlways, im, it); err != nil {
-		logger.Panic(err)
-	}
+type Goods struct {
 }
 
-type roleGoods struct {
-}
-
-func (this *roleGoods) Getter(u *updater.Updater, values *dataset.Values, keys []int32) error {
+func (this *Goods) Getter(u *updater.Updater, values *dataset.Values, keys []int32) error {
 	//内存模式只会拉所有
 	if len(keys) > 0 {
 		return errors.New("record getter 参数keys应该为空")
 	}
-	role := u.Handle(define.ITypeRole).(*updater.Document).Any().(*Role)
-	if role.Goods == nil {
+	doc := u.Handle(share.ITypeRole).(*updater.Document)
+
+	if i := doc.Get(roleGoodsField); i == nil {
 		values.Reset(make(map[int32]int64), 0)
 	} else {
-		values.Reset(role.Goods, 0)
+		values.Reset(i.(map[int32]int64), 0)
 	}
 	return nil
 }
 
-func (this *roleGoods) Setter(u *updater.Updater, values dataset.Data, expire int64) error {
-	doc := u.Handle(define.ITypeRole).(*updater.Document)
-	role := doc.Any().(*Role)
-	if len(role.Goods) == 0 {
-		data := u.Handle(define.ITypeGoods).(*updater.Values).All()
-		role.Goods = data
+func (this *Goods) Setter(u *updater.Updater, values dataset.Data, expire int64) error {
+	doc := u.Handle(share.ITypeRole).(*updater.Document)
+	var goods map[int32]int64
+	if i := doc.Get(roleGoodsField); i != nil {
+		goods = i.(map[int32]int64)
+	}
+	if len(goods) == 0 {
+		data := u.Handle(share.ITypeGoods).(*updater.Values).All()
 		doc.Dirty(roleGoodsField, data)
 		return nil
 	}

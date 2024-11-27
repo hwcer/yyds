@@ -3,9 +3,9 @@ package context
 import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/options"
+	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/registry"
 	"github.com/hwcer/yyds/game/players"
 	"github.com/hwcer/yyds/game/players/player"
 	"github.com/hwcer/yyds/game/share"

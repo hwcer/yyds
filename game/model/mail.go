@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/updater"
-	"server/config"
+	"github.com/hwcer/yyds/game/config"
 	"strconv"
 	"strings"
 )
@@ -87,7 +87,7 @@ func (this *Mail) AddAttr(k, v int32) {
 	if k == 0 || v == 0 {
 		return
 	}
-	if it := config.Data.GetIType(k); it == 0 {
+	if it := config.GetIType(k); it == 0 {
 		return
 	}
 	this.Attr = append(this.Attr, MailAttr{K: k, V: v})

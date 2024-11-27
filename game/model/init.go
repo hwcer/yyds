@@ -3,52 +3,41 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/redis"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosmo"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
-	"github.com/hwcer/uuid"
-	"runtime/debug"
-	"server/share"
 )
 
 const BaseSize = 32
+const UpdaterProcessBuilder = "_player_builder"
 
 var DB = cosmo.New()
-var UUID *uuid.Unique //随机自增种子,生成全服唯一ID
 var Redis *redis.Client
+var Builder *uuid.Unique //随机自增种子,生成全服唯一ID
 
 type loading interface {
 	init() error
 }
 
-type Player interface {
-	Uid() uint64
-	Unique(iid int32) *uuid.UUID
-}
-
-func GetUid(u *updater.Updater) uint64 {
-	if p := GetPlayer(u); p != nil {
-		return p.Uid()
-	} else {
-		logger.Alert("model.Uid player is nil:%v", string(debug.Stack()))
-		return 0
-	}
-}
-
-func GetPlayer(u *updater.Updater) Player {
-	p, _ := u.Player.(Player)
-	return p
-}
-
 // Unique 创建可以叠加的道具ID
-func Unique(u *updater.Updater, iid int32) (string, error) {
-	p := GetPlayer(u)
-	if p == nil {
-		return "", errors.New("player is not player")
+func Unique(u *updater.Updater, iid int32) (r string, err error) {
+	var b *uuid.Builder
+	if i := u.Process.Get(UpdaterProcessBuilder); i == nil {
+		if b, err = uuid.Create(u.Uid(), BaseSize); err == nil {
+			u.Process.Set(UpdaterProcessBuilder, b)
+		}
+	} else {
+		b = i.(*uuid.Builder)
 	}
-	return p.Unique(iid).String(BaseSize), nil
+	if b != nil {
+		r = b.New(uint32(iid)).String(BaseSize)
+	} else if err == nil {
+		err = errors.New("Updater.Process player builder error")
+	}
+	return
 }
 
 type Times struct {
@@ -100,14 +89,14 @@ func Register(model interface{}) {
 }
 
 func Start() (err error) {
-	sid := share.Options.Game.Sid
-	if err = DB.Start(fmt.Sprintf("%v#S%v", share.AppId(), sid), share.Options.Game.Mongodb); err != nil {
+	sid := options.Game.Sid
+	if err = DB.Start(fmt.Sprintf("%v#S%v", options.Options.Appid, sid), options.Game.Mongodb); err != nil {
 		return
 	}
-	if share.Options.Game.Redis != "" {
-		Redis, err = redis.New(share.Options.Game.Redis)
+	if options.Game.Redis != "" {
+		Redis, err = redis.New(options.Game.Redis)
 	}
-	UUID = uuid.NewUnique(uint32(sid), BaseSize)
+	Builder = uuid.NewUnique(uint32(sid), BaseSize)
 	updater.ITypes(func(k int32, it updater.IType) bool {
 		if h, ok := it.(loading); ok {
 			if err = h.init(); err != nil {
@@ -135,7 +124,7 @@ type Model struct {
 }
 
 func (this *Model) Init(u *updater.Updater, iid int32) {
-	this.Uid = GetUid(u)
+	this.Uid, _ = u.Uid().(uint64)
 	this.IID = iid
 	this.Update = u.Time.Unix()
 }
@@ -181,12 +170,6 @@ func (this *Model) Set(k string, v any) (any, bool) {
 	}
 	return v, true
 }
-
-//func (this *Model) Saving(u dataset.Update) {
-//	if _, ok := u["update"]; !ok {
-//		u["update"] = time.Now()
-//	}
-//}
 
 func (this *Model) SetOnInsert() (r map[string]interface{}, err error) {
 	r = make(map[string]any)

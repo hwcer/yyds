@@ -2,7 +2,7 @@ package context
 
 import (
 	"github.com/hwcer/cosgo/options"
-	"github.com/hwcer/registry"
+	"github.com/hwcer/cosgo/registry"
 	"strings"
 )
 

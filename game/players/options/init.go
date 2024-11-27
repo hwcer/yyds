@@ -1,8 +1,8 @@
 package options
 
 import (
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/uuid"
 	"server/config"
 	"server/game/model"
 )

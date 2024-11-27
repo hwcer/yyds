@@ -3,11 +3,10 @@ package model
 import (
 	"errors"
 	"github.com/hwcer/cosmo/update"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"server/define"
+	"github.com/hwcer/yyds/game/share"
 	"time"
 )
 
@@ -19,14 +18,8 @@ const (
 	//TaskStatusFinish TaskStatus = 2 //已经完成
 )
 
-var ITypeTask = &taskIType{IType{id: define.ITypeTask}}
-
 func init() {
-	im := &Task{}
-	Register(im)
-	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeMaybe, im, ITypeTask); err != nil {
-		logger.Panic(err)
-	}
+	Register(&Task{})
 }
 
 type Task struct {
@@ -65,7 +58,7 @@ func (this *Task) Set(k string, v any) (any, bool) {
 }
 
 func (this *Task) IType(int32) int32 {
-	return define.ITypeTask
+	return share.ITypeTask
 }
 
 // ----------------- 作为MODEL方法--------------------
@@ -81,7 +74,7 @@ func (this *Task) Upsert(u *updater.Updater, op *operator.Operator) bool {
 }
 
 func (this *Task) Getter(u *updater.Updater, coll *dataset.Collection, keys []string) error {
-	uid := GetUid(u)
+	uid, _ := u.Uid().(uint64)
 	if uid == 0 {
 		return errors.New("Task.Getter uid not found")
 	}
@@ -113,24 +106,4 @@ func (this *Task) BulkWriteFilter(up update.Update) {
 		this.Update = time.Now().Unix()
 		up.Set("update", this.Update)
 	}
-}
-
-type taskIType struct {
-	IType
-}
-
-func (this *taskIType) New(u *updater.Updater, op *operator.Operator) (any, error) {
-	return this.Create(u, op.IID, op.Value), nil
-}
-func (this *taskIType) Stacked() bool {
-	return true
-}
-func (this *taskIType) ObjectId(u *updater.Updater, iid int32) (string, error) {
-	return Unique(u, iid)
-}
-func (this *taskIType) Create(u *updater.Updater, iid int32, val int64) *Task {
-	i := &Task{}
-	i.Init(u, iid)
-	i.OID, _ = this.ObjectId(u, iid)
-	return i
 }

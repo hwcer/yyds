@@ -3,22 +3,16 @@ package model
 import (
 	"errors"
 	"github.com/hwcer/cosmo/update"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"server/define"
+	"github.com/hwcer/yyds/game/share"
+
 	"time"
 )
 
-var ITypeShop = &shopIType{IType{id: define.ITypeShop}}
-
 func init() {
-	im := &Shop{}
-	Register(im)
-	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeNone, im, ITypeShop); err != nil {
-		logger.Panic(err)
-	}
+	Register(&Shop{})
 }
 
 // Shop 商店信息
@@ -63,7 +57,7 @@ func (this *Shop) Clone() *Shop {
 }
 
 func (this *Shop) IType(int32) int32 {
-	return define.ITypeShop
+	return share.ITypeShop
 }
 
 // ----------------- 作为MODEL方法--------------------
@@ -73,7 +67,7 @@ func (this *Shop) Upsert(u *updater.Updater, op *operator.Operator) bool {
 }
 
 func (this *Shop) Getter(u *updater.Updater, coll *dataset.Collection, keys []string) error {
-	uid := GetUid(u)
+	uid, _ := u.Uid().(uint64)
 	if uid == 0 {
 		return errors.New("Shop.Getter uid not found")
 	}
@@ -90,38 +84,18 @@ func (this *Shop) Getter(u *updater.Updater, coll *dataset.Collection, keys []st
 	}
 	return nil
 }
+
 func (this *Shop) Setter(u *updater.Updater, bulkWrite dataset.BulkWrite) error {
 	return bulkWrite.Save()
 }
+
 func (this *Shop) BulkWrite(u *updater.Updater) dataset.BulkWrite {
 	return NewBulkWrite(this)
 }
+
 func (this *Shop) BulkWriteFilter(up update.Update) {
 	if !up.Has(update.UpdateTypeSet, "update") {
 		this.Update = time.Now().Unix()
 		up.Set("update", this.Update)
 	}
-}
-
-type shopIType struct {
-	IType
-}
-
-func (this *shopIType) New(u *updater.Updater, op *operator.Operator) (any, error) {
-	return this.Create(u, op.IID, op.Value), nil
-}
-func (this *shopIType) Stacked() bool {
-	return true
-}
-
-func (this *shopIType) ObjectId(u *updater.Updater, iid int32) (string, error) {
-	return Unique(u, iid)
-}
-
-func (this *shopIType) Create(u *updater.Updater, iid int32, val int64) *Shop {
-	i := &Shop{}
-	i.Init(u, iid)
-	i.OID, _ = this.ObjectId(u, iid)
-	i.Val = int32(val)
-	return i
 }

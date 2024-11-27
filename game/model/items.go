@@ -2,36 +2,26 @@ package model
 
 import (
 	"errors"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"server/config"
-	"server/define"
+	"github.com/hwcer/yyds/game/config"
 	"strings"
 )
 
-var ITypeItems = newItemsIType(define.ITypeItems)
-var ITypeViper = newItemsIType(define.ITypeViper)
-
 func init() {
-	im := &Item{}
-	Register(im)
-	types := []updater.IType{ITypeItems, ITypeViper, ITypeGacha, ITypeTicket}
-	types = append(types, ITypeEquip, ITypeHero)
-	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeAlways, im, types...); err != nil {
-		logger.Panic(err)
-	}
+	Register(&Items{})
 }
 
-type Item struct {
+type Items struct {
 	Model  `bson:"inline"`
 	Value  int64         `bson:"val" json:"val"`
 	Attach values.Values `bson:"att" json:"att"` //通用字段
 }
 
-func (this *Item) Get(k string) (any, bool) {
+func (this *Items) Get(k string) (any, bool) {
 	if i := strings.Index(k, "."); i > 0 && k[0:i] == "att" {
 		return this.Attach.Get(k[i+1:]), true
 	}
@@ -45,7 +35,7 @@ func (this *Item) Get(k string) (any, bool) {
 	}
 }
 
-func (this *Item) Set(k string, v any) (any, bool) {
+func (this *Items) Set(k string, v any) (any, bool) {
 	if i := strings.Index(k, "."); i > 0 && k[0:i] == "att" {
 		return this.marshal(k[i+1:], v), true
 	}
@@ -60,7 +50,7 @@ func (this *Item) Set(k string, v any) (any, bool) {
 	return v, true
 }
 
-func (this *Item) marshal(k string, v any) any {
+func (this *Items) marshal(k string, v any) any {
 	if r, err := this.Attach.Marshal(k, v); err != nil {
 		logger.Error(err)
 		return dataset.Update{} //返回空Update不会向数据库写入错误数据
@@ -69,32 +59,32 @@ func (this *Item) marshal(k string, v any) any {
 	}
 }
 
-func (this *Item) Copy() *Item {
+func (this *Items) Copy() *Items {
 	i := this.Clone()
-	return i.(*Item)
+	return i.(*Items)
 }
 
 // Clone 复制对象,可以将NEW新对象与SET操作解绑
-func (this *Item) Clone() any {
+func (this *Items) Clone() any {
 	r := *this
 	r.Attach = this.Attach.Clone()
 	return &r
 }
 
-func (this *Item) IType(iid int32) int32 {
-	return config.Data.GetIType(iid)
+func (this *Items) IType(iid int32) int32 {
+	return config.GetIType(iid)
 }
 
-func (this *Item) Upsert(u *updater.Updater, op *operator.Operator) bool {
+func (this *Items) Upsert(u *updater.Updater, op *operator.Operator) bool {
 	return false
 }
 
-func (this *Item) Getter(u *updater.Updater, coll *dataset.Collection, keys []string) error {
-	uid := GetUid(u)
+func (this *Items) Getter(u *updater.Updater, coll *dataset.Collection, keys []string) error {
+	uid := u.Uid()
 	if uid == 0 {
-		return errors.New("Item.Getter uid not found")
+		return errors.New("Items.Getter uid not found")
 	}
-	var rows []*Item
+	var rows []*Items
 	tx := DB.Model(this).Where("uid = ?", uid)
 	tx = tx.Omit("uid", "update")
 	if len(keys) > 0 {
@@ -109,21 +99,21 @@ func (this *Item) Getter(u *updater.Updater, coll *dataset.Collection, keys []st
 	}
 	return nil
 }
-func (this *Item) Setter(u *updater.Updater, bw dataset.BulkWrite) error {
+func (this *Items) Setter(u *updater.Updater, bw dataset.BulkWrite) error {
 	return bw.Save()
 }
 
-func (this *Item) BulkWrite(u *updater.Updater) dataset.BulkWrite {
+func (this *Items) BulkWrite(u *updater.Updater) dataset.BulkWrite {
 	bw := NewBulkWrite(this)
 	return bw
 }
 
 // TableName 数据库表名
-func (*Item) TableName() string {
+func (*Items) TableName() string {
 	return "items"
 }
 
 // TableOrder 初始化时的排序，DESC
-func (*Item) TableOrder() int32 {
+func (*Items) TableOrder() int32 {
 	return 99
 }

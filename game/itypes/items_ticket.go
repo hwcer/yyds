@@ -1,40 +1,48 @@
 package itypes
 
 import (
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"server/config"
-	"server/define"
+	"github.com/hwcer/yyds/game/model"
+	"github.com/hwcer/yyds/game/share"
 )
 
 const (
 	ticketPlugName = "_model_ticket_plug"
 )
 
+var Ticket = &TicketIType{}
+
 type cycleHandle func(dateTime *times.Times, powerTime int64, powerMax int64, cycle int64) (addVal int64, newTime int64)
 
 var cycleHandleDict = make(map[int32]cycleHandle)
-var ITypeTicket = newItemsIType(define.ITypeTicket)
 
 func init() {
+	Ticket.ItemsIType = NewItemsIType(share.ITypeTicket)
 	cycleHandleDict[1] = cycleHandleType1
 	cycleHandleDict[2] = cycleHandleType2
-	ITypeTicket.SetListener(ticketListener)
 }
 
-// ticketListener 自动回复
-func ticketListener(u *updater.Updater, op *operator.Operator) {
-	TicketSettlement(u, op.IID)
+type TicketIType struct {
+	*ItemsIType
 }
 
-// TicketSettlement 强制结算体力
-func TicketSettlement(u *updater.Updater, iid ...int32) {
-	plug := u.Events.LoadOrCreate(ticketPlugName, createTicketPlug).(*ticketPlug)
+func (this *TicketIType) Listener(u *updater.Updater, op *operator.Operator) {
+	if Options.GetItemsTicketConfig != nil {
+		logger.Alert("ITypes.Ticket GetConfig is nil")
+		return
+	}
+	this.Settlement(u, op.IID)
+}
+
+// Settlement 强制结算体力
+func (this *TicketIType) Settlement(u *updater.Updater, iid ...int32) {
+	plug := u.Events.LoadOrCreate(ticketPlugName, this.createTicketPlug).(*ticketPlug)
 	for _, id := range iid {
-		c := config.Data.Ticket[id]
+		c := Options.GetItemsTicketConfig(id)
 		if c == nil {
 			continue
 		}
@@ -46,7 +54,7 @@ func TicketSettlement(u *updater.Updater, iid ...int32) {
 	}
 }
 
-func createTicketPlug() updater.Middleware {
+func (this *TicketIType) createTicketPlug() updater.Middleware {
 	return &ticketPlug{}
 }
 
@@ -70,7 +78,7 @@ func (this *ticketPlug) add(iid int32) {
 func (this *ticketPlug) checkAllTicket(u *updater.Updater) bool {
 	for iid, _ := range this.dict {
 		if v := u.Get(iid); v != nil {
-			this.sumTicket(u, v.(*Item).Copy())
+			this.sumTicket(u, v.(*model.Items).Copy())
 		} else {
 			this.newTicket(u, iid)
 		}
@@ -79,7 +87,7 @@ func (this *ticketPlug) checkAllTicket(u *updater.Updater) bool {
 }
 
 func (this *ticketPlug) powerMax(u *updater.Updater, iid int32) int64 {
-	c := config.Data.Ticket[iid]
+	c := Options.GetItemsTicketConfig(iid)
 	limit := c.GetLimit()
 	powerMax := int64(limit[2])
 	if limit[0] > 0 && limit[1] > 0 {
@@ -89,7 +97,7 @@ func (this *ticketPlug) powerMax(u *updater.Updater, iid int32) int64 {
 }
 
 func (this *ticketPlug) newTicket(u *updater.Updater, iid int32) {
-	i, err := ITypeTicket.Create(u, iid, this.powerMax(u, iid))
+	i, err := Ticket.Create(u, iid, this.powerMax(u, iid))
 	if err != nil {
 		logger.Debug("Ticket ObjectId error:%v", err)
 		return
@@ -103,8 +111,8 @@ func (this *ticketPlug) newTicket(u *updater.Updater, iid int32) {
 	_ = u.Operator(op, true)
 }
 
-func (this *ticketPlug) sumTicket(u *updater.Updater, data *Item) {
-	c := config.Data.Ticket[data.IID]
+func (this *ticketPlug) sumTicket(u *updater.Updater, data *model.Items) {
+	c := Options.GetItemsTicketConfig(data.IID)
 	t := times.New(u.Time)
 	nowTime := t.Now().Unix()
 	powerMax := this.powerMax(u, data.IID)

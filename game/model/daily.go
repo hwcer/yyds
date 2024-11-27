@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo/update"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
-	"github.com/hwcer/uuid"
 	"github.com/hwcer/yyds/game/share"
 )
 
@@ -50,8 +50,8 @@ func (this *Daily) LoadOrCreate(u *updater.Updater, iid int32) (r *Daily, err er
 		if doc == nil {
 			return nil, errors.New("daily Getter Handle(Role) empty")
 		}
-		role := doc.Any()
-		r.Signup, _ = times.Timestamp(role.Create).Sign(0)
+		create := doc.Val("create")
+		r.Signup, _ = times.Timestamp(create).Sign(0)
 		if tx = DB.Create(r); tx.Error != nil {
 			return nil, tx.Error
 		}

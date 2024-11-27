@@ -1,10 +1,10 @@
 package player
 
 import (
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/emitter"
 	"github.com/hwcer/updater/verify"
-	"github.com/hwcer/uuid"
 	"net"
 	"sync"
 )
@@ -34,9 +34,9 @@ type Player struct {
 	Expire  *Expire
 	Verify  *verify.Verify
 	Emitter *emitter.Emitter
-	Message *Message       //最后一次发包的 MESSAGE
-	mutex   sync.Mutex     //底层自动使用锁，不要手动调用
-	workers map[string]any //自定义处理程序,在player加载完成时统一初始化
+	Message *Message   //最后一次发包的 MESSAGE
+	mutex   sync.Mutex //底层自动使用锁，不要手动调用
+	//workers map[string]any //自定义处理程序,在player加载完成时统一初始化
 	//readOnly   bool
 	heartbeat  int64 //最后心跳时间
 	lastUpdate int64 //强制更新时间节点

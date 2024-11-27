@@ -3,8 +3,7 @@ package player
 import (
 	"fmt"
 	"github.com/hwcer/updater"
-	"server/define"
-	"server/game/model"
+	"github.com/hwcer/yyds/game/itypes"
 	"strings"
 )
 
@@ -13,7 +12,7 @@ type Role struct {
 }
 
 func NewRole(p *Player) *Role {
-	doc := p.Document(define.ITypeRole)
+	doc := p.Document(itypes.ITypeRole)
 	r := &Role{Document: doc}
 	return r
 }
@@ -54,20 +53,21 @@ func (this *Role) Sub(k string, v int32, fields ...any) {
 	}
 	this.Document.Sub(k, v)
 }
-func (this *Role) All() *model.Role {
-	return this.Document.Any().(*model.Role)
-}
 
-func (this *Role) GetDaily() (*model.RoleDaily, error) {
-	r := this.All()
-	if err := r.Daily.Verify(this.Updater); err != nil {
-		return nil, err
-	}
-	return &r.Daily, nil
-}
+//func (this *Role) All() *model.Role {
+//	return this.Document.Any().(*model.Role)
+//}
 
-func (this *Role) SetDaily(k string, v any) {
-	arr := []any{model.RoleHandleDailyVal, k}
-	rk := this.rk(model.RoleHandleDailyName, arr...)
-	this.Document.Set(rk, v)
-}
+//func (this *Role) GetDaily() (*model.RoleDaily, error) {
+//	r := this.All()
+//	if err := r.Daily.Verify(this.Updater); err != nil {
+//		return nil, err
+//	}
+//	return &r.Daily, nil
+//}
+//
+//func (this *Role) SetDaily(k string, v any) {
+//	arr := []any{model.RoleHandleDailyVal, k}
+//	rk := this.rk(model.RoleHandleDailyName, arr...)
+//	this.Document.Set(rk, v)
+//}
