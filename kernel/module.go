@@ -20,7 +20,7 @@ import (
 var mod *Module
 
 func init() {
-	mod = &Module{Module: cosgo.Module{Id: "game"}}
+	mod = &Module{Module: cosgo.Module{Id: "kernel"}}
 }
 
 func New() *Module {
@@ -100,9 +100,6 @@ func (this *Module) Start() error {
 }
 
 func (this *Module) Close() (err error) {
-	//if err = rank2.Close(); err != nil {
-	//	return err
-	//}
 	if err = model.Close(); err != nil {
 		return
 	}
