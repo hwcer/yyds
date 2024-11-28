@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"github.com/hwcer/yyds/game/config"
 	"strings"
 )
 
@@ -69,10 +68,6 @@ func (this *Items) Clone() any {
 	r := *this
 	r.Attach = this.Attach.Clone()
 	return &r
-}
-
-func (this *Items) IType(iid int32) int32 {
-	return config.GetIType(iid)
 }
 
 func (this *Items) Upsert(u *updater.Updater, op *operator.Operator) bool {

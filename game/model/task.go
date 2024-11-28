@@ -6,7 +6,7 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"github.com/hwcer/yyds/game/share"
+	"github.com/hwcer/yyds/game/config"
 	"time"
 )
 
@@ -58,7 +58,7 @@ func (this *Task) Set(k string, v any) (any, bool) {
 }
 
 func (this *Task) IType(int32) int32 {
-	return share.ITypeTask
+	return config.ITypeTask
 }
 
 // ----------------- 作为MODEL方法--------------------

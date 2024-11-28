@@ -1,8 +1,6 @@
 package players
 
-import (
-	"server/game/players/player"
-)
+import "github.com/hwcer/yyds/game/players/player"
 
 type Players interface {
 	Try(uid uint64, handle player.Handle) error

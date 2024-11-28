@@ -1,4 +1,4 @@
-package share
+package config
 
 const (
 	ITypeRole       int32 = 10

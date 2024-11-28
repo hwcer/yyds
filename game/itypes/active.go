@@ -3,12 +3,12 @@ package itypes
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/game/config"
 	"github.com/hwcer/yyds/game/model"
-	"github.com/hwcer/yyds/game/share"
 )
 
-var Active = NewIType(share.ITypeActive)
-var Config = NewIType(share.ITypeConfig) //后台配置的活动
+var Active = NewIType(config.ITypeActive)
+var Config = NewIType(config.ITypeConfig) //后台配置的活动
 
 func init() {
 	im := &model.Active{}

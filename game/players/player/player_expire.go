@@ -1,11 +1,10 @@
 package player
 
 import (
+	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
-	"server/define"
-	"server/game/model"
-	"server/share"
+	"github.com/hwcer/yyds/game/share"
 )
 
 const (
@@ -40,11 +39,10 @@ func (this *Expire) Start(t int32, v int64) (r int64, err error) {
 	case ExpireTimeTimeStamp:
 		return v, nil
 	case ExpireTimePlayerCreate:
-		role := this.p.Role.Any().(*model.Role)
-		dt := times.Timestamp(role.Create).Daily(int(v - 1))
+		dt := times.Timestamp(this.p.Role.Val("create")).Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerCreate:
-		dt := times.Timestamp(share.Options.Game.ServerTime)
+		dt := times.Timestamp(options.Game.ServerTime)
 		dt = dt.Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerAlways:
@@ -74,14 +72,13 @@ func (this *Expire) Finish(t int32, v int64) (r int64, err error) {
 		return v, nil
 	case ExpireTimePlayerCreate:
 		if v > 0 {
-			role := this.p.Role.Any().(*model.Role)
-			dt := times.Timestamp(role.Create).Daily(int(v)).Add(-1)
+			dt := times.Timestamp(this.p.Role.Val("create")).Daily(int(v)).Add(-1)
 			r = dt.Unix()
 		}
 		return
 	case ExpireTimeServerCreate:
 		if v > 0 {
-			dt := times.Timestamp(share.Options.Game.ServerTime)
+			dt := times.Timestamp(options.Game.ServerTime)
 			dt = dt.Daily(int(v)).Add(-1)
 			r = dt.Unix()
 		}
@@ -101,19 +98,15 @@ func (this *Expire) Verify(args []int64) (t [2]int64, err error) {
 	if t[0], err = this.Start(int32(args[0]), args[1]); err != nil {
 		return
 	} else if t[0] > now {
-		err = define.ErrActiveDisable
+		err = share.ErrActiveDisable
 		return
 	}
 	if t[1], err = this.Finish(int32(args[0]), args[2]); err != nil {
 		return
 	}
 	if t[1] > 0 && t[1] < now {
-		err = define.ErrActiveExpired
+		err = share.ErrActiveExpired
 		return
 	}
 	return
 }
-
-//func (p *Player) Limits(args []int64) (t [2]int64, err error) {
-//	return p.Expire.Verify(args)
-//}

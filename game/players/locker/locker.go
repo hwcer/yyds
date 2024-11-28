@@ -2,7 +2,7 @@ package locker
 
 import (
 	"github.com/hwcer/cosgo/await"
-	"server/game/players/player"
+	"github.com/hwcer/yyds/game/players/player"
 )
 
 //func NewMulti(readOnly bool) *Locker {

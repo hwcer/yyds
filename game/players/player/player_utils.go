@@ -2,13 +2,15 @@ package player
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/game/players/emitter"
+	"github.com/hwcer/yyds/game/share"
 	"net"
 	"reflect"
-	"strings"
 	"sync/atomic"
 )
 
@@ -31,6 +33,7 @@ func (p *Player) Loading(init bool) (err error) {
 	}()
 	if p.Updater == nil {
 		p.Updater = updater.New(p.uid)
+		p.Updater.Process.Set(ProcessNamePlayer, p)
 	}
 	if err = p.Updater.Loading(init); err != nil {
 		return err
@@ -62,19 +65,27 @@ func (p *Player) RemoteAddr() (r net.Addr) {
 }
 
 func (p *Player) Emit(t int32, v int32, args ...int32) {
-	c := config.Data.Emitter[t]
+	if share.Configs.Emitter == nil {
+		logger.Alert("share.Configs.Emitter is nil")
+		return
+	}
+	c := share.Configs.Emitter(t)
 	if c == nil {
 		return
 	}
-	if c.Daily > 0 {
-		p.EventUpdate(c.Daily, v, c.Replace)
+	replace := c.GetReplace()
+	if i := c.GetDaily(); i > 0 {
+		p.EventUpdate(i, v, replace)
 	}
-	if c.Record > 0 {
-		p.EventUpdate(c.Record, v, c.Replace)
+	if i := c.GetRecord(); i > 0 {
+		p.EventUpdate(i, v, replace)
 	}
-	if c.Events > 0 {
-		p.Emitter.Emit(t, v, args...)
+	if i := c.GetEvents(); i > 0 {
+		p.emitter.Emit(i, v, args...)
 	}
+}
+func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
+	return p.emitter.Listen(t, args, handle)
 }
 
 func (p *Player) EventUpdate(k int32, v int32, replace int32) {
@@ -178,11 +189,6 @@ func (p *Player) SubItems(items interface{}, multi ...int32) {
 	}
 }
 
-func (p *Player) Worker(name string) any {
-	name = strings.ToLower(name)
-	return p.workers[name]
-}
-
 // MustUpdate 客户端数据是否需要更新
 // -1 : 不需要强制更新
 // 0 : 强制更新
@@ -197,16 +203,16 @@ func (p *Player) MustUpdate() int64 {
 
 // MachineUpdate 更新客户端机器码
 func (p *Player) MachineUpdate(machine string) {
-	role := p.Role.All()
+	usrMachine := p.Role.Get("machine").(string)
 	if machine == "" {
 		//客户端清除不支持，或者未实现增量更新
 		p.mustUpdate = true
 		p.lastUpdate = 0
-	} else if machine == role.Machine {
+	} else if machine == usrMachine {
 		p.mustUpdate = false
 	} else {
 		p.mustUpdate = true
-		p.lastUpdate = role.Update
+		p.lastUpdate = p.Role.Val("update")
 		p.Role.Set("machine", machine)
 	}
 }

@@ -55,6 +55,14 @@ func (c *config) Reload() {
 	c.dict = make(map[int32]*IType)
 	c.preprocess = make(map[string]any)
 }
+
+func (c *config) GetIMax(iid int32) (r int64) {
+	if i := c.Get(iid); i != nil {
+		r = int64(i.IMax)
+	}
+	return
+}
+
 func (c *config) GetIType(iid int32) (r int32) {
 	if iid < 10 {
 		return 0

@@ -1,32 +1,34 @@
 package player
 
 import (
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
-	"github.com/hwcer/updater/emitter"
-	"github.com/hwcer/updater/verify"
-	"server/config"
-	"server/define"
-	"server/game/model"
+	"github.com/hwcer/yyds/game/config"
+	"github.com/hwcer/yyds/game/model"
+	"github.com/hwcer/yyds/game/players/emitter"
+	"github.com/hwcer/yyds/game/players/verify"
+	"github.com/hwcer/yyds/game/share"
 )
 
 const taskListenerKey = "task_listener_key"
 
 func init() {
-	Register("TaskTargetWorker", taskTargetWorker)
+	updater.RegisterGlobalEvent(updater.OnLoaded, onTaskLoader)
 }
 
-func taskTargetWorker(p *Player) any {
-	if !p.Task.Collection.Loader() {
-		return nil
+func onTaskLoader(u *updater.Updater) {
+	doc := u.Handle(config.ITypeTask).(*updater.Collection)
+	if !doc.Loader() {
+		return
 	}
+	p := u.Process.Get(ProcessNamePlayer).(*Player)
 	p.Task.Range(func(id string, data *model.Task) bool {
 		if data.Status == model.TaskStatusStart {
 			p.Task.listener(data.IID)
 		}
 		return true
 	})
-	return nil
 }
 
 type Task struct {
@@ -53,7 +55,7 @@ func (tt *TaskTarget) GetCondition() int32 {
 }
 
 func NewTask(p *Player) *Task {
-	doc := p.Collection(define.ITypeTask)
+	doc := p.Collection(config.ITypeTask)
 	r := &Task{Collection: doc, player: p}
 	r.listeners = map[int32]struct{}{}
 	return r
@@ -79,22 +81,26 @@ func (this *Task) Get(id int32) (r *model.Task) {
 }
 
 func (this *Task) listener(id int32) {
+	if share.Configs.Task == nil {
+		logger.Alert("share.Configs.Task is nil")
+		return
+	}
 	if _, ok := this.listeners[id]; ok {
 		return
 	}
-	c := config.Data.Task[id]
+	c := share.Configs.Task(id)
 	if c == nil || c.GetCondition() != verify.ConditionEvents {
 		return
 	}
 
 	this.listeners[id] = struct{}{}
-	l := this.player.Emitter.Listener(c.GetKey(), c.GetArgs(), this.handle)
+	l := this.player.Listen(c.GetKey(), c.GetArgs(), this.handle)
 	l.Attach.Set(taskListenerKey, id)
 }
 
 func (this *Task) handle(l *emitter.Listener, val int32) (r bool) {
 	id := l.Attach.GetInt32(taskListenerKey)
-	c := config.Data.Task[id]
+	c := share.Configs.Task(id)
 	if c == nil {
 		return false
 	}

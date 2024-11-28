@@ -86,8 +86,6 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		}
 	}()
 	ex := verify(c, func() error {
-		c.reset()
-		defer c.release()
 		//判定重发
 		if rid := getMetadataRequestId(c.Context); rid > 0 {
 			if c.Player.Message == nil {

@@ -2,8 +2,8 @@ package channel
 
 import (
 	"fmt"
-	"server/define"
-	"server/game/players/player"
+	"github.com/hwcer/yyds/game/players/player"
+	"github.com/hwcer/yyds/game/share"
 	"sync"
 	"time"
 )
@@ -65,7 +65,7 @@ func (this *Players) getPlayer(uid uint64, init bool, handle player.Handle) erro
 		return err
 	}
 	if p.Status == player.StatusRelease {
-		return define.ErrLoginWaiting
+		return share.ErrLoginWaiting
 	}
 	p.Reset()
 	defer p.Release()
@@ -76,7 +76,7 @@ func (this *Players) getOnline(uid uint64, handle player.Handle) error {
 	if i, ok := this.dict.Load(uid); ok {
 		p = i.(*player.Player)
 		if p.Status == player.StatusRelease {
-			return define.ErrLoginWaiting
+			return share.ErrLoginWaiting
 		}
 		p.Reset()
 		defer p.Release()

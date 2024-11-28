@@ -3,11 +3,11 @@ package itypes
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/game/config"
 	"github.com/hwcer/yyds/game/model"
-	"github.com/hwcer/yyds/game/share"
 )
 
-var Task = NewIType(share.ITypeTask)
+var Task = NewIType(config.ITypeTask)
 
 func init() {
 	Task.SetCreator(taskCreator)

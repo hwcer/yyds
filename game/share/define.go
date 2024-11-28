@@ -19,7 +19,7 @@ func init() {
 	cosgo.Config.Flags(FlagNameMaster, "", "", "Master服务器地址")
 	cosgo.Config.SetDefault("pprof", "") //开启性能分析工具
 	cosgo.Config.SetDefault("config", "config.toml")
-	cosgo.On(cosgo.EventTypReady, func() error {
+	cosgo.On(cosgo.EventTypStarted, func() error {
 		var s []string
 		cosgo.Range(func(m cosgo.IModule) bool {
 			s = append(s, m.ID())

@@ -1,8 +1,10 @@
 package itypes
 
-import "github.com/hwcer/yyds/game/share"
+import (
+	"github.com/hwcer/yyds/game/config"
+)
 
-var Gacha = NewItemsIType(share.ITypeGacha)
+var Gacha = NewItemsIType(config.ITypeGacha)
 
 func init() {
 	Gacha.SetStacked(true)

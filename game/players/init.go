@@ -5,13 +5,13 @@ import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/yyds/game/model"
+	"github.com/hwcer/yyds/game/players/channel"
+	"github.com/hwcer/yyds/game/players/locker"
+	"github.com/hwcer/yyds/game/players/options"
+	"github.com/hwcer/yyds/game/players/player"
+	"github.com/hwcer/yyds/game/share"
 	"net"
-	"server/define"
-	"server/game/model"
-	"server/game/players/channel"
-	"server/game/players/locker"
-	"server/game/players/options"
-	"server/game/players/player"
 	"sync/atomic"
 )
 
@@ -68,7 +68,7 @@ func Load(uid uint64, init bool, handle player.Handle) (err error) {
 func Login(uid uint64, conn net.Conn, handle player.Handle) (err error) {
 	err = ps.Load(uid, true, func(p *player.Player) error {
 		if !Connected(p, conn) {
-			return define.ErrLoginWaiting
+			return share.ErrLoginWaiting
 		}
 		return handle(p)
 	})
@@ -105,8 +105,7 @@ func loading() (err error) {
 		if err = p.Loading(true); err == nil {
 			ps.Store(r.Uid, p)
 			p.KeepAlive(now)
-			role := p.Role.All()
-			logger.Debug("预加载用户: [%v] %v", role.Uid, role.Guid)
+			logger.Debug("预加载用户: [%v] %v", p.Uid(), p.Get("name"))
 		}
 	}
 	logger.Trace("累计预加载用户数量:%v\n", len(rows))

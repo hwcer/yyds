@@ -8,9 +8,7 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/emitter"
-	"server/config"
-	"server/define"
-	"server/game/model"
+	"github.com/hwcer/yyds/game/model"
 	"strings"
 )
 

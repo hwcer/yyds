@@ -1,8 +1,10 @@
 package itypes
 
-import "github.com/hwcer/yyds/game/share"
+import (
+	"github.com/hwcer/yyds/game/config"
+)
 
-var Equip = NewItemsIType(share.ITypeEquip)
+var Equip = NewItemsIType(config.ITypeEquip)
 
 func init() {
 	Equip.SetStacked(false)

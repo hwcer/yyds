@@ -3,11 +3,11 @@ package itypes
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/game/config"
 	"github.com/hwcer/yyds/game/model"
-	"github.com/hwcer/yyds/game/share"
 )
 
-var Shop = NewIType(share.ITypeShop)
+var Shop = NewIType(config.ITypeShop)
 
 func init() {
 	Shop.SetCreator(shopCreator)

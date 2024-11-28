@@ -18,6 +18,9 @@ import (
 
 var locker sync.RWMutex
 
+func GetIMax(iid int32) (r int64) {
+	return Config.GetIMax(iid)
+}
 func GetIType(iid int32) (r int32) {
 	return Config.GetIType(iid)
 }

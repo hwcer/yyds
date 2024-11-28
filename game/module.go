@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xshare"
+	_ "github.com/hwcer/yyds/game/config"
+	_ "github.com/hwcer/yyds/game/context"
+	_ "github.com/hwcer/yyds/game/itypes"
+	"github.com/hwcer/yyds/game/model"
 	"github.com/hwcer/yyds/game/players"
 	"github.com/hwcer/yyds/game/share"
 	"strconv"
@@ -64,13 +67,13 @@ func (this *Module) Init() (err error) {
 	}
 
 	args := map[string]any{
-		"sid":     service.ServerId(),
-		"name":    share.Options.Game.Name,
-		"address": share.Options.Game.Address,
+		"sid":     options.Game.Sid,
+		"name":    options.Game.Name,
+		"address": options.Game.Address,
 	}
 
-	if share.Options.Game.Notify != "" {
-		uri := utils.NewAddress(share.Options.Game.Notify)
+	if options.Game.Notify != "" {
+		uri := utils.NewAddress(options.Game.Notify)
 		if uri.Scheme == "" {
 			uri.Scheme = "http"
 		}
@@ -81,11 +84,7 @@ func (this *Module) Init() (err error) {
 	}
 
 	if err = share.Master.Post(share.MasterApiTypeGameServerUpdate, args, nil); err != nil {
-		if errors.Is(err, share.ErrMasterUrlEmpty) {
-			logger.Trace(err)
-		} else {
-			return fmt.Errorf(err.Error()+"，当前回调地址:%v", share.Options.Game.Notify)
-		}
+		return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
 	}
 	if err = model.Start(); err != nil {
 		return
@@ -93,30 +92,10 @@ func (this *Module) Init() (err error) {
 	if err = players.Start(); err != nil {
 		return
 	}
-	if err = service.Start(); err != nil {
-		return
-	}
 	return
 }
 
 func (this *Module) Start() error {
-	if model.Redis != nil {
-		//if err := rank2.Start(model.Redis); err != nil {
-		//	return err
-		//} else {
-		//	logger.Trace("Redis排行榜功能已经启用")
-		//}
-	}
-	if err := local.Start(); err != nil {
-		return err
-	}
-	if err := handle.Start(); err != nil {
-		return err
-	}
-	if err := master.Start(); err != nil {
-		return err
-	}
-	logger.Trace("游戏服务启动完毕:%v", service.ServerId())
 	return nil
 }
 

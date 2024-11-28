@@ -6,15 +6,15 @@ import (
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/operator"
+	"github.com/hwcer/yyds/game/config"
 	"github.com/hwcer/yyds/game/model"
-	"github.com/hwcer/yyds/game/share"
 )
 
 const (
 	RoleModelPlug = "_model_role_plug"
 )
 
-var Role = &roleIType{IType: NewIType(share.ITypeRole)}
+var Role = &roleIType{IType: NewIType(config.ITypeRole)}
 
 func init() {
 	it := []updater.IType{Role, ItemsGroup, ItemsPacks}
@@ -26,7 +26,12 @@ func init() {
 
 type roleIType struct {
 	*IType
+	Upgrade roleUpgrade
 	Builder *uuid.Builder
+}
+type roleUpgrade interface {
+	Verify(u *updater.Updater, exp int64) (newExp int64)    //获得经验时进行检查
+	Submit(u *updater.Updater, lv, exp int64) (newLv int64) //判断升级，返回新的等级
 }
 
 func (this *roleIType) init() (err error) {
@@ -46,16 +51,11 @@ func (this *roleIType) init() (err error) {
 
 func (this *roleIType) Listener(u *updater.Updater, op *operator.Operator) {
 	if op.Type == operator.TypesAdd && (op.Key == "exp" || op.Key == "Exp") {
-		if Options.RoleUpgrade == nil {
+		if this.Upgrade == nil {
 			logger.Alert("ITypes.Options.RoleUpgrade is nil")
 			return
 		}
-		if Options.RoleVerify == nil {
-			_ = u.Events.LoadOrCreate(RoleModelPlug, this.NewMiddleware)
-			return
-		}
-
-		if exp := Options.RoleVerify(u, op.Value); exp > 0 {
+		if exp := this.Upgrade.Verify(u, op.Value); exp > 0 {
 			op.Value = exp
 			_ = u.Events.LoadOrCreate(RoleModelPlug, this.NewMiddleware)
 		} else {
@@ -82,8 +82,8 @@ func (this RoleMiddleware) upgrade(u *updater.Updater) bool {
 	lv := u.Val("lv")
 	exp := u.Val("exp")
 
-	if newLv := Options.RoleUpgrade(u, lv, exp); newLv != lv {
-		role := u.Handle(share.ITypeRole)
+	if newLv := Role.Upgrade.Submit(u, lv, exp); newLv != lv {
+		role := u.Handle(config.ITypeRole)
 		role.Add("lv", int32(newLv-lv))
 	}
 	//var newLv int32

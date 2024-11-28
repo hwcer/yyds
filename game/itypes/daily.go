@@ -3,11 +3,11 @@ package itypes
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/game/config"
 	"github.com/hwcer/yyds/game/model"
-	"github.com/hwcer/yyds/game/share"
 )
 
-var Daily = NewIType(share.ITypeDaily)
+var Daily = NewIType(config.ITypeDaily)
 
 func init() {
 	im := &model.Daily{}

@@ -1,7 +1,7 @@
 package itypes
 
 import (
-	"github.com/hwcer/yyds/game/share"
+	"github.com/hwcer/yyds/game/config"
 )
 
-var Hero = NewItemsIType(share.ITypeHero)
+var Hero = NewItemsIType(config.ITypeHero)

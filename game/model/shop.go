@@ -6,8 +6,7 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"github.com/hwcer/yyds/game/share"
-
+	"github.com/hwcer/yyds/game/config"
 	"time"
 )
 
@@ -57,7 +56,7 @@ func (this *Shop) Clone() *Shop {
 }
 
 func (this *Shop) IType(int32) int32 {
-	return share.ITypeShop
+	return config.ITypeShop
 }
 
 // ----------------- 作为MODEL方法--------------------

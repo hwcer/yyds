@@ -9,6 +9,7 @@ import (
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
+	"github.com/hwcer/yyds/game/config"
 )
 
 const BaseSize = 32
@@ -170,7 +171,9 @@ func (this *Model) Set(k string, v any) (any, bool) {
 	}
 	return v, true
 }
-
+func (this *Model) IType(id int32) int32 {
+	return config.GetIType(id)
+}
 func (this *Model) SetOnInsert() (r map[string]interface{}, err error) {
 	r = make(map[string]any)
 	r["uid"] = this.Uid

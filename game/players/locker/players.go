@@ -1,8 +1,8 @@
 package locker
 
 import (
-	"server/define"
-	"server/game/players/player"
+	"github.com/hwcer/yyds/game/players/player"
+	"github.com/hwcer/yyds/game/share"
 	"sync"
 	"time"
 )
@@ -33,7 +33,7 @@ func (this *Players) Try(uid uint64, handle player.Handle) error {
 		}
 	}
 	if p != nil && p.Status == player.StatusRelease {
-		return define.ErrLoginWaiting
+		return share.ErrLoginWaiting
 	}
 	return handle(p)
 }
@@ -48,7 +48,7 @@ func (this *Players) Get(uid uint64, handle player.Handle) error {
 		defer p.Release()
 	}
 	if p != nil && p.Status == player.StatusRelease {
-		return define.ErrLoginWaiting
+		return share.ErrLoginWaiting
 	}
 	return handle(p)
 }

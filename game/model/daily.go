@@ -9,7 +9,7 @@ import (
 	"github.com/hwcer/cosmo/update"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
-	"github.com/hwcer/yyds/game/share"
+	"github.com/hwcer/yyds/game/config"
 )
 
 const dailyValuesFormat = "val.%v"
@@ -31,11 +31,9 @@ func (this *Daily) New(u *updater.Updater, iid int32) (r *Daily, err error) {
 	r.Value = map[int32]int64{}
 	return
 }
-
 func (this *Daily) IType(int32) int32 {
-	return share.ITypeDaily
+	return config.ITypeDaily
 }
-
 func (this *Daily) LoadOrCreate(u *updater.Updater, iid int32) (r *Daily, err error) {
 	if iid == 0 {
 		iid, _ = times.Sign(0)
@@ -46,7 +44,7 @@ func (this *Daily) LoadOrCreate(u *updater.Updater, iid int32) (r *Daily, err er
 	if tx := DB.Find(r, r.OID); tx.Error != nil {
 		return nil, tx.Error
 	} else if tx.RowsAffected == 0 {
-		doc := u.Handle(share.ITypeRole).(*updater.Document)
+		doc := u.Handle(config.ITypeRole).(*updater.Document)
 		if doc == nil {
 			return nil, errors.New("daily Getter Handle(Role) empty")
 		}

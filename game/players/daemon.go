@@ -3,11 +3,11 @@ package players
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/yyds/game/players/options"
+	"github.com/hwcer/yyds/game/players/player"
 	"golang.org/x/net/context"
 	"net"
 	"runtime/debug"
-	"server/game/players/options"
-	"server/game/players/player"
 	"sort"
 	"sync/atomic"
 	"time"

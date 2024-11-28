@@ -3,11 +3,11 @@ package itypes
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/game/config"
 	"github.com/hwcer/yyds/game/model"
-	"github.com/hwcer/yyds/game/share"
 )
 
-var Goods = NewIType(share.ITypeGoods)
+var Goods = NewIType(config.ITypeGoods)
 
 func init() {
 	if err := updater.Register(updater.ParserTypeValues, updater.RAMTypeAlways, &model.Goods{}, Goods); err != nil {

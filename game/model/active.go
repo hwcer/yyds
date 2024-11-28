@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/updater/operator"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -60,14 +59,7 @@ func (this *Active) marshal(k string, v any) any {
 		return r
 	}
 }
-func (this *Active) IType(id int32) int32 {
-	s := strconv.Itoa(int(id))
-	if len(s) < 2 {
-		return 0
-	}
-	i, _ := strconv.Atoi(s[0:2])
-	return int32(i)
-}
+
 func (this *Active) Copy() *Active {
 	i := this.Clone()
 	return i.(*Active)
