@@ -18,7 +18,7 @@ const (
 	ITypeDaily  int32 = 96
 	ITypeRecord int32 = 97
 	ITypeActive int32 = 98 //内置模版活动
-	ITypeConfig int32 = 99 //后台配置活动(master.config)
+	ITypeConfig int32 = 99 //后台配置活动(master.Config)
 	//内置,无需全局唯一ID
 	ITypeMail    int32 = -1
 	ITypeShop    int32 = -2  //商店信息

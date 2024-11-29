@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var Config = config{}
+var cfg = New()
 
 type iMax interface {
 	GetIMax() int32
@@ -22,48 +22,47 @@ type IType struct {
 	IType int32
 }
 
-type config struct {
-	dict map[int32]*IType
-
-	preprocess map[string]any
+func New() *Config {
+	return &Config{dict: map[int32]*IType{}, Process: Process{}}
 }
 
-func (c *config) set(k int32, v *IType) {
+type Config struct {
+	dict    map[int32]*IType
+	Process Process
+}
+
+func (c *Config) Set(k int32, v *IType) {
 	if c.dict == nil {
 		c.dict = make(map[int32]*IType)
 	}
 	c.dict[k] = v
 }
 
-func (c *config) add(k int32, iType int32, iMax int32, name string) {
+func (c *Config) Add(k int32, iType int32, iMax int32, name string) {
 	if c.dict == nil {
 		c.dict = make(map[int32]*IType)
 	}
 	it := &IType{Name: name, IType: iType, IMax: iMax}
-	c.set(k, it)
+	c.Set(k, it)
 }
 
-func (c *config) Get(k int32) *IType {
+func (c *Config) Get(k int32) *IType {
 	return c.dict[k]
 }
 
-func (c *config) Has(k int32) bool {
+func (c *Config) Has(k int32) bool {
 	_, ok := c.dict[k]
 	return ok
 }
-func (c *config) Reload() {
-	c.dict = make(map[int32]*IType)
-	c.preprocess = make(map[string]any)
-}
 
-func (c *config) GetIMax(iid int32) (r int64) {
+func (c *Config) GetIMax(iid int32) (r int64) {
 	if i := c.Get(iid); i != nil {
 		r = int64(i.IMax)
 	}
 	return
 }
 
-func (c *config) GetIType(iid int32) (r int32) {
+func (c *Config) GetIType(iid int32) (r int32) {
 	if iid < 10 {
 		return 0
 	}
@@ -77,7 +76,7 @@ func (c *config) GetIType(iid int32) (r int32) {
 	return
 }
 
-func (c *config) Parse(name string, items any, iType int32, iMax int32) (errs []error) {
+func (c *Config) Parse(name string, items any, iType int32, iMax int32) (errs []error) {
 	rv := reflect.ValueOf(items)
 	if rv.Kind() != reflect.Map {
 		errs = append(errs, fmt.Errorf("%v 不是有效的map", name))
@@ -97,7 +96,7 @@ func (c *config) Parse(name string, items any, iType int32, iMax int32) (errs []
 		}
 
 		it := &IType{Name: name, IType: iType}
-		c.set(id, it)
+		c.Set(id, it)
 		if it.IMax = c.reflectIMax(id, i); it.IMax == 0 {
 			it.IMax = iMax
 		}
@@ -116,7 +115,7 @@ func (c *config) Parse(name string, items any, iType int32, iMax int32) (errs []
 	return
 }
 
-func (c *config) reflectIType(id int32, i interface{}) int32 {
+func (c *Config) reflectIType(id int32, i interface{}) int32 {
 	if v, ok := i.(iType); ok {
 		return v.GetIType()
 	}
@@ -124,7 +123,7 @@ func (c *config) reflectIType(id int32, i interface{}) int32 {
 	v, _ := strconv.Atoi(s[0:2])
 	return int32(v)
 }
-func (c *config) reflectIMax(id int32, i interface{}) int32 {
+func (c *Config) reflectIMax(id int32, i interface{}) int32 {
 	if v, ok := i.(iMax); ok {
 		return v.GetIMax()
 	}

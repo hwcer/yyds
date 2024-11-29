@@ -19,38 +19,43 @@ import (
 var locker sync.RWMutex
 
 func GetIMax(iid int32) (r int64) {
-	return Config.GetIMax(iid)
+	return cfg.GetIMax(iid)
 }
 func GetIType(iid int32) (r int32) {
-	return Config.GetIType(iid)
+	return cfg.GetIType(iid)
+}
+func GetProcess(name string) any {
+	return cfg.Process.Get(name)
 }
 
-func Reload(c any) (err error) {
+func Reload(data any) (err error) {
 	locker.Lock()
 	defer locker.Unlock()
+	c := New()
 
 	files, err := os.Stat(cosgo.Abs(options.Options.Config))
 	if err != nil {
 		return
 	}
 	if files.IsDir() {
-		err = ReloadFromMultiple(c)
+		err = ReloadFromMultiple(data)
 	} else {
-		err = ReloadFromSingle(c)
+		err = ReloadFromSingle(data)
 	}
 	if err != nil {
 		return
 	}
-	if !verifyConfigData(c) {
+	if !verifyConfigData(c, data) {
 		if cosgo.Debug() {
 			logger.Alert("配置检查未通过!请检查日志")
 		} else {
 			return errors.New("配置检查未通过!请检查日志")
 		}
 	}
-	for _, v := range hvs {
-		v.Handle(c)
+	for _, v := range handles {
+		v.Handle(c, data)
 	}
+	cfg = c
 	return
 }
 
@@ -114,10 +119,10 @@ func ReloadFromMultiple(c any) (err error) {
 	return
 }
 
-func verifyConfigData(data any) (result bool) {
+func verifyConfigData(c *Config, data any) (result bool) {
 	result = true
-	for _, v := range hvs {
-		if errs := v.Verify(data); len(errs) > 0 {
+	for _, v := range handles {
+		if errs := v.Verify(c, data); len(errs) > 0 {
 			result = false
 			vf := reflect.TypeOf(v)
 			var name string
