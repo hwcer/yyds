@@ -27,7 +27,7 @@ type IType struct {
 	listener ITypeListener
 }
 
-func (this *IType) Id() int32 {
+func (this *IType) ID() int32 {
 	return this.id
 }
 

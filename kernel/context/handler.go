@@ -15,11 +15,6 @@ import (
 )
 
 func caller(c *Context, node *registry.Node) any {
-	if c.Player != nil {
-		c.Time = c.Player.Time
-	} else {
-		c.Time = times.Now()
-	}
 	var v interface{}
 	if node.IsFunc() {
 		m := node.Method().(func(*Context) interface{})
@@ -37,7 +32,7 @@ func caller(c *Context, node *registry.Node) any {
 	}
 
 	r := Parse(v)
-	r.Time = c.Time.UnixMilli()
+	r.Time = c.Time().UnixMilli()
 	if r.Code == 0 && c.Player != nil {
 		var err error
 		if r.Cache, err = c.Player.Submit(); err != nil {
@@ -83,7 +78,7 @@ func verify(c *Context, handle func() error) (err error) {
 			return share.ErrLogin
 		}
 		c.Player = p
-		c.Player.KeepAlive(c.Time.Unix())
+		c.Player.KeepAlive(c.Unix())
 
 		if update := c.Player.Role.Val("update"); update < times.Daily(0).Unix() && c.ServiceMethod() != ServiceMethodRoleRenewal {
 			return share.ErrNeedResetSession

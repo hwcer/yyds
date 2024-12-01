@@ -16,13 +16,13 @@ const (
 
 var Role = &roleIType{IType: NewIType(config.ITypeRole)}
 
-func init() {
-	it := []updater.IType{Role, ItemsGroup, ItemsPacks}
-	//ROLE
-	if err := updater.Register(updater.ParserTypeDocument, updater.RAMTypeAlways, &model.Role{}, it...); err != nil {
-		logger.Panic(err)
-	}
-}
+//func init() {
+//	it := []updater.IType{Role, ItemsGroup, ItemsPacks}
+//	//ROLE
+//	if err := updater.Register(updater.ParserTypeDocument, updater.RAMTypeAlways, &model.Role{}, it...); err != nil {
+//		logger.Panic(err)
+//	}
+//}
 
 type roleIType struct {
 	*IType

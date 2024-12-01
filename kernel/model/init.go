@@ -19,7 +19,7 @@ var DB = cosmo.New()
 var Redis *redis.Client
 var Builder *uuid.Unique //随机自增种子,生成全服唯一ID
 
-type loading interface {
+type initialize interface {
 	init() error
 }
 
@@ -99,13 +99,22 @@ func Start() (err error) {
 	}
 	Builder = uuid.NewUnique(uint32(sid), BaseSize)
 	updater.ITypes(func(k int32, it updater.IType) bool {
-		if h, ok := it.(loading); ok {
+		if h, ok := it.(initialize); ok {
 			if err = h.init(); err != nil {
 				return false
 			}
 		}
 		return true
 	})
+	updater.Models(func(k int32, m any) bool {
+		if h, ok := m.(initialize); ok {
+			if err = h.init(); err != nil {
+				return false
+			}
+		}
+		return true
+	})
+
 	return
 }
 

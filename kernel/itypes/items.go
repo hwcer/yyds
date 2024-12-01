@@ -1,7 +1,6 @@
 package itypes
 
 import (
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/kernel/config"
@@ -11,14 +10,14 @@ import (
 var Items = NewItemsIType(config.ITypeItems)
 var Viper = NewItemsIType(config.ITypeViper)
 
-func init() {
-	im := &model.Items{}
-	its := []updater.IType{Items, Viper, Gacha, Ticket}
-	its = append(its, Equip, Hero)
-	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeAlways, im, its...); err != nil {
-		logger.Panic(err)
-	}
-}
+//func init() {
+//	im := &model.Items{}
+//	its := []updater.IType{Items, Viper, Gacha, Ticket}
+//	its = append(its, Equip, Hero)
+//	if err := updater.Register(updater.ParserTypeCollection, updater.RAMTypeAlways, im, its...); err != nil {
+//		logger.Panic(err)
+//	}
+//}
 
 func NewItemsIType(id int32) *itemsIType {
 	i := &itemsIType{}

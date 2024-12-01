@@ -1,17 +1,13 @@
 package share
 
 import (
-	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/options"
 )
 
 // loadOptions 加载配置
 func reload() (err error) {
 	//logger.Info("reload config file")
-	err = options.Initialize(func() error {
-		return cosgo.Config.Unmarshal(options.Options)
-	})
-	return
+	return options.Initialize()
 }
 
 /*
