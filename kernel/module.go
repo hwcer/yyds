@@ -3,7 +3,6 @@ package kernel
 import (
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xshare"
@@ -20,7 +19,7 @@ import (
 var mod *Module
 
 func init() {
-	mod = &Module{Module: cosgo.Module{Id: "kernel"}}
+	mod = &Module{}
 }
 
 func New() *Module {
@@ -28,9 +27,11 @@ func New() *Module {
 }
 
 type Module struct {
-	cosgo.Module
 }
 
+func (this *Module) Id() string {
+	return "kernel"
+}
 func (this *Module) Init() (err error) {
 	var ip string
 	if ip, err = xshare.LocalIpv4(); err != nil {
@@ -86,13 +87,7 @@ func (this *Module) Init() (err error) {
 	if err = share.Master.Post(share.MasterApiTypeGameServerUpdate, args, nil); err != nil {
 		return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
 	}
-	if err = model.Start(); err != nil {
-		return
-	}
-	if err = players.Start(); err != nil {
-		return
-	}
-	return
+	return utils.Assert(model.Start, players.Start)
 }
 
 func (this *Module) Start() error {
