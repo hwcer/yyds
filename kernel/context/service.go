@@ -22,7 +22,7 @@ import (
 
 var Service = xserver.Service(options.ServiceTypeGame, handlerMetadata, handlerCaller, handlerFilter)
 
-func Register(i interface{}, prefix ...string) {
+func RegisterHandle(i interface{}, prefix ...string) {
 	var arr []string
 	if options.Gate.Prefix != "" {
 		arr = append(arr, options.Gate.Prefix)

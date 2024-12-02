@@ -1,4 +1,4 @@
-package itypes
+package itype
 
 import (
 	"github.com/hwcer/cosgo/random"

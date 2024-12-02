@@ -9,7 +9,7 @@ import (
 	"github.com/hwcer/cosrpc/xshare"
 	_ "github.com/hwcer/yyds/kernel/config"
 	_ "github.com/hwcer/yyds/kernel/context"
-	_ "github.com/hwcer/yyds/kernel/itypes"
+	_ "github.com/hwcer/yyds/kernel/itype"
 	"github.com/hwcer/yyds/kernel/model"
 	"github.com/hwcer/yyds/kernel/players"
 	"github.com/hwcer/yyds/kernel/share"

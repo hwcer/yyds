@@ -27,8 +27,8 @@ func (this *Context) Uid() uint64 {
 	return 0
 }
 
-// Guid 账号ID
-func (this *Context) Guid() string {
+// GUid 账号ID
+func (this *Context) GUid() string {
 	if this.Player != nil {
 		doc := this.Player.Document(config.ITypeRole)
 		return doc.Get("guid").(string)

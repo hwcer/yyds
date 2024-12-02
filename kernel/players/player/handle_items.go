@@ -5,7 +5,7 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/yyds/kernel/config"
-	"github.com/hwcer/yyds/kernel/itypes"
+	"github.com/hwcer/yyds/kernel/itype"
 	"github.com/hwcer/yyds/kernel/model"
 )
 
@@ -90,7 +90,7 @@ func (this *Items) GetOrCreate(id int32, autoInsertDB bool) (r *model.Items, exi
 		exist = true
 		r = i.(*model.Items)
 	} else {
-		r, _ = itypes.Items.Create(this.player.Updater, id, 0)
+		r, _ = itype.Items.Create(this.player.Updater, id, 0)
 		if autoInsertDB {
 			_ = this.Collection.New(r)
 		}
