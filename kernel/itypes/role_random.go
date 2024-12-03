@@ -12,7 +12,7 @@ var ItemsPacks = &itemsRandom{IType: IType{id: config.ITypeItemPacks}}
 
 type itemsRandom struct {
 	IType
-	Random func(iid, num int32) map[int32]int32
+	Random func(u *updater.Updater, iid, num int32) map[int32]int32
 }
 
 // Listener 独立概率
@@ -25,30 +25,40 @@ func (this *itemsRandom) Listener(u *updater.Updater, op *operator.Operator) {
 		return
 	}
 	op.Type = operator.TypesResolve
-	r := map[int32]int32{}
-	this.switchParser(op.IID, int32(op.Value), r, 0)
+	r := this.Parse(u, op.IID, int32(op.Value))
 	for k, v := range r {
 		u.Add(k, v)
 	}
 }
 
+func (this *itemsRandom) Parse(u *updater.Updater, iid, num int32) map[int32]int32 {
+	r := map[int32]int32{}
+	this.switchParser(u, iid, num, r, 0)
+	return r
+}
+
 // parse 解析概率表 物品组或者包
-func (this *itemsRandom) parser(k, v int32, r map[int32]int32, n int32) {
-	for i, j := range this.Random(k, v) {
-		this.switchParser(i, j, r, n)
+func (this *itemsRandom) doRandom(u *updater.Updater, k, v int32, r map[int32]int32, n int32) {
+	if this.Random == nil {
+		logger.Alert("itemsRandom Random handle is nil")
+		return
+	}
+	rs := this.Random(u, k, v)
+	for i, j := range rs {
+		this.switchParser(u, i, j, r, n)
 	}
 }
 
-func (this *itemsRandom) switchParser(k, v int32, r map[int32]int32, n int32) {
+func (this *itemsRandom) switchParser(u *updater.Updater, k, v int32, r map[int32]int32, n int32) {
 	n++
 	if n > 100 {
 		logger.Alert("IType itemsRandom endless loop:%v", k)
 	}
 	switch config.GetIType(k) {
 	case config.ITypeItemPacks:
-		ItemsPacks.parser(k, v, r, n)
+		ItemsPacks.doRandom(u, k, v, r, n)
 	case config.ITypeItemGroup:
-		ItemsGroup.parser(k, v, r, n)
+		ItemsGroup.doRandom(u, k, v, r, n)
 	default:
 		r[k] += v
 	}

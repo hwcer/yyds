@@ -5,7 +5,7 @@ import (
 	"github.com/hwcer/updater"
 	"github.com/hwcer/updater/dataset"
 	"github.com/hwcer/yyds/kernel/config"
-	"github.com/hwcer/yyds/kernel/itype"
+	"github.com/hwcer/yyds/kernel/itypes"
 	"github.com/hwcer/yyds/kernel/model"
 )
 

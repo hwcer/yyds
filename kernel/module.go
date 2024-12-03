@@ -3,12 +3,14 @@ package kernel
 import (
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xshare"
 	_ "github.com/hwcer/yyds/kernel/config"
 	_ "github.com/hwcer/yyds/kernel/context"
-	_ "github.com/hwcer/yyds/kernel/itype"
+	_ "github.com/hwcer/yyds/kernel/itypes"
 	"github.com/hwcer/yyds/kernel/model"
 	"github.com/hwcer/yyds/kernel/players"
 	"github.com/hwcer/yyds/kernel/share"
@@ -27,12 +29,16 @@ func New() *Module {
 }
 
 type Module struct {
+	cosgo.Module
 }
 
 func (this *Module) Id() string {
 	return "kernel"
 }
 func (this *Module) Init() (err error) {
+	if err = options.Initialize(); err != nil {
+		return err
+	}
 	var ip string
 	if ip, err = xshare.LocalIpv4(); err != nil {
 		return
@@ -85,7 +91,11 @@ func (this *Module) Init() (err error) {
 	}
 
 	if err = share.Master.Post(share.MasterApiTypeGameServerUpdate, args, nil); err != nil {
-		return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
+		if errors.Is(err, share.ErrMasterEmpty) {
+			logger.Alert("配置项[master]为空,部分功能无法使用")
+		} else {
+			return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
+		}
 	}
 	return utils.Assert(model.Start, players.Start)
 }

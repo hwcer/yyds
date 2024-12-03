@@ -22,7 +22,7 @@ func init() {
 	cosgo.On(cosgo.EventTypStarted, func() error {
 		var s []string
 		cosgo.Range(func(m cosgo.IModule) bool {
-			s = append(s, m.ID())
+			s = append(s, m.Id())
 			return true
 		})
 		logger.Trace("启动模块:%v", strings.Join(s, ","))

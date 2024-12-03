@@ -6,6 +6,7 @@ import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xserver"
 )
 
@@ -20,9 +21,7 @@ func init() {
 
 func New() *Module {
 	if mod == nil {
-		mod = &Module{
-			Module: cosgo.Module{Id: moduleName},
-		}
+		mod = &Module{}
 	}
 	return mod
 }
@@ -31,29 +30,22 @@ type Module struct {
 	cosgo.Module
 }
 
+func (this *Module) Id() string {
+	return moduleName
+}
 func (this *Module) Init() (err error) {
-	if err = reload(); err != nil {
-		return
-	}
-	if err = verify(); err != nil {
-		return
-	}
-	return nil
+	return utils.Assert(this.Reload, this.Verify)
 }
 
 func (this *Module) Start() (err error) {
 	return xserver.Start()
 }
 
-func (this *Module) Close() (err error) {
-	return
-}
-
 func (this *Module) Reload() (err error) {
-	return reload()
+	return options.Initialize()
 }
 
-func verify() (err error) {
+func (this *Module) Verify() (err error) {
 	if options.Options.Appid == "" {
 		return errors.New("appid empty")
 	}

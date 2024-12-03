@@ -1,7 +1,6 @@
 package share
 
 import (
-	"errors"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/options"
 	"github.com/hwcer/cosgo/request"
@@ -60,7 +59,7 @@ func (m *master) OAuth() *request.OAuth {
 
 func (m *master) Post(api MasterApiType, args interface{}, reply interface{}) (err error) {
 	if options.Options.Master == "" {
-		return errors.New("master url is empty")
+		return ErrMasterEmpty
 	}
 	url := options.Options.Master
 	if strings.HasSuffix(url, "/") {

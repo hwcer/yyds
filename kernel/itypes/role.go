@@ -30,8 +30,8 @@ type roleIType struct {
 	Builder *uuid.Builder
 }
 type roleUpgrade interface {
-	Verify(u *updater.Updater, exp int64) (newExp int64)    //获得经验时进行检查
-	Submit(u *updater.Updater, lv, exp int64) (newLv int64) //判断升级，返回新的等级
+	Verify(u *updater.Updater, exp int64) (newExp int64)          //获得经验时进行检查
+	Submit(u *updater.Updater, lv int32, exp int64) (newLv int32) //判断升级，返回新的等级
 }
 
 func (this *roleIType) init() (err error) {
@@ -79,26 +79,11 @@ func (this RoleMiddleware) Emit(u *updater.Updater, t updater.EventType) bool {
 }
 
 func (this RoleMiddleware) upgrade(u *updater.Updater) bool {
-	lv := u.Val("lv")
+	lv := int32(u.Val("lv"))
 	exp := u.Val("exp")
-
-	if newLv := Role.Upgrade.Submit(u, lv, exp); newLv != lv {
+	if newLv := Role.Upgrade.Submit(u, lv, exp); newLv > 0 && newLv != lv {
 		role := u.Handle(config.ITypeRole)
-		role.Add("lv", int32(newLv-lv))
+		role.Add("lv", newLv-lv)
 	}
-	//var newLv int32
-	//
-	//for i := lv + 1; ; i++ {
-	//	if c := config.Data.Level[i]; c != nil && exp >= c.Exp {
-	//		newLv = i
-	//	} else {
-	//		break
-	//	}
-	//}
-	//
-	//if newLv > 0 {
-	//	u.Set(define.ItemTypeLV, newLv)
-	//}
-
 	return false
 }
