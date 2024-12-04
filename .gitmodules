@@ -43,3 +43,6 @@
 [submodule "options"]
 	path = options
 	url = https://github.com/hwcer/options.git
+[submodule "wower"]
+	path = wower
+	url = https://github.com/hwcer/wower.git
