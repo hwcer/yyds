@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-func init() {
-	Verify = defaultVerify
-}
-
 type Token interface {
 	GetGuid() string
 	GetAppid() string
@@ -31,7 +27,7 @@ func (this *defaultToken) GetAppid() string {
 	return this.Appid
 }
 
-func defaultVerify(c *Context) (r Token, err error) {
+func Verify(c *Context) (r Token, err error) {
 
 	d := &defaultToken{}
 	r = d
