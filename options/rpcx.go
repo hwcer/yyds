@@ -6,7 +6,6 @@ var Rpcx = &rpcx{
 	Timeout:             2,
 	Network:             "tcp",
 	Address:             ":8100",
-	BasePath:            "rpcx",
 	ClientMessageChan:   300,
 	ClientMessageWorker: 1,
 }
@@ -16,7 +15,6 @@ type rpcx = struct {
 	Timeout             int32
 	Network             string
 	Address             string //仅仅启动服务器时需要
-	BasePath            string
-	ClientMessageChan   int //双向通信客户端接受消息通道大小
-	ClientMessageWorker int //双向通信客户端处理消息协程数量
+	ClientMessageChan   int    //双向通信客户端接受消息通道大小
+	ClientMessageWorker int    //双向通信客户端处理消息协程数量
 }
