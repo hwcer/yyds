@@ -13,36 +13,9 @@
 [submodule "cosweb"]
 	path = cosweb
 	url = https://github.com/hwcer/cosweb.git
-[submodule "logger"]
-	path = logger
-	url = https://github.com/hwcer/logger.git
 [submodule "updater"]
 	path = updater
 	url = https://github.com/hwcer/updater.git
-[submodule "scc"]
-	path = scc
-	url = https://github.com/hwcer/scc.git
-[submodule "schema"]
-	path = schema
-	url = https://github.com/hwcer/schema.git
-[submodule "registry"]
-	path = registry
-	url = https://github.com/hwcer/registry.git
 [submodule "coswss"]
 	path = coswss
 	url = https://github.com/hwcer/coswss.git
-[submodule "gate"]
-	path = gate
-	url = https://github.com/hwcer/gate.git
-[submodule "uuid"]
-	path = uuid
-	url = https://github.com/hwcer/uuid
-[submodule "xlsx"]
-	path = xlsx
-	url = https://github.com/hwcer/xlsx
-[submodule "options"]
-	path = options
-	url = https://github.com/hwcer/options.git
-[submodule "wower"]
-	path = wower
-	url = https://github.com/hwcer/wower.git
