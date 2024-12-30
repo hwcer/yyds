@@ -14,7 +14,7 @@ type itemProbability interface {
 	GetVal() int32
 }
 
-type emitterConfig interface {
+type EmitterConfig interface {
 	GetDaily() int32
 	GetRecord() int32
 	GetEvents() int32
@@ -29,7 +29,7 @@ var GetRoleCreateTime func(player *Player) int64 = func(player *Player) int64 {
 }
 
 // GetEmitterConfig 获取事件配置
-var GetEmitterConfig func(id int32) emitterConfig = func(id int32) emitterConfig {
+var GetEmitterConfig func(id int32) EmitterConfig = func(id int32) EmitterConfig {
 	logger.Alert("请设置 player.GetEmitterConfig 才能使用全局事件")
 	return nil
 }

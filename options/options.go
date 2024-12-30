@@ -29,7 +29,7 @@ var Options = &struct {
 	Appid   string
 	Master  string
 	Secret  string //秘钥,必须8位
-	Verify  int8   `json:"verify"` //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
+	Verify  int8   `json:"monitor"` //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
 	Service map[string]string
 	Game    *game
 	Gate    *gate
