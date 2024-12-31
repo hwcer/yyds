@@ -54,6 +54,10 @@ func send(c *xshare.Context) any {
 	}
 	query := Options.Query(p)
 	sock := players.Players.Socket(p)
+	if sock == nil {
+		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
+		return nil
+	}
 	if err := sock.Send(path, query, c.Bytes()); err != nil {
 		return err
 	}

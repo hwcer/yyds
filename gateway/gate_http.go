@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -96,6 +97,9 @@ func (this *httpProxy) Query() values.Values {
 	q := this.Context.Request.URL.Query()
 	for k, _ := range q {
 		r[k] = q.Get(k)
+	}
+	if _, ok := r[binder.ContentType]; !ok {
+		r[binder.ContentType] = this.Context.Request.Header.Get(binder.ContentType)
 	}
 	return r
 }

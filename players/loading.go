@@ -6,9 +6,7 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-var Preload func(limit int, callback loadingHandler)
-
-type loadingHandler func(uid uint64, name string) (next bool)
+var Preload func(limit int, callback func(uid uint64, name string) (next bool)) error
 
 // loading 初始加载用户到内存
 func loading() (err error) {
@@ -20,7 +18,7 @@ func loading() (err error) {
 		return nil
 	}
 	var n int
-	Preload(Options.MemoryInstall, func(uid uint64, name string) (next bool) {
+	err = Preload(Options.MemoryInstall, func(uid uint64, name string) (next bool) {
 		p := player.New(uid)
 		if err = p.Loading(true); err == nil {
 			n += 1
@@ -30,7 +28,9 @@ func loading() (err error) {
 		}
 		return true
 	})
-
+	if err != nil {
+		return err
+	}
 	logger.Trace("累计预加载用户数量:%v\n", n)
 	return
 }
