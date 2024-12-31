@@ -2,6 +2,7 @@ package options
 
 import (
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosrpc/xshare"
 	"sync/atomic"
 )
 
@@ -17,9 +18,13 @@ const (
 )
 
 func Initialize() error {
-	if atomic.CompareAndSwapInt32(&initialize, 0, 1) {
-		return cosgo.Config.Unmarshal(Options)
+	if !atomic.CompareAndSwapInt32(&initialize, 0, 1) {
+		return nil
 	}
+	if err := cosgo.Config.Unmarshal(Options); err != nil {
+		return err
+	}
+	xshare.Options.BasePath = Options.Appid
 	return nil
 }
 
@@ -33,11 +38,11 @@ var Options = &struct {
 	Service map[string]string
 	Game    *game
 	Gate    *gate
-	Rpcx    *rpcx
+	Rpcx    *xshare.Rpcx
 }{
 	Verify:  1,
-	Service: Service,
+	Service: xshare.Service,
 	Game:    Game,
 	Gate:    Gate,
-	Rpcx:    Rpcx,
+	Rpcx:    xshare.Options,
 }
