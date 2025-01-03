@@ -1,12 +1,13 @@
 package yyds
 
 import (
-	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
 	"strconv"
@@ -70,30 +71,30 @@ func (this *Module) Init() (err error) {
 		options.Game.Address = uri.String(true)
 	}
 
-	//args := map[string]any{
-	//	"sid":     options.Game.Sid,
-	//	"name":    options.Game.Name,
-	//	"address": options.Game.Address,
-	//}
-	//
-	//if options.Game.Notify != "" {
-	//	uri := utils.NewAddress(options.Game.Notify)
-	//	if uri.Scheme == "" {
-	//		uri.Scheme = "http"
-	//	}
-	//	if uri.Empty() {
-	//		uri.Host = ip
-	//	}
-	//	args["notify"] = uri.String(true)
-	//}
-	//
-	//if err = share.Master.Post(share.MasterApiTypeGameServerUpdate, args, nil); err != nil {
-	//	if errors.Is(err, errors.ErrMasterEmpty) {
-	//		logger.Alert("配置项[master]为空,部分功能无法使用")
-	//	} else {
-	//		return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
-	//	}
-	//}
+	args := map[string]any{
+		"sid":     options.Game.Sid,
+		"name":    options.Game.Name,
+		"address": options.Game.Address,
+	}
+
+	if options.Game.Notify != "" {
+		uri := utils.NewAddress(options.Game.Notify)
+		if uri.Scheme == "" {
+			uri.Scheme = "http"
+		}
+		if uri.Empty() {
+			uri.Host = ip
+		}
+		args["notify"] = uri.String(true)
+	}
+
+	if err = options.Master.Post(options.MasterApiTypeGameServerUpdate, args, nil); err != nil {
+		if errors.Is(err, errors.ErrMasterEmpty) {
+			logger.Alert("配置项[master]为空,部分功能无法使用")
+		} else {
+			return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
+		}
+	}
 	return utils.Assert(players.Start)
 }
 

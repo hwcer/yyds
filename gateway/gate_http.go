@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/session"
@@ -79,9 +80,18 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 	reply, err := proxy(h)
 	if err != nil {
 		return c.JSON(values.Parse(err))
-	} else {
-		return c.Bytes(cosweb.ContentTypeApplicationJSON, reply)
 	}
+	if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
+		if s := string(reply); strings.HasPrefix(s, "{") {
+			sb := strings.Builder{}
+			sb.WriteString("{")
+			sb.WriteString(fmt.Sprintf(`"cookie":{"name":"%v","value":"%v"},`, session.Options.Name, v))
+			sb.WriteString(s[1:])
+			reply = []byte(sb.String())
+		}
+	}
+	return c.Bytes(cosweb.ContentTypeApplicationJSON, reply)
+
 }
 
 type httpProxy struct {
@@ -100,6 +110,9 @@ func (this *httpProxy) Query() values.Values {
 	}
 	if _, ok := r[binder.ContentType]; !ok {
 		r[binder.ContentType] = this.Context.Request.Header.Get(binder.ContentType)
+		if r[binder.ContentType] == "" {
+			r[binder.ContentType] = "application/json"
+		}
 	}
 	return r
 }
@@ -129,6 +142,7 @@ func (this *httpProxy) Login(guid string, value values.Values) (err error) {
 	header := this.Header()
 	header.Set("X-Forwarded-Key", session.Options.Name)
 	header.Set("X-Forwarded-Val", cookie.Value)
+	this.Context.Set(session.Options.Name, cookie.Value)
 	return nil
 }
 
