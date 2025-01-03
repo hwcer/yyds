@@ -91,7 +91,7 @@ func verify(c *Context, handle func() error) (err error) {
 				return e
 			}
 		} else if session := meta[options.ServicePlayerSession]; session != p.Session {
-			return errors.ErrReplaced
+			//return errors.ErrReplaced
 		}
 
 		return handle()
