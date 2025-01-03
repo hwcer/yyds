@@ -22,13 +22,16 @@ var (
 	ErrDataNotExists = values.Errorf(104, "data not exists")    //数据库数据不存在
 	ErrPlayerMax     = values.Errorf(105, "player max")         //房间已满
 	ErrDataExists    = values.Errorf(106, "data exists")        //数据已经存在
-
-	ErrItemNotEnough = values.Errorf(202, "item not enough") //道具,材料不足
-	ErrTargetLimit   = values.Errorf(203, "target limit")    //任务目标未达成
-	ErrPreTaskLimit  = values.Errorf(204, "pre task limit")  //前置任务没完成
-
-	ErrArgEmpty      = values.Errorf(400, "args empty")     //参数不能为空
-	ErrActiveDisable = values.Errorf(401, "active disable") //活动未开始
-	ErrActiveExpired = values.Errorf(402, "active expired") //活动已经结束
+	ErrItemNotEnough = values.Errorf(202, "item not enough")    //道具,材料不足
+	ErrTargetLimit   = values.Errorf(203, "target limit")       //任务目标未达成
+	ErrPreTaskLimit  = values.Errorf(204, "pre task limit")     //前置任务没完成
+	ErrArgEmpty      = values.Errorf(400, "args empty")         //参数不能为空
+	ErrActiveDisable = values.Errorf(401, "active disable")     //活动未开始
+	ErrActiveExpired = values.Errorf(402, "active expired")     //活动已经结束
 	ErrConfigEmpty   = values.Errorf(403, "config empty")
 )
+
+func init() {
+	Register(ErrLogin, ErrLocked, ErrNotSelectRole, ErrServerLimit, ErrMasterEmpty, ErrRoleNotExist, ErrLoginWaiting, ErrNeedResetSession)
+	Register(ErrLoginAgain, ErrLoginDisabled, ErrDataNotExists, ErrPlayerMax, ErrDataExists, ErrItemNotEnough, ErrTargetLimit, ErrPreTaskLimit, ErrArgEmpty, ErrActiveDisable, ErrActiveExpired, ErrConfigEmpty)
+}

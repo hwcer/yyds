@@ -52,7 +52,7 @@ func send(c *xshare.Context) any {
 	if len(path) == 0 {
 		return nil //仅仅设置信息，不需要发送
 	}
-	query := Options.Query(p)
+	query := Options.Query(p, mate)
 	sock := players.Players.Socket(p)
 	if sock == nil {
 		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
