@@ -26,7 +26,10 @@ func caller(c *Context, node *registry.Node) any {
 	var err error
 	//直接返回二进制不做任何处理
 	if r, ok := v.([]byte); ok {
-		if _, err = c.Player.Submit(); err != nil {
+		if c.Player != nil {
+			_, err = c.Player.Submit()
+		}
+		if err != nil {
 			return Error(err)
 		} else {
 			return r
