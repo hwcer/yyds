@@ -88,6 +88,7 @@ func proxy(h Request) ([]byte, error) {
 			req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
 		}
 	}
+
 	req[options.ServicePlayerGateway] = options.Gate.Address
 
 	//if ct := c.Binder.String(); ct != binder.Json.String() {

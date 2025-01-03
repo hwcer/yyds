@@ -3,7 +3,6 @@ package players
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
@@ -18,23 +17,24 @@ import (
 func Connect(p *player.Player, meta map[string]string) error {
 	status := p.Status
 	session := meta[options.ServicePlayerSession]
-
-	if status == player.StatusLocked || status == player.StatusRelease {
-		return errors.ErrLoginWaiting
+	if session == "" {
+		return errors.New("player session is empty")
 	}
 	if status == player.StatusConnected {
-		if session != "" && p.Session == session {
-			return values.Errorf(0, "Please do not log in again")
+		if p.Session == session {
+			return nil
+			//return values.Errorf(0, "Please do not log in again")
+		} else {
+			//顶号
 		}
-	} else if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
+	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusRecycling {
+		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
+			return errors.ErrLoginWaiting
+		}
+	} else {
 		return errors.ErrLoginWaiting
 	}
-	if status == player.StatusNone || status == player.StatusRecycling {
-		atomic.AddInt32(&playersOnline, 1)
-	}
-	if session != "" {
-		p.Session = session
-	}
+	p.Session = session
 	if gateway := meta[options.ServicePlayerGateway]; gateway != "" {
 		p.Gateway = gateway
 	}
