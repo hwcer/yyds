@@ -3,10 +3,7 @@ package gateway
 import (
 	"errors"
 	"github.com/hwcer/cosgo/scc"
-	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosnet"
-	"github.com/hwcer/cosrpc/xclient"
-	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
@@ -45,13 +42,6 @@ func (this *Module) Init() (err error) {
 	} else if options.Gate.Address[0:i] == "" {
 		options.Gate.Address = "0.0.0.0" + options.Gate.Address
 	}
-	if err = xserver.Start(); err != nil {
-		return err
-	}
-	if err = xclient.Start(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -136,6 +126,5 @@ func (this *Module) Close() (err error) {
 	if this.mux != nil {
 		this.mux.Close()
 	}
-	return utils.Assert(xclient.Close, xserver.Close)
-
+	return nil
 }

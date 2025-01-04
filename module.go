@@ -31,7 +31,7 @@ func (this *Module) Id() string {
 }
 func (this *Module) Init() (err error) {
 
-	if err = utils.Assert(options.Initialize); err != nil {
+	if err = options.Initialize(); err != nil {
 		return err
 	}
 

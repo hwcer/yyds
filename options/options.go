@@ -3,6 +3,9 @@ package options
 import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosrpc/xclient"
+	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
 	"sync/atomic"
 )
@@ -34,7 +37,14 @@ func Initialize() error {
 		}
 	}
 
+	cosgo.On(cosgo.EventTypStarted, rpcStart)
+	cosgo.On(cosgo.EventTypClosing, xclient.Close)
+	cosgo.On(cosgo.EventTypStopped, xserver.Close)
 	return nil
+}
+
+func rpcStart() error {
+	return utils.Assert(xserver.Start, xclient.Start)
 }
 
 var Options = &struct {
