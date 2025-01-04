@@ -19,8 +19,6 @@ type authorizes map[string]int8
 
 func init() {
 	s := map[string]int8{
-		"/ping":        OAuthTypeNone,
-		"/heart":       OAuthTypeNone,
 		"/login":       OAuthTypeNone,
 		"/roles":       OAuthTypeOAuth,
 		"/role/create": OAuthTypeOAuth,

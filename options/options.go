@@ -2,6 +2,7 @@ package options
 
 import (
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc/xshare"
 	"sync/atomic"
 )
@@ -25,6 +26,14 @@ func Initialize() error {
 		return err
 	}
 	xshare.Options.BasePath = Options.Appid
+	if Game.Time != "" {
+		if t, err := times.Parse(Game.Time); err != nil {
+			return err
+		} else if t != nil {
+			Game.timeUnix = t.Unix()
+		}
+	}
+
 	return nil
 }
 

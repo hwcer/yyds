@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/logger"
-	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
-	"github.com/hwcer/yyds/players"
 	"strconv"
 	"strings"
 )
@@ -33,8 +31,15 @@ func (this *Module) Id() string {
 }
 func (this *Module) Init() (err error) {
 
-	if err = utils.Assert(options.Initialize, this.Verify); err != nil {
+	if err = utils.Assert(options.Initialize); err != nil {
 		return err
+	}
+
+	if options.Options.Appid == "" {
+		return errors.New("appid empty")
+	}
+	if options.Options.Secret == "" {
+		return errors.New("secret empty")
 	}
 
 	var ip string
@@ -95,7 +100,7 @@ func (this *Module) Init() (err error) {
 			return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
 		}
 	}
-	return utils.Assert(players.Start)
+	return nil
 }
 
 func (this *Module) Start() error {
@@ -104,23 +109,6 @@ func (this *Module) Start() error {
 
 func (this *Module) Close() (err error) {
 	return nil
-}
-
-func (this *Module) Verify() (err error) {
-	if options.Options.Appid == "" {
-		return errors.New("appid empty")
-	}
-	if options.Options.Secret == "" {
-		return errors.New("secret empty")
-	}
-
-	var t *times.Times
-	t, err = times.Parse(options.Options.Game.Time)
-	if err != nil {
-		return err
-	}
-	options.Game.ServerTime = t.Unix()
-	return
 }
 
 func autoServerId(ip string) (sid int32) {

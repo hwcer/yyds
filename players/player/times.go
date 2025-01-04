@@ -42,7 +42,7 @@ func (this *Times) Start(t int32, v int64) (r int64, err error) {
 		dt := times.Timestamp(GetRoleCreateTime(this.p)).Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerCreate:
-		dt := times.Timestamp(options.Game.ServerTime)
+		dt := times.Timestamp(options.GetServerTime())
 		dt = dt.Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerAlways:
@@ -78,7 +78,7 @@ func (this *Times) Expire(t int32, v int64) (r int64, err error) {
 		return
 	case ExpireTimeServerCreate:
 		if v > 0 {
-			dt := times.Timestamp(options.Game.ServerTime)
+			dt := times.Timestamp(options.GetServerTime())
 			dt = dt.Daily(int(v)).Add(-1)
 			r = dt.Unix()
 		}
