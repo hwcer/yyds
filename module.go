@@ -8,6 +8,7 @@ import (
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
+	"github.com/hwcer/yyds/players"
 	"strconv"
 	"strings"
 )
@@ -104,7 +105,7 @@ func (this *Module) Init() (err error) {
 }
 
 func (this *Module) Start() error {
-	return nil
+	return players.Start()
 }
 
 func (this *Module) Close() (err error) {
