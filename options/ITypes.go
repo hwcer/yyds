@@ -6,6 +6,7 @@ const (
 	ITypeItems      int32 = 21 //无法叠加道具，一般不用
 	ITypeTicket     int32 = 22
 	ITypeViper      int32 = 23
+	ITypeGacha      int32 = 24 //抽卡信息
 	ITypeHero       int32 = 40
 	ITypeEquip      int32 = 50
 	ITypeBuilding   int32 = 60 //城堡功能性建筑物
@@ -22,7 +23,6 @@ const (
 	//内置,无需全局唯一ID
 	ITypeMail    int32 = -1
 	ITypeShop    int32 = -2  //商店信息
-	ITypeGacha   int32 = -3  //抽卡信息
 	ITypeChapter int32 = -11 //剧情章节信息
 	ITypeDress   int32 = -12 //地表装修,ITypeDecoration是装饰物,属于道具的一种，ITypeDress是把ITypeDecoration布置在地表的信息
 )

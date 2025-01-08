@@ -37,7 +37,7 @@ func Initialize() error {
 		}
 	}
 
-	cosgo.On(cosgo.EventTypStarted, rpcStart)
+	cosgo.On(cosgo.EventTypLoaded, rpcStart)
 	cosgo.On(cosgo.EventTypClosing, xclient.Close)
 	cosgo.On(cosgo.EventTypStopped, xserver.Close)
 	return nil
