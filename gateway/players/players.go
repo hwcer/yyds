@@ -88,7 +88,9 @@ func (this *players) Login(p *session.Data, callback loginCallback) (err error) 
 // Binding 身份认证绑定socket
 func (this *players) Binding(socket *cosnet.Socket, uuid string, data map[string]any) (r *session.Data, err error) {
 	p := session.NewData(uuid, "", data)
+	var re bool
 	err = this.Login(p, func(player *session.Data, loaded bool) error {
+		re = loaded
 		if loaded {
 			this.replace(player, socket)
 		} else {
@@ -97,8 +99,9 @@ func (this *players) Binding(socket *cosnet.Socket, uuid string, data map[string
 		r = player
 		return nil
 	})
-	if err == nil {
-		socket.OAuth(r)
+	if err != nil {
+		return nil, err
 	}
+	socket.OAuth(r, re)
 	return
 }

@@ -24,8 +24,8 @@ func (this *Socket) init() error {
 	service := cosnet.Service("")
 	_ = service.Register(this.proxy, "/*")
 	cosnet.On(cosnet.EventTypeError, this.Errorf)
-	cosnet.On(cosnet.EventTypeConnected, this.Connected)
-	cosnet.On(cosnet.EventTypeDisconnect, this.Disconnect)
+	//cosnet.On(cosnet.EventTypeConnected, this.Connected)
+	//cosnet.On(cosnet.EventTypeDisconnect, this.Disconnect)
 	return nil
 }
 
@@ -62,13 +62,13 @@ func (this *Socket) proxy(c *cosnet.Context) interface{} {
 	return reply
 }
 
-func (this *Socket) Connected(sock *cosnet.Socket, _ interface{}) {
-	logger.Debug("Connected:%v", sock.Id())
-}
-
-func (this *Socket) Disconnect(sock *cosnet.Socket, _ interface{}) {
-	logger.Debug("Disconnect:%v", sock.Id())
-}
+//func (this *Socket) Connected(sock *cosnet.Socket, _ interface{}) {
+//	logger.Debug("Connected:%v", sock.Id())
+//}
+//
+//func (this *Socket) Disconnect(sock *cosnet.Socket, _ interface{}) {
+//	logger.Debug("Disconnect:%v", sock.Id())
+//}
 
 type socketProxy struct {
 	*cosnet.Context
