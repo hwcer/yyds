@@ -65,6 +65,10 @@ func Login(uid uint64, meta map[string]string, handle player.Handle) (err error)
 	return
 }
 
-func Locker(uid []uint64, handle player.LockerHandle, done ...func()) error {
+func Locker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
 	return ps.Locker(uid, handle, done...)
+}
+
+func Range(f func(uint64, *player.Player) bool) {
+	ps.Range(f)
 }

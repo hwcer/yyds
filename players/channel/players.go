@@ -135,7 +135,7 @@ func (this *Players) Delete(k uint64) {
 	this.dict.Delete(k)
 }
 
-func (this *Players) Locker(uid []uint64, handle player.LockerHandle, done ...func()) error {
+func (this *Players) Locker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
 	return NewLocker(uid, handle, done...)
 }
 

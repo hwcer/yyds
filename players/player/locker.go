@@ -9,7 +9,7 @@ type Locker interface {
 	Submit() error
 }
 
-type LockerHandle func(locker Locker)
+type LockerHandle func(locker Locker) (any, error)
 
 func (p *Player) Reset() {
 	p.Updater.Reset()

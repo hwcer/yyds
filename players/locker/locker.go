@@ -17,11 +17,10 @@ type Args struct {
 	handle player.LockerHandle
 }
 
-func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) error {
+func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, done: done}
 	l := &Locker{}
-	_, err := w.Call(l.call, msg)
-	return err
+	return w.Call(l.call, msg)
 }
 
 type Locker struct {
@@ -98,20 +97,15 @@ func (this *Locker) Submit() error {
 	return nil
 }
 
-func (this *Locker) init(msg *Args) error {
+func (this *Locker) call(args any) (reply any, err error) {
+	msg, _ := args.(*Args)
 	bw := &Locker{done: msg.done}
 	for _, v := range msg.uid {
-		if err := bw.loading(v); err != nil {
+		if err = bw.loading(v); err != nil {
 			bw.release()
-			return err
+			return nil, err
 		}
 	}
 	defer bw.release()
-	msg.handle(bw)
-	return nil
-}
-func (this *Locker) call(args any) (reply any, err error) {
-	msg, _ := args.(*Args)
-	err = this.init(msg)
-	return
+	return msg.handle(bw)
 }

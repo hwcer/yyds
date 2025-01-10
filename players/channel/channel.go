@@ -17,11 +17,10 @@ type Args struct {
 	handle player.LockerHandle
 }
 
-func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) error {
+func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, done: done}
 	l := &Locker{}
-	_, err := w.Call(l.call, msg)
-	return err
+	return w.Call(l.call, msg)
 }
 
 type Locker struct {
@@ -39,8 +38,7 @@ func (this *Locker) call(args any) (reply any, err error) {
 		}
 	}
 	defer bw.release()
-	msg.handle(bw)
-	return
+	return msg.handle(bw)
 }
 
 func (this *Locker) release() {
