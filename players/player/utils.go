@@ -89,11 +89,11 @@ func (p *Player) Heartbeat() int64 {
 // KeepAlive 保持在线
 func (p *Player) KeepAlive(t int64) {
 	if t == 0 {
-		now := p.Updater.Now
-		if now.IsZero() {
-			now = times.Now()
+		if p.Updater != nil {
+			t = p.Updater.Unix()
+		} else {
+			t = times.Unix()
 		}
-		t = now.Unix()
 	}
 
 	p.heartbeat = t

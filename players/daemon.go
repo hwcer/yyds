@@ -41,7 +41,7 @@ func Connect(p *player.Player, meta map[string]string) error {
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}
-	p.Lively = p.Now.Unix()
+	p.Lively = p.Unix()
 	p.KeepAlive(0)
 	return nil
 }

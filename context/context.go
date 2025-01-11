@@ -40,13 +40,16 @@ func (this *Context) GUid() string {
 
 func (this *Context) Now() time.Time {
 	if this.Player != nil {
-		return this.Player.Now
+		return this.Player.Now()
 	}
 	return time.Now()
 }
 
 func (this *Context) Unix() int64 {
-	return this.Now().Unix()
+	if this.Player != nil {
+		return this.Player.Unix()
+	}
+	return time.Now().Unix()
 }
 
 // Channel 频道操作器
