@@ -23,8 +23,8 @@ type playerAwaitArgsKey int8
 const (
 	playerAwaitArgsUid playerAwaitArgsKey = iota
 	playerAwaitArgsInit
-	playerAwaitArgsHandle
-	playerAwaitArgsOnline //只获取在线玩家
+	playerAwaitArgsCaller //内部方法
+	playerAwaitArgsHandle //回调业务逻辑
 )
 
 type Players struct {
@@ -38,40 +38,23 @@ func (this *Players) call(args any) (reply any, err error) {
 	}
 	uid := msg[playerAwaitArgsUid].(uint64)
 	init := msg[playerAwaitArgsInit].(bool)
-	handle := msg[playerAwaitArgsHandle].(func(player2 *player.Player) error)
-	online := msg[playerAwaitArgsOnline].(bool)
-	if online {
-		err = this.getOnline(uid, handle)
-	} else {
-		err = this.getPlayer(uid, init, handle)
+	caller := msg[playerAwaitArgsCaller].(int8)
+	handle := msg[playerAwaitArgsHandle].(player.Handle)
+	switch caller {
+	case 1:
+		err = this.get(uid, handle)
+	case 2:
+		err = this.try(uid, handle)
+	case 3:
+		err = this.load(uid, init, handle)
+	default:
+		err = fmt.Errorf("channel Players.call args caller error:%v", caller)
 	}
 	return
 }
 
-func (this *Players) get(uid uint64, init bool) (p *player.Player, err error) {
-	p = player.New(uid)
-	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
-		p = i.(*player.Player)
-	} else if err = p.Loading(init); err != nil {
-		this.dict.Delete(uid)
-		return nil, err
-	}
-	return
-}
-
-func (this *Players) getPlayer(uid uint64, init bool, handle player.Handle) error {
-	p, err := this.get(uid, init)
-	if err != nil {
-		return err
-	}
-	if p.Status == player.StatusRelease {
-		return errors.ErrLoginWaiting
-	}
-	p.Reset()
-	defer p.Release()
-	return handle(p)
-}
-func (this *Players) getOnline(uid uint64, handle player.Handle) error {
+// 1
+func (this *Players) get(uid uint64, handle player.Handle) error {
 	var p *player.Player
 	if i, ok := this.dict.Load(uid); ok {
 		p = i.(*player.Player)
@@ -83,15 +66,57 @@ func (this *Players) getOnline(uid uint64, handle player.Handle) error {
 	}
 	return handle(p)
 }
-func (this *Players) Try(uid uint64, handle player.Handle) (err error) {
-	return this.Get(uid, handle)
+
+// 2
+func (this *Players) try(uid uint64, handle player.Handle) (err error) {
+	p := player.New(uid)
+	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
+		p = i.(*player.Player)
+		if p.Status == player.StatusRelease {
+			return errors.ErrLoginWaiting
+		}
+	} else if err = p.Loading(true); err != nil {
+		this.dict.Delete(uid)
+		return err
+	}
+
+	p.Reset()
+	defer p.Release()
+	return handle(p)
+}
+
+// 3
+func (this *Players) load(uid uint64, init bool, handle player.Handle) (err error) {
+	p := player.New(uid)
+	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
+		p = i.(*player.Player)
+		if p.Status == player.StatusRelease {
+			return errors.ErrLoginWaiting
+		}
+	}
+	if err = p.Loading(init); err != nil {
+		this.dict.Delete(uid)
+		return err
+	}
+	p.Reset()
+	defer p.Release()
+	return handle(p)
 }
 func (this *Players) Get(uid uint64, handle player.Handle) (err error) {
 	args := playerAwaitArgs{}
 	args[playerAwaitArgsUid] = uid
 	args[playerAwaitArgsInit] = false
+	args[playerAwaitArgsCaller] = int8(1)
 	args[playerAwaitArgsHandle] = handle
-	args[playerAwaitArgsOnline] = false
+	_, err = w.Call(this.call, args)
+	return err
+}
+func (this *Players) Try(uid uint64, handle player.Handle) (err error) {
+	args := playerAwaitArgs{}
+	args[playerAwaitArgsUid] = uid
+	args[playerAwaitArgsInit] = true
+	args[playerAwaitArgsCaller] = int8(2)
+	args[playerAwaitArgsHandle] = handle
 	_, err = w.Call(this.call, args)
 	return err
 }
@@ -100,26 +125,11 @@ func (this *Players) Load(uid uint64, init bool, handle player.Handle) (err erro
 	args := playerAwaitArgs{}
 	args[playerAwaitArgsUid] = uid
 	args[playerAwaitArgsInit] = init
-	args[playerAwaitArgsOnline] = false
+	args[playerAwaitArgsCaller] = int8(3)
 	args[playerAwaitArgsHandle] = handle
 	_, err = w.Call(this.call, args)
 	return err
 }
-
-//func (this *Players) Login(uid uint64, conn net.Conn, handle player.HandleDefault) (err error) {
-//	args := playerAwaitArgs{}
-//	args[playerAwaitArgsUid] = uid
-//	args[playerAwaitArgsInit] = true
-//	args[playerAwaitArgsOnline] = false
-//	args[playerAwaitArgsHandle] = func(p *player.Player) error {
-//		if !p.Connected(conn) {
-//			return define.ErrLoginWaiting
-//		}
-//		return handle(p)
-//	}
-//	_, err = w.Call(this.call, args)
-//	return
-//}
 
 func (this *Players) Range(f func(uint64, *player.Player) bool) {
 	this.dict.Range(func(key, value interface{}) bool {

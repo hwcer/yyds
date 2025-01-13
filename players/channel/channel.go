@@ -52,10 +52,10 @@ func (this *Locker) release() {
 }
 
 func (this *Locker) loading(uid uint64) (err error) {
-	if this.dict == nil {
-		this.dict = map[uint64]*player.Player{}
-	}
-	this.dict[uid], err = instance.get(uid, false)
+	//if this.dict == nil {
+	//	this.dict = map[uint64]*player.Player{}
+	//}
+	//this.dict[uid], err = instance.load(uid, false)
 	return
 }
 

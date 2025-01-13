@@ -20,24 +20,6 @@ type Players struct {
 	dict sync.Map
 }
 
-func (this *Players) Try(uid uint64, handle player.Handle) error {
-	var p *player.Player
-	if v, ok := this.dict.Load(uid); ok {
-		p = v.(*player.Player)
-		if ok = p.TryLock(); ok {
-			defer p.Unlock()
-			p.Reset()
-			defer p.Release()
-		} else {
-			p = nil
-		}
-	}
-	if p != nil && p.Status == player.StatusRelease {
-		return errors.ErrLoginWaiting
-	}
-	return handle(p)
-}
-
 func (this *Players) Get(uid uint64, handle player.Handle) error {
 	var p *player.Player
 	if v, ok := this.dict.Load(uid); ok {
@@ -53,18 +35,41 @@ func (this *Players) Get(uid uint64, handle player.Handle) error {
 	return handle(p)
 }
 
+func (this *Players) Try(uid uint64, handle player.Handle) error {
+	p := player.New(uid)
+	p.Lock()
+	defer p.Unlock()
+	if v, ok := this.dict.LoadOrStore(uid, p); ok {
+		p = v.(*player.Player)
+		if locked := p.TryLock(); locked {
+			defer p.Unlock()
+		} else {
+			return errors.ErrLoginWaiting
+		}
+		if p.Status == player.StatusRelease {
+			return errors.ErrLoginWaiting
+		}
+	} else if err := p.Loading(true); err != nil {
+		this.dict.Delete(uid)
+		return err
+	}
+	p.Reset()
+	defer p.Release()
+	return handle(p)
+}
+
 func (this *Players) Load(uid uint64, init bool, handle player.Handle) (err error) {
 	r := player.New(uid)
 	r.Lock()
 	defer r.Unlock()
 	if i, loaded := this.dict.LoadOrStore(uid, r); loaded {
-		np := i.(*player.Player)
-		np.Lock()
-		defer np.Unlock()
-		r = np
+		r = i.(*player.Player)
+		r.Lock()
+		defer r.Unlock()
 	}
 	//未初始化
-	if err = r.Loading(init); err != nil {
+	err = r.Loading(init)
+	if err != nil {
 		this.dict.Delete(uid)
 		return
 	}

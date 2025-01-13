@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	ServiceMethodOAuthName  = "_ServiceMethodOAuth"
+	ServiceMethodOAuthValue = "1"
+)
+
 func caller(c *Context, node *registry.Node) any {
 	var v interface{}
 	if node.IsFunc() {
@@ -38,7 +43,7 @@ func caller(c *Context, node *registry.Node) any {
 
 	r := Parse(v)
 	r.Time = c.Now().UnixMilli()
-	if r.Code == 0 && c.Player != nil {
+	if l := c.GetValue(ServiceMethodOAuthName); l == ServiceMethodOAuthValue && r.Code == 0 && c.Player != nil {
 		if r.Cache, err = c.Player.Submit(); err != nil {
 			r = Error(err)
 		} else {
@@ -78,9 +83,6 @@ func verify(c *Context, handle func() error) (err error) {
 	}
 
 	err = players.Try(uid, func(p *player.Player) error {
-		if p == nil {
-			return errors.ErrLogin
-		}
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
 
@@ -96,7 +98,8 @@ func verify(c *Context, handle func() error) (err error) {
 		} else if session := meta[options.ServicePlayerSession]; session != p.Session {
 			//return errors.ErrReplaced
 		}
-
+		//不进入用户协议 不执行submit
+		c.SetValue(ServiceMethodOAuthName, ServiceMethodOAuthValue)
 		return handle()
 	})
 	return
