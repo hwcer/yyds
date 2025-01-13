@@ -17,7 +17,15 @@ type Args struct {
 	handle player.LockerHandle
 }
 
+// 已经在控制携程内
 func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
+	msg := &Args{uid: uid, handle: handle, done: done}
+	l := &Locker{}
+	return l.call(msg)
+}
+
+// NewLockerWithLocker 通常在脚本或者不在控制携程之内才使用这个方法先进入防并发携程
+func NewLockerWithLocker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, done: done}
 	l := &Locker{}
 	return w.Call(l.call, msg)
@@ -33,7 +41,6 @@ func (this *Locker) call(args any) (reply any, err error) {
 	bw := &Locker{done: msg.done}
 	for _, v := range msg.uid {
 		if err = bw.loading(v); err != nil {
-			bw.release()
 			return
 		}
 	}
@@ -52,10 +59,25 @@ func (this *Locker) release() {
 }
 
 func (this *Locker) loading(uid uint64) (err error) {
-	//if this.dict == nil {
-	//	this.dict = map[uint64]*player.Player{}
-	//}
-	//this.dict[uid], err = instance.load(uid, false)
+	if this.dict == nil {
+		this.dict = map[uint64]*player.Player{}
+	}
+	if _, ok := this.dict[uid]; ok {
+		return nil
+	}
+	var r *player.Player
+	if i, ok := instance.dict.Load(uid); ok {
+		r = i.(*player.Player)
+	} else {
+		r = player.New(uid)
+	}
+	//未初始化
+	if err = r.Loading(false); err != nil {
+		instance.dict.Delete(uid)
+		return err
+	}
+	r.Reset()
+	this.dict[uid] = r
 	return
 }
 
@@ -96,11 +118,12 @@ func (this *Locker) Verify() error {
 }
 
 // Submit 统一提交
-// todo cache ...
 func (this *Locker) Submit() error {
 	for _, p := range this.dict {
-		if _, err := p.Updater.Submit(); err != nil {
+		if cc, err := p.Updater.Submit(); err != nil {
 			return err
+		} else {
+			p.Dirty.Push(cc...)
 		}
 	}
 	return nil

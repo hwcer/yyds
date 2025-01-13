@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/players/emitter"
 	"reflect"
@@ -40,10 +39,6 @@ func (p *Player) Loading(init bool) (err error) {
 
 func (p *Player) Uid() uint64 {
 	return p.uid
-}
-
-func (p *Player) Unique(iid int32) *uuid.UUID {
-	return p.uuid.New(uint32(iid))
 }
 
 func (p *Player) Destroy() error {

@@ -9,6 +9,7 @@ type Message struct {
 	*values.Message
 	Time   int64                `json:"time,omitempty"`
 	Cache  []*operator.Operator `json:"cache,omitempty"`
+	Dirty  []*operator.Operator `json:"dirty,omitempty"`
 	Notify values.Byte          `json:"notify,omitempty"` //消息通知
 }
 

@@ -43,11 +43,25 @@ func (this *Locker) loading(uid uint64) error {
 	if this.dict == nil {
 		this.dict = map[uint64]*player.Player{}
 	}
-	err := instance.Load(uid, false, func(p *player.Player) error {
-		this.dict[uid] = p
+	if _, ok := this.dict[uid]; ok {
 		return nil
-	})
-	return err
+	}
+	r := player.New(uid)
+	r.Lock()
+	if i, loaded := instance.dict.LoadOrStore(uid, r); loaded {
+		r.Unlock()
+		r = i.(*player.Player)
+		r.Lock()
+	}
+	//未初始化
+	if err := r.Loading(false); err != nil {
+		r.Unlock()
+		instance.dict.Delete(uid)
+		return err
+	}
+	r.Reset()
+	this.dict[uid] = r
+	return nil
 }
 
 func (this *Locker) Select(keys ...any) {
@@ -87,11 +101,12 @@ func (this *Locker) Verify() error {
 }
 
 // Submit 统一提交
-// todo cache ...
 func (this *Locker) Submit() error {
 	for _, p := range this.dict {
-		if _, err := p.Updater.Submit(); err != nil {
+		if cc, err := p.Updater.Submit(); err != nil {
 			return err
+		} else {
+			p.Dirty.Push(cc...)
 		}
 	}
 	return nil
@@ -102,7 +117,6 @@ func (this *Locker) call(args any) (reply any, err error) {
 	bw := &Locker{done: msg.done}
 	for _, v := range msg.uid {
 		if err = bw.loading(v); err != nil {
-			bw.release()
 			return nil, err
 		}
 	}

@@ -1,7 +1,6 @@
 package player
 
 import (
-	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/verify"
@@ -21,17 +20,17 @@ func New(uid uint64) *Player {
 type Player struct {
 	*updater.Updater
 	uid       uint64
-	uuid      *uuid.UUID
-	Times     *Times
-	Lively    int64 //登录时间
-	Status    int32 //在线状态
-	Verify    *verify.Verify
-	Emitter   *emitter.Emitter
-	Message   *Message   //最后一次发包的 MESSAGE
-	Gateway   string     //网关地址
-	Session   string     //当前登录session id
 	mutex     sync.Mutex //底层自动使用锁，不要手动调用
 	heartbeat int64      //最后心跳时间
+	Times     *Times     //时间控制器
+	Dirty     Dirty      //短连接推送数据缓存
+	Lively    int64      //登录时间
+	Status    int32      //在线状态
+	Verify    *verify.Verify
+	Emitter   *emitter.Emitter
+	Message   *Message //最后一次发包的 MESSAGE
+	Gateway   string   //网关地址
+	Session   string   //当前登录session id
 }
 
 func (p *Player) initialize() {

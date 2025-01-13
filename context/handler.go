@@ -44,11 +44,12 @@ func caller(c *Context, node *registry.Node) any {
 	r := Parse(v)
 	r.Time = c.Now().UnixMilli()
 	if l := c.GetValue(ServiceMethodOAuthName); l == ServiceMethodOAuthValue && r.Code == 0 && c.Player != nil {
-		if r.Cache, err = c.Player.Submit(); err != nil {
-			r = Error(err)
+		if r.Cache, err = c.Player.Submit(); err == nil {
+			r.Dirty = c.Player.Dirty.Pull()
 		} else {
-			//r.Notify = c.Player.Notify.Get()
+			r = Error(err)
 		}
+
 	}
 
 	return r
