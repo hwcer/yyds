@@ -18,9 +18,13 @@ func (this *Context) Locker(uids []uint64, handle player.LockerHandle, next ...f
 		p = this.Player
 		this.Player = nil
 		p.Release()
-		p.Unlock()
+		if players.Options.AsyncModel == players.AsyncModelLocker {
+			p.Unlock()
+		}
 		done = append(done, func() {
-			p.Lock()
+			if players.Options.AsyncModel == players.AsyncModelLocker {
+				p.Lock()
+			}
 			p.Reset()
 			this.Player = p
 		})

@@ -80,14 +80,12 @@ type Selector struct {
 	*Context
 }
 
-// Set 设置微服务地址
-func (this *Context) Set(k, v string) {
+func (this *Selector) Set(k, v string) {
 	name := options.GetServiceSelectorAddress(k)
 	this.SetMetadata(name, v)
 }
 
-// Delete 删除微服务地址
-func (this *Context) Delete(k string) {
+func (this *Selector) Remove(k string) {
 	name := options.GetServiceSelectorAddress(k)
 	this.SetMetadata(name, "")
 }
