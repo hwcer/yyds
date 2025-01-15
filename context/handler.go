@@ -9,6 +9,7 @@ import (
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
+	"strconv"
 	"strings"
 )
 
@@ -96,8 +97,12 @@ func verify(c *Context, handle func() error) (err error) {
 			if e := players.Connect(p, meta); e != nil {
 				return e
 			}
-		} else if session := meta[options.ServicePlayerSession]; session != p.Session {
-			//return errors.ErrReplaced
+		} else if gate := meta[options.ServicePlayerGateway]; gate == "" {
+			return errors.Error("gateway code empty")
+		} else if v, e := strconv.ParseInt(gate, 10, 64); e != nil {
+			return errors.Errorf(0, "gateway code error:%v", gate)
+		} else if uint64(v) != p.Gateway {
+			return errors.ErrReplaced
 		}
 		//不进入用户协议 不执行submit
 		c.SetValue(ServiceMethodOAuthName, ServiceMethodOAuthValue)

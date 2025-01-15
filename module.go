@@ -44,7 +44,7 @@ func (this *Module) Init() (err error) {
 	}
 
 	var ip string
-	if ip, err = xshare.LocalIpv4(); err != nil {
+	if ip, err = utils.LocalIpv4(); err != nil {
 		return
 	}
 	if options.Options.Debug {

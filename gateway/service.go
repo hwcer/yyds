@@ -46,18 +46,41 @@ func send(c *xshare.Context) any {
 	mate := c.Metadata()
 	if _, ok := mate[options.ServicePlayerLogout]; ok {
 		players.Delete(p)
+		return nil
 	}
-	CookiesUpdate(mate, p)
+	var query map[string]any
+	if Options.Query != nil {
+		query = Options.Query(p, mate)
+	} else {
+		query = make(map[string]any)
+	}
 	path := c.GetMetadata(options.ServiceMessagePath)
-	if len(path) == 0 {
-		return nil //仅仅设置信息，不需要发送
-	}
-	query := Options.Query(p, mate)
 	sock := players.Players.Socket(p)
 	if sock == nil {
 		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
 		return nil
+		//if s := c.GetMetadata(options.ServicePlayerSession); s == "" {
+		//	logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
+		//	return nil
+		//} else {
+		//	sid, err := strconv.ParseUint(s, 32, 64)
+		//	if err != nil {
+		//		logger.Debug("解析SOCKET ID错误，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
+		//		return nil
+		//	}
+		//	if sock = cosnet.Get(sid); sock == nil {
+		//		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
+		//		return nil
+		//	} else {
+		//		_, err = players.Binding(sock, guid, nil)
+		//	}
+		//}
 	}
+	CookiesUpdate(mate, p)
+	if len(path) == 0 {
+		return nil //仅仅设置信息，不需要发送
+	}
+
 	if err := sock.Send(path, query, c.Bytes()); err != nil {
 		return err
 	}

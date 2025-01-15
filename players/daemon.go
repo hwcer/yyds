@@ -9,19 +9,22 @@ import (
 	"golang.org/x/net/context"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"sync/atomic"
 	"time"
 )
 
 // Connect 连线，不包括断线重连等
-func Connect(p *player.Player, meta map[string]string) error {
+func Connect(p *player.Player, meta map[string]string) (err error) {
 	status := p.Status
-	session := meta[options.ServicePlayerSession]
-	if session == "" {
-		return errors.New("player session is empty")
+	var gateway uint64
+	if s := meta[options.ServicePlayerGateway]; s == "" {
+		return errors.New("gateway is empty")
+	} else if gateway, err = strconv.ParseUint(s, 10, 64); err != nil {
+		return err
 	}
 	if status == player.StatusConnected {
-		if p.Session == session {
+		if p.Gateway == gateway {
 			return nil
 			//return values.Errorf(0, "Please do not log in again")
 		} else {
@@ -34,10 +37,7 @@ func Connect(p *player.Player, meta map[string]string) error {
 	} else {
 		return errors.ErrLoginWaiting
 	}
-	p.Session = session
-	if gateway := meta[options.ServicePlayerGateway]; gateway != "" {
-		p.Gateway = gateway
-	}
+	p.Gateway = gateway
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -58,7 +59,6 @@ type Request interface {
 	Login(guid string, cookie values.Values) error
 	Buffer() (buf *bytes.Buffer, err error)
 	Delete() error
-	Session() string //请求身份标识,http(cookie id),socket(socket id)
 }
 
 func proxy(h Request) ([]byte, error) {
@@ -80,17 +80,17 @@ func proxy(h Request) ([]byte, error) {
 		} else if p == nil {
 			return nil, values.Error("not login")
 		}
+		if Options.Proxy != nil {
+			Options.Proxy(p, req)
+		}
 		p.KeepAlive()
 		if limit == options.OAuthTypeOAuth {
 			req[options.ServiceMetadataGUID] = p.UUID()
-			req[options.ServicePlayerSession] = h.Session()
 		} else {
 			req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
 		}
 	}
-
-	req[options.ServicePlayerGateway] = options.Gate.Address
-
+	req[options.ServicePlayerGateway] = strconv.FormatUint(xshare.Address().Encode(), 10)
 	//if ct := c.Binder.String(); ct != binder.Json.String() {
 	//	req[binder.ContentType] = ct
 	//}

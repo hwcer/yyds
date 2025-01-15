@@ -24,13 +24,13 @@ type Player struct {
 	heartbeat int64      //最后心跳时间
 	Times     *Times     //时间控制器
 	Dirty     Dirty      //短连接推送数据缓存
+	Secret    string     //断线重连秘钥
 	Lively    int64      //登录时间
 	Status    int32      //在线状态
 	Verify    *verify.Verify
 	Emitter   *emitter.Emitter
 	Message   *Message //最后一次发包的 MESSAGE
-	Gateway   string   //网关地址
-	Session   string   //当前登录session id
+	Gateway   uint64   //网关地址
 }
 
 func (p *Player) initialize() {

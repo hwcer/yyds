@@ -10,9 +10,9 @@ const (
 	ServiceMessageRoom   = "_msg_room"
 	ServiceMessageIgnore = "_msg_ignore"
 
-	ServicePlayerOAuth   = "_player_oauth"
-	ServicePlayerLogout  = "_player_logout"
-	ServicePlayerSession = "_player_session" //用户登录进程ID,http(session id),tcp(socket id)
+	ServicePlayerOAuth  = "_player_oauth"
+	ServicePlayerLogout = "_player_logout"
+	//ServicePlayerSession = "_player_session" //用户登录进程ID,http(session id),tcp(socket id)
 	ServicePlayerGateway = "_player_gateway"
 
 	ServicePlayerRoomJoin  = "player.join"      //已经加入的房间

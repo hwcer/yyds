@@ -21,6 +21,7 @@ func init() {
 	s := map[string]int8{
 		"/login":       OAuthTypeNone,
 		"/roles":       OAuthTypeOAuth,
+		"/reconnect":   OAuthTypeNone,
 		"/role/create": OAuthTypeOAuth,
 		"/role/select": OAuthTypeOAuth,
 	}

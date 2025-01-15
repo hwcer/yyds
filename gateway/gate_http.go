@@ -150,6 +150,6 @@ func (this *httpProxy) Delete() error {
 	return this.Context.Session.Delete()
 }
 
-func (this *httpProxy) Session() string {
-	return this.Context.Session.Token()
-}
+//func (this *httpProxy) Session() string {
+//	return this.Context.Session.Token()
+//}
