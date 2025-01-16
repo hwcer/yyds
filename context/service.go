@@ -117,7 +117,9 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	err = players.Try(uid, func(p *player.Player) error {
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
-		if c.Player.Login < times.Daily(0).Unix() && c.ServiceMethod() != ServiceMethodRoleRenewal {
+		if c.Player.Login == 0 {
+			c.Player.Login = p.Unix()
+		} else if c.Player.Login < times.Daily(0).Unix() && c.ServiceMethod() != ServiceMethodRoleRenewal {
 			return errors.ErrNeedResetSession
 		}
 		//尝试重新上线
@@ -145,10 +147,12 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 				c.Player.Message.Data = reply.([]byte)
 			}()
 		}
-
 		reply, err = c.handle(node)
 		return err
 	})
+	if err != nil {
+		return Serialize(c, Parse(err))
+	}
 	return
 }
 
