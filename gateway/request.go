@@ -9,24 +9,16 @@ import (
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
-	"net/url"
-	"strconv"
 	"strings"
 )
 
-func metadata(raw string) (req, res xshare.Metadata, err error) {
-	var query url.Values
-	query, err = url.ParseQuery(raw)
-	if err != nil {
-		return
-	}
-
-	req = make(xshare.Metadata)
-	res = make(xshare.Metadata)
-	for k, _ := range query {
-		req[k] = query.Get(k)
-	}
-	return
+type Request interface {
+	Path() (string, error)
+	Data() (*session.Data, error)
+	Query() values.Values
+	Login(guid string, cookie values.Values) error
+	Buffer() (buf *bytes.Buffer, err error)
+	Delete() error
 }
 
 // request rpc转发,返回实际转发的servicePath
@@ -50,15 +42,6 @@ func request(p *session.Data, path string, args []byte, req, res xshare.Metadata
 	}
 	err = xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
 	return
-}
-
-type Request interface {
-	Path() (string, error)
-	Data() (*session.Data, error)
-	Query() values.Values
-	Login(guid string, cookie values.Values) error
-	Buffer() (buf *bytes.Buffer, err error)
-	Delete() error
 }
 
 func proxy(h Request) ([]byte, error) {
@@ -90,10 +73,7 @@ func proxy(h Request) ([]byte, error) {
 			req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
 		}
 	}
-	req[options.ServicePlayerGateway] = strconv.FormatUint(xshare.Address().Encode(), 10)
-	//if ct := c.Binder.String(); ct != binder.Json.String() {
-	//	req[binder.ContentType] = ct
-	//}
+	req.Set(options.ServicePlayerGateway, xshare.Address().Encode())
 	buff, err := h.Buffer()
 	if err != nil {
 		return nil, values.Parse(err)

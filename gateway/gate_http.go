@@ -6,6 +6,7 @@ import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/yyds/gateway/players"
@@ -108,11 +109,10 @@ func (this *httpProxy) Query() values.Values {
 	for k, _ := range q {
 		r[k] = q.Get(k)
 	}
-	if _, ok := r[binder.ContentType]; !ok {
-		r[binder.ContentType] = this.Context.Request.Header.Get(binder.ContentType)
-		if r[binder.ContentType] == "" {
-			r[binder.ContentType] = "application/json"
-		}
+	if t := this.Context.Request.Header.Get(binder.ContentType); t != "" {
+		r.Set(xshare.MetadataHeaderContentTypeRequest, t)
+	} else {
+		r.Set(xshare.MetadataHeaderContentTypeRequest, "json")
 	}
 	return r
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/options"
-	"strings"
 	"time"
 )
 
@@ -27,23 +26,19 @@ func (this *defaultToken) GetAppid() string {
 	return this.Appid
 }
 
-func Verify(c *Context) (r Token, err error) {
+func Verify(guid, access string) (r Token, err error) {
 
 	d := &defaultToken{}
 	r = d
 
 	//开发者模式
 	if options.Game.Developer {
-		if guid := c.GetString("guid"); guid != "" {
+		if guid != "" {
 			d.Guid = guid
-			return
-		} else if username := strings.TrimSpace(c.GetString("username")); username != "" {
-			d.Guid = username
 			return
 		}
 	}
 	//正常游戏模式
-	access := c.GetString("access")
 	if access == "" {
 		return nil, errors.New("[release model]access empty")
 	}

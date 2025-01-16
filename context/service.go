@@ -2,16 +2,25 @@ package context
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
+	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 	"reflect"
 	"runtime/debug"
-	"strconv"
+	"strings"
+)
+
+const (
+	ServiceMethodOAuthName  = "_ServiceMethodOAuth"
+	ServiceMethodOAuthValue = "1"
 )
 
 /*
@@ -20,6 +29,11 @@ import (
 */
 
 var Service = xserver.Service(options.ServiceTypeGame, handlerMetadata, handlerCaller, handlerFilter)
+var Serialize func(c *Context, reply *Message) ([]byte, error) = serializeDefault
+
+type Caller interface {
+	Caller(node *registry.Node, c *Context) interface{}
+}
 
 func Register(i interface{}, prefix ...string) {
 	var arr []string
@@ -49,10 +63,6 @@ func RegisterPrivate(i interface{}, prefix ...string) {
 	}
 }
 
-type Caller interface {
-	Caller(node *registry.Node, c *Context) interface{}
-}
-
 var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
 	if node.IsFunc() {
 		_, ok := node.Method().(func(*Context) interface{})
@@ -76,13 +86,53 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	c := &Context{Context: sc}
 	defer func() {
 		if v := recover(); v != nil {
-			reply, err = serialize(sc, Errorf(500, "server error"))
+			reply, err = Serialize(c, Errorf(500, "server error"))
 			logger.Trace("server error:%v\n%v", v, string(debug.Stack()))
 		}
 	}()
-	ex := verify(c, func() error {
-		//判定重发
-		if rid := getMetadataRequestId(c.Context); rid > 0 && c.Player != nil {
+	path := c.ServiceMethod()
+	if strings.HasPrefix(path, ServiceMethodDebug) && !cosgo.Debug() {
+		return nil, values.Errorf(0, "unauthorized")
+	}
+
+	if !options.HasServiceMethod(path) {
+		return c.handle(node) //内网通信不启用玩家数据
+	}
+
+	l := MethodGrade(path)
+	if l == options.OAuthTypeNone {
+		return c.handle(node)
+	}
+	if l == options.OAuthTypeOAuth {
+		if guid := c.GetMetadata(options.ServiceMetadataGUID); guid == "" {
+			return nil, values.Errorf(0, "guid empty")
+		} else {
+			return c.handle(node)
+		}
+	}
+	uid := c.Uid()
+	if uid == 0 {
+		return nil, values.Errorf(0, "not select role")
+	}
+	err = players.Try(uid, func(p *player.Player) error {
+		c.Player = p
+		c.Player.KeepAlive(c.Unix())
+		if c.Player.Login < times.Daily(0).Unix() && c.ServiceMethod() != ServiceMethodRoleRenewal {
+			return errors.ErrNeedResetSession
+		}
+		//尝试重新上线
+		meta := c.Metadata()
+		if c.Player.Status != player.StatusConnected {
+			if e := players.Connect(p, meta); e != nil {
+				return e
+			}
+		} else if gate := meta.GetInt64(options.ServicePlayerGateway); uint64(gate) != p.Gateway {
+			return errors.ErrReplaced
+		}
+		//不进入用户协议 不执行submit
+		c.SetValue(ServiceMethodOAuthName, ServiceMethodOAuthValue)
+		//重发
+		if rid := meta.GetInt32(options.ServiceMetadataRequestId); rid > 0 && c.Player != nil {
 			if c.Player.Message == nil {
 				c.Player.Message = &player.Message{}
 			}
@@ -95,13 +145,10 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 				c.Player.Message.Data = reply.([]byte)
 			}()
 		}
-		r := caller(c, node)
-		reply, err = serialize(sc, r)
-		return nil
+
+		reply, err = c.handle(node)
+		return err
 	})
-	if ex != nil {
-		return serialize(sc, values.Parse(ex))
-	}
 	return
 }
 
@@ -109,28 +156,50 @@ var handlerMetadata xshare.HandlerMetadata = func() string {
 	return fmt.Sprintf("%v=%v", options.Options.Appid, options.Game.Sid)
 }
 
-func serialize(c *xshare.Context, reply interface{}) ([]byte, error) {
-	b := xshare.Binder(c)
-	switch v := reply.(type) {
-	case []byte:
-		return v, nil
-	case *Message:
-		if v.Data == nil {
-			return []byte{}, nil //长连接返回 nil 不自动回复
-		} else {
-			return b.Marshal(reply)
-		}
-	default:
-		logger.Error("未知返回信息类型:%v%v", c.ServicePath(), c.ServiceMethod())
-		return b.Marshal(reply)
-	}
+func serializeDefault(c *Context, reply *Message) ([]byte, error) {
+	b := c.Binder(xshare.BinderModRes)
+	return b.Marshal(reply)
 }
 
-func getMetadataRequestId(sc *xshare.Context) int32 {
-	rid := sc.GetMetadata(options.ServiceMetadataRequestId)
-	if rid == "" {
-		return 0
+func (c *Context) handle(node *registry.Node) (any, error) {
+	r := c.caller(node)
+	return Serialize(c, r)
+}
+
+func (c *Context) caller(node *registry.Node) *Message {
+	var v interface{}
+	if node.IsFunc() {
+		m := node.Method().(func(*Context) interface{})
+		v = m(c)
+	} else if s, ok := node.Binder().(Caller); ok {
+		v = s.Caller(node, c)
+	} else {
+		vs := node.Call(c)
+		v = vs[0].Interface()
 	}
-	v, _ := strconv.Atoi(rid)
-	return int32(v)
+	var err error
+	//直接返回二进制不做任何处理
+	if r, ok := v.([]byte); ok {
+		if c.Player != nil {
+			_, err = c.Player.Submit()
+		}
+		if err != nil {
+			return Error(err)
+		} else {
+			return Parse(r)
+		}
+	}
+
+	r := Parse(v)
+	r.Time = c.Now().UnixMilli()
+	if l := c.GetValue(ServiceMethodOAuthName); l == ServiceMethodOAuthValue && r.Code == 0 && c.Player != nil {
+		if r.Cache, err = c.Player.Submit(); err == nil {
+			r.Dirty = c.Player.Dirty.Pull()
+		} else {
+			r = Error(err)
+		}
+
+	}
+
+	return r
 }

@@ -3,25 +3,23 @@ package players
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
 	"golang.org/x/net/context"
 	"runtime/debug"
 	"sort"
-	"strconv"
 	"sync/atomic"
 	"time"
 )
 
 // Connect 连线，不包括断线重连等
-func Connect(p *player.Player, meta map[string]string) (err error) {
+func Connect(p *player.Player, meta xshare.Metadata) (err error) {
 	status := p.Status
-	var gateway uint64
-	if s := meta[options.ServicePlayerGateway]; s == "" {
+	gateway := uint64(meta.GetInt64(options.ServicePlayerGateway))
+	if gateway == 0 {
 		return errors.New("gateway is empty")
-	} else if gateway, err = strconv.ParseUint(s, 10, 64); err != nil {
-		return err
 	}
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
@@ -41,7 +39,7 @@ func Connect(p *player.Player, meta map[string]string) (err error) {
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}
-	p.Lively = p.Unix()
+	p.Login = p.Unix()
 	p.KeepAlive(0)
 	return nil
 }

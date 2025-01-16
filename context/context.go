@@ -1,6 +1,9 @@
 package context
 
 import (
+	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
@@ -50,6 +53,59 @@ func (this *Context) Unix() int64 {
 		return this.Player.Unix()
 	}
 	return time.Now().Unix()
+}
+
+// Gateway 网关地址
+func (this *Context) Gateway() string {
+	var code uint64
+	if this.Player != nil {
+		code = this.Player.Gateway
+	} else {
+		meta := this.Metadata()
+		code = uint64(meta.GetInt64(options.ServicePlayerGateway))
+	}
+	if code == 0 {
+		return ""
+	}
+	return utils.Ipv4Decode(code)
+}
+
+func (this *Context) Call(req xshare.Metadata, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
+	if req == nil {
+		req = xshare.Metadata{}
+	}
+	if _, ok := req[xshare.MetadataHeaderContentTypeRequest]; !ok {
+		req.Set(xshare.MetadataHeaderContentTypeRequest, "json")
+	}
+	err = xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
+	if err != nil {
+		logger.Debug("send servicePath:%v , serviceMethod:%v , err:%v", servicePath, serviceMethod, err)
+	}
+	return
+}
+
+// Send 推送消息，必须长连接在线
+func (this *Context) Send(path string, v any, req xshare.Metadata) {
+	b, err := this.Binder(xshare.BinderModRes).Marshal(v)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	if req == nil {
+		req = xshare.NewMetadata()
+	}
+	if _, ok := req[options.ServiceMetadataGUID]; !ok {
+		req[options.ServiceMetadataGUID] = this.GUid()
+	}
+	//req.Set(xshare.MetadataHeaderContentTypeRequest, this.Binder(xshare.BinderModReq))
+
+	req.Set(options.ServiceMessagePath, path)
+	if gateway := this.Gateway(); gateway != "" {
+		req.Set(xshare.ServiceSelectorServerAddress, gateway)
+	} else {
+		logger.Alert("grpc gateway is nil")
+	}
+	_ = this.Call(req, nil, options.ServiceTypeGate, "send", b, nil)
 }
 
 // Channel 频道操作器

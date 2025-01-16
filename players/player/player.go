@@ -24,8 +24,8 @@ type Player struct {
 	heartbeat int64      //最后心跳时间
 	Times     *Times     //时间控制器
 	Dirty     Dirty      //短连接推送数据缓存
+	Login     int64      //登录时间
 	Secret    string     //断线重连秘钥
-	Lively    int64      //登录时间
 	Status    int32      //在线状态
 	Verify    *verify.Verify
 	Emitter   *emitter.Emitter
