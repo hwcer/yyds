@@ -7,6 +7,7 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosnet/tcp"
+	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"net"
@@ -77,10 +78,7 @@ type socketProxy struct {
 func (this *socketProxy) Data() (*session.Data, error) {
 	return this.Context.Socket.Data(), nil
 }
-func (this *socketProxy) Query() values.Values {
-	q := this.Message.Query()
-	return q
-}
+
 func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	buff := bytes.NewBuffer(this.Context.Message.Body())
 	return buff, nil
@@ -95,6 +93,7 @@ func (this *socketProxy) Delete() error {
 	return nil
 }
 
-//func (this *socketProxy) Session() string {
-//	return strconv.FormatUint(this.Context.Socket.Id(), 32)
-//}
+func (this *socketProxy) Metadata() xshare.Metadata {
+	q := this.Message.Query()
+	return q
+}

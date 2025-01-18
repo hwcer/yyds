@@ -6,7 +6,6 @@ import (
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/gateway/players"
-	"github.com/hwcer/yyds/gateway/rooms"
 	"github.com/hwcer/yyds/options"
 	"strings"
 )
@@ -16,7 +15,7 @@ var Service = xserver.Service(options.ServiceTypeGate)
 func init() {
 	Register(send)
 	Register(broadcast)
-	Register(rooms.Broadcast, "room/broadcast")
+	//Register(rooms.Broadcast, "room/broadcast")
 }
 
 // Register 注册协议，用于服务器推送消息
@@ -48,40 +47,20 @@ func send(c *xshare.Context) any {
 		players.Delete(p)
 		return nil
 	}
-	var query map[string]any
-	if Options.Query != nil {
-		query = Options.Query(p, mate)
-	} else {
-		query = make(map[string]any)
-	}
+
+	Emitter.emit(EventTypePushMessage, p, mate)
 	path := c.GetMetadata(options.ServiceMessagePath)
 	sock := players.Players.Socket(p)
 	if sock == nil {
 		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
 		return nil
-		//if s := c.GetMetadata(options.ServicePlayerSession); s == "" {
-		//	logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
-		//	return nil
-		//} else {
-		//	sid, err := strconv.ParseUint(s, 32, 64)
-		//	if err != nil {
-		//		logger.Debug("解析SOCKET ID错误，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
-		//		return nil
-		//	}
-		//	if sock = cosnet.Get(sid); sock == nil {
-		//		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
-		//		return nil
-		//	} else {
-		//		_, err = players.Binding(sock, guid, nil)
-		//	}
-		//}
 	}
 	CookiesUpdate(mate, p)
 	if len(path) == 0 {
 		return nil //仅仅设置信息，不需要发送
 	}
 
-	if err := sock.Send(path, query, c.Bytes()); err != nil {
+	if err := sock.Send(path, mate, c.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -106,8 +85,9 @@ func broadcast(c *xshare.Context) any {
 			return true
 		}
 		CookiesUpdate(mate, p)
+		Emitter.emit(EventTypePushMessage, p, mate)
 		if sock := players.Socket(p); sock != nil {
-			_ = sock.Send(path, nil, c.Bytes())
+			_ = sock.Send(path, mate, c.Bytes())
 		}
 		return true
 	})

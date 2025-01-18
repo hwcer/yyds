@@ -2,9 +2,6 @@ package rooms
 
 import (
 	"github.com/hwcer/cosgo/session"
-	"github.com/hwcer/cosrpc/xshare"
-	"github.com/hwcer/yyds/gateway/players"
-	"github.com/hwcer/yyds/options"
 	"strings"
 	"sync"
 )
@@ -88,32 +85,33 @@ func Range(name string, f func(*session.Data) bool) {
 	room.Range(f)
 }
 
-func Broadcast(c *xshare.Context) any {
-	path := c.GetMetadata(options.ServiceMessagePath)
-	name := c.GetMetadata(options.ServiceMessageRoom)
-	room := Get(name)
-	if room == nil {
-		return false
-	}
-
-	ignore := c.GetMetadata(options.ServiceMessageIgnore)
-	ignoreMap := make(map[string]struct{})
-	if ignore != "" {
-		arr := strings.Split(ignore, ",")
-		for _, v := range arr {
-			ignoreMap[v] = struct{}{}
-		}
-	}
-	body := c.Bytes()
-
-	for _, p := range room.ps {
-		uid := p.GetString(options.ServiceMetadataUID)
-		if _, ok := ignoreMap[uid]; ok {
-			socket := players.Socket(p)
-			if socket != nil {
-				_ = socket.Send(path, nil, body)
-			}
-		}
-	}
-	return true
-}
+//
+//func Broadcast(c *xshare.Context) any {
+//	path := c.GetMetadata(options.ServiceMessagePath)
+//	name := c.GetMetadata(options.ServiceMessageRoom)
+//	room := Get(name)
+//	if room == nil {
+//		return false
+//	}
+//
+//	ignore := c.GetMetadata(options.ServiceMessageIgnore)
+//	ignoreMap := make(map[string]struct{})
+//	if ignore != "" {
+//		arr := strings.Split(ignore, ",")
+//		for _, v := range arr {
+//			ignoreMap[v] = struct{}{}
+//		}
+//	}
+//	body := c.Bytes()
+//
+//	for _, p := range room.ps {
+//		uid := p.GetString(options.ServiceMetadataUID)
+//		if _, ok := ignoreMap[uid]; ok {
+//			socket := players.Socket(p)
+//			if socket != nil {
+//				_, _ = socket.Send(path, c.Metadata(), body)
+//			}
+//		}
+//	}
+//	return true
+//}

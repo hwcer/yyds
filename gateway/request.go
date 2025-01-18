@@ -15,10 +15,10 @@ import (
 type Request interface {
 	Path() (string, error)
 	Data() (*session.Data, error)
-	Query() values.Values
 	Login(guid string, cookie values.Values) error
 	Buffer() (buf *bytes.Buffer, err error)
 	Delete() error
+	Metadata() xshare.Metadata
 }
 
 // request rpc转发,返回实际转发的servicePath
@@ -49,12 +49,8 @@ func proxy(h Request) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req := make(xshare.Metadata)
+	req := h.Metadata()
 	res := make(xshare.Metadata)
-	q := h.Query()
-	for k, _ := range q {
-		req[k] = q.GetString(k)
-	}
 	var p *session.Data
 	limit := options.OAuth.Get(path)
 	if limit != options.OAuthTypeNone {
@@ -63,9 +59,7 @@ func proxy(h Request) ([]byte, error) {
 		} else if p == nil {
 			return nil, values.Error("not login")
 		}
-		if Options.Proxy != nil {
-			Options.Proxy(p, req)
-		}
+		Emitter.emit(EventTypePushMessage, p, req)
 		p.KeepAlive()
 		if limit == options.OAuthTypeOAuth {
 			req[options.ServiceMetadataGUID] = p.UUID()
@@ -82,6 +76,7 @@ func proxy(h Request) ([]byte, error) {
 	if err = request(p, path, buff.Bytes(), req, res, &reply); err != nil {
 		return nil, values.Parse(err)
 	}
+	
 	if len(res) == 0 {
 		return reply, nil
 	}

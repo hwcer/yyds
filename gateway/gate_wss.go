@@ -15,10 +15,10 @@ func init() {
 }
 
 func WSVerify(w http.ResponseWriter, r *http.Request) (meta map[string]string, err error) {
-	//logger.Trace("Sec-Websocket-Extensions:%v", r.Header.Get("Sec-Websocket-Extensions"))
-	//logger.Trace("Sec-Websocket-Key:%v", r.Header.Get("Sec-Websocket-Key"))
-	//logger.Trace("Sec-Websocket-Protocol:%v", r.Header.Get("Sec-Websocket-Protocol"))
-	//logger.Trace("Sec-Websocket-Branch:%v", r.Header.Get("Sec-Websocket-Branch"))
+	//logger.Trace("Sec-Websocket-Extensions:%v", r.Head.Get("Sec-Websocket-Extensions"))
+	//logger.Trace("Sec-Websocket-Key:%v", r.Head.Get("Sec-Websocket-Key"))
+	//logger.Trace("Sec-Websocket-Protocol:%v", r.Head.Get("Sec-Websocket-Protocol"))
+	//logger.Trace("Sec-Websocket-Branch:%v", r.Head.Get("Sec-Websocket-Branch"))
 	token := r.Header.Get("Sec-Websocket-Protocol")
 	if token == "" || len(token) < 2 {
 		//return nil, values.Error("token empty")

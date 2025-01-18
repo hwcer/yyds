@@ -182,7 +182,7 @@ func (c *CS) getDataFromUrl(url string) (b []byte, err error) {
 	//
 	////logger.Debug("url:%v", strings.Join(arr, "/"))
 	//address := strings.Join(arr, "/")
-	//b, err = request.Request(http.MethodGet, address, nil)
+	//b, err = request.OnSend(http.MethodGet, address, nil)
 	//if err != nil {
 	//	logger.Trace("加载远程配置错误：%v", address)
 	//}

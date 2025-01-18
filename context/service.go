@@ -84,12 +84,12 @@ var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
 
 var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Context) (reply any, err error) {
 	c := &Context{Context: sc}
-	defer func() {
-		if v := recover(); v != nil {
-			reply, err = Serialize(c, Errorf(500, "server error"))
-			logger.Trace("server error:%v\n%v", v, string(debug.Stack()))
-		}
-	}()
+	//defer func() {
+	//	if v := recover(); v != nil {
+	//		reply, err = Serialize(c, Errorf(500, "server error"))
+	//		logger.Trace("server error:%v\n%v", v, string(debug.Stack()))
+	//	}
+	//}()
 	path := c.ServiceMethod()
 	if strings.HasPrefix(path, ServiceMethodDebug) && !cosgo.Debug() {
 		return nil, values.Errorf(0, "unauthorized")
@@ -170,7 +170,14 @@ func (c *Context) handle(node *registry.Node) (any, error) {
 	return Serialize(c, r)
 }
 
-func (c *Context) caller(node *registry.Node) *Message {
+func (c *Context) caller(node *registry.Node) (r *Message) {
+	defer func() {
+		if v := recover(); v != nil {
+			r = Errorf(500, "server error")
+			logger.Trace("server error:%v\n%v", v, string(debug.Stack()))
+		}
+	}()
+
 	var v interface{}
 	if node.IsFunc() {
 		m := node.Method().(func(*Context) interface{})
@@ -194,7 +201,7 @@ func (c *Context) caller(node *registry.Node) *Message {
 		}
 	}
 
-	r := Parse(v)
+	r = Parse(v)
 	r.Time = c.Now().UnixMilli()
 	if l := c.GetValue(ServiceMethodOAuthName); l == ServiceMethodOAuthValue && r.Code == 0 && c.Player != nil {
 		if r.Cache, err = c.Player.Submit(); err == nil {

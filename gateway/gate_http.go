@@ -103,19 +103,6 @@ type httpProxy struct {
 func (this *httpProxy) Path() (string, error) {
 	return this.Context.Request.URL.Path, nil
 }
-func (this *httpProxy) Query() values.Values {
-	r := make(values.Values)
-	q := this.Context.Request.URL.Query()
-	for k, _ := range q {
-		r[k] = q.Get(k)
-	}
-	if t := this.Context.Request.Header.Get(binder.ContentType); t != "" {
-		r.Set(xshare.MetadataHeaderContentTypeRequest, t)
-	} else {
-		r.Set(xshare.MetadataHeaderContentTypeRequest, "json")
-	}
-	return r
-}
 
 func (this *httpProxy) Data() (*session.Data, error) {
 	token := this.Context.GetString(session.Options.Name, cosweb.RequestDataTypeCookie, cosweb.RequestDataTypeQuery, cosweb.RequestDataTypeHeader)
@@ -150,6 +137,16 @@ func (this *httpProxy) Delete() error {
 	return this.Context.Session.Delete()
 }
 
-//func (this *httpProxy) Session() string {
-//	return this.Context.Session.Token()
-//}
+func (this *httpProxy) Metadata() xshare.Metadata {
+	r := make(xshare.Metadata)
+	q := this.Context.Request.URL.Query()
+	for k, _ := range q {
+		r[k] = q.Get(k)
+	}
+	if t := this.Context.Request.Header.Get(binder.ContentType); t != "" {
+		r.Set(xshare.MetadataHeaderContentTypeRequest, t)
+	} else {
+		r.Set(xshare.MetadataHeaderContentTypeRequest, "json")
+	}
+	return r
+}
