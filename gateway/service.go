@@ -47,12 +47,11 @@ func send(c *xshare.Context) any {
 		players.Delete(p)
 		return nil
 	}
-
-	Emitter.emit(EventTypePushMessage, p, mate)
 	path := c.GetMetadata(options.ServiceMessagePath)
+	Emitter.emit(EventTypeMessage, p, path, mate)
 	sock := players.Players.Socket(p)
+	//logger.Debug("推送消息包  GUID:%v PATH:%v META:%v  BODY：%s", guid, path, mate, c.Bytes())
 	if sock == nil {
-		logger.Debug("用户长连接不在线，消息丢弃,GUID：%v  PATH:%v  BODY：%s", guid, path, c.Bytes())
 		return nil
 	}
 	CookiesUpdate(mate, p)
@@ -85,7 +84,7 @@ func broadcast(c *xshare.Context) any {
 			return true
 		}
 		CookiesUpdate(mate, p)
-		Emitter.emit(EventTypePushMessage, p, mate)
+		Emitter.emit(EventTypeMessage, p, path, mate)
 		if sock := players.Socket(p); sock != nil {
 			_ = sock.Send(path, mate, c.Bytes())
 		}

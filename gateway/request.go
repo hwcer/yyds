@@ -40,6 +40,7 @@ func request(p *session.Data, path string, args []byte, req, res xshare.Metadata
 			req.SetAddress(serviceAddress)
 		}
 	}
+	Emitter.emit(EventTypeRequest, p, path, req)
 	err = xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
 	return
 }
@@ -51,6 +52,10 @@ func proxy(h Request) ([]byte, error) {
 	}
 	req := h.Metadata()
 	res := make(xshare.Metadata)
+	//defer func() {
+	//	logger.Debug("发送确认包  PATH:%v, META:%+v", path, req)
+	//}()
+
 	var p *session.Data
 	limit := options.OAuth.Get(path)
 	if limit != options.OAuthTypeNone {
@@ -59,7 +64,6 @@ func proxy(h Request) ([]byte, error) {
 		} else if p == nil {
 			return nil, values.Error("not login")
 		}
-		Emitter.emit(EventTypePushMessage, p, req)
 		p.KeepAlive()
 		if limit == options.OAuthTypeOAuth {
 			req[options.ServiceMetadataGUID] = p.UUID()
@@ -76,7 +80,7 @@ func proxy(h Request) ([]byte, error) {
 	if err = request(p, path, buff.Bytes(), req, res, &reply); err != nil {
 		return nil, values.Parse(err)
 	}
-	
+	Emitter.emit(EventTypeConfirm, p, path, req)
 	if len(res) == 0 {
 		return reply, nil
 	}

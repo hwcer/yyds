@@ -9,25 +9,26 @@ var Emitter = emitter{events: make(map[EventType][]EventHandle)}
 
 type EventType int8
 
-type EventHandle func(player *session.Data, meta xshare.Metadata)
+type EventHandle func(player *session.Data, path string, meta xshare.Metadata)
 
 const (
-	EventTypeRequest     EventType = iota //请求时
-	EventTypePushMessage                  //推送消息时
+	EventTypeRequest EventType = iota //请求时
+	EventTypeConfirm                  //确认消息
+	EventTypeMessage                  //推送消息时
 )
 
 type emitter struct {
 	events map[EventType][]EventHandle
 }
 
-func (e *emitter) emit(evt EventType, player *session.Data, meta xshare.Metadata) {
+func (e *emitter) emit(evt EventType, player *session.Data, path string, meta xshare.Metadata) {
 	if handlers, ok := e.events[evt]; ok {
 		for _, h := range handlers {
-			h(player, meta)
+			h(player, path, meta)
 		}
 	}
 }
 
-func (e *emitter) Listen(evt EventType, h func(player *session.Data, meta xshare.Metadata)) {
+func (e *emitter) Listen(evt EventType, h func(player *session.Data, path string, meta xshare.Metadata)) {
 	e.events[evt] = append(e.events[evt], h)
 }

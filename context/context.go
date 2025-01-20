@@ -105,6 +105,9 @@ func (this *Context) Send(path string, v any, req xshare.Metadata) {
 	} else {
 		logger.Alert("grpc gateway is nil")
 	}
+	if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
+		req.Set(options.ServiceMetadataRequestId, rid)
+	}
 	_ = this.Call(req, nil, options.ServiceTypeGate, "send", b, nil)
 }
 
