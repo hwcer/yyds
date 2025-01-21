@@ -31,11 +31,9 @@ func (this *Module) Id() string {
 	return "yyds"
 }
 func (this *Module) Init() (err error) {
-
 	if err = options.Initialize(); err != nil {
 		return err
 	}
-
 	if options.Options.Appid == "" {
 		return errors.New("appid empty")
 	}
