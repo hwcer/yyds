@@ -1,12 +1,14 @@
 package context
 
 import (
+	"context"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
+	"github.com/smallnest/rpcx/client"
 	"strconv"
 	"strings"
 	"time"
@@ -70,18 +72,16 @@ func (this *Context) Gateway() string {
 	return utils.Ipv4Decode(code)
 }
 
-func (this *Context) Call(req xshare.Metadata, res xshare.Metadata, servicePath, serviceMethod string, args, reply any) (err error) {
-	if req == nil {
-		req = xshare.Metadata{}
-	}
-	if _, ok := req[xshare.MetadataHeaderContentTypeRequest]; !ok {
-		req.Set(xshare.MetadataHeaderContentTypeRequest, "json")
-	}
-	err = xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
+func (this *Context) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
+	err = xclient.XCall(ctx, servicePath, serviceMethod, args, reply)
 	if err != nil {
 		logger.Debug("send servicePath:%v , serviceMethod:%v , err:%v", servicePath, serviceMethod, err)
 	}
 	return
+}
+
+func (this *Context) Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Call, err error) {
+	return xclient.Async(ctx, servicePath, serviceMethod, args)
 }
 
 // Send 推送消息，必须长连接在线
@@ -108,7 +108,7 @@ func (this *Context) Send(path string, v any, req xshare.Metadata) {
 	if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
 		req.Set(options.ServiceMetadataRequestId, rid)
 	}
-	_ = this.Call(req, nil, options.ServiceTypeGate, "send", b, nil)
+	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", b, nil)
 }
 
 // Channel 频道操作器
