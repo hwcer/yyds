@@ -137,8 +137,8 @@ func (this *httpProxy) Delete() error {
 	return this.Context.Session.Delete()
 }
 
-func (this *httpProxy) Metadata() xshare.Metadata {
-	r := make(xshare.Metadata)
+func (this *httpProxy) Metadata() values.Metadata {
+	r := make(values.Metadata)
 	q := this.Context.Request.URL.Query()
 	for k, _ := range q {
 		r[k] = q.Get(k)

@@ -123,7 +123,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 			return errors.ErrNeedResetSession
 		}
 		//尝试重新上线
-		meta := c.Metadata()
+		meta := values.Metadata(c.Metadata())
 		if c.Player.Status != player.StatusConnected {
 			if e := players.Connect(p, meta); e != nil {
 				return e

@@ -1,8 +1,8 @@
 package gateway
 
 import (
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
-	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
@@ -24,8 +24,8 @@ func WSVerify(w http.ResponseWriter, r *http.Request) (meta map[string]string, e
 		//return nil, values.Error("token empty")
 		return nil, nil
 	}
-	req := xshare.NewMetadata()
-	res := xshare.NewMetadata()
+	req := values.Metadata{}
+	res := values.Metadata{}
 	reply := make([]byte, 0)
 
 	err = request(nil, options.Gate.Login, []byte{}, req, res, &reply)
