@@ -99,7 +99,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		return c.handle(node) //内网通信不启用玩家数据
 	}
 
-	l := MethodGrade(path)
+	l, rmp := MethodGrade(path)
 	if l == options.OAuthTypeNone {
 		return c.handle(node)
 	}
@@ -119,7 +119,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		c.Player.KeepAlive(c.Unix())
 		if c.Player.Login == 0 {
 			c.Player.Login = p.Unix()
-		} else if c.Player.Login < times.Daily(0).Unix() && c.ServiceMethod() != ServiceMethodRoleRenewal {
+		} else if c.Player.Login < times.Daily(0).Unix() && rmp != ServiceMethodRoleRenewal {
 			return errors.ErrNeedResetSession
 		}
 		//尝试重新上线
