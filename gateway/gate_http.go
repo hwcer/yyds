@@ -48,6 +48,13 @@ func (this *Server) init() (err error) {
 	access.Headers(strings.Join(headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Register("/*", this.proxy, Method...)
+
+	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
+		static := this.Server.Static(options.Gate.Static.Route, options.Gate.Static.Root)
+		if options.Gate.Static.Index != "" {
+			static.Index(options.Gate.Static.Index)
+		}
+	}
 	return nil
 }
 

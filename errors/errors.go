@@ -4,8 +4,6 @@ import (
 	"github.com/hwcer/cosgo/values"
 )
 
-var Success = values.Errorf(200, "success") //成功
-
 var (
 	ErrLogin            = values.Errorf(1, "not login")         //请重新登录
 	ErrLocked           = values.Errorf(2, "wait a minute")     //请求太快等一会
