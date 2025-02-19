@@ -36,10 +36,11 @@ func Initialize() error {
 			Game.timeUnix = t.Unix()
 		}
 	}
-
-	cosgo.On(cosgo.EventTypLoaded, rpcStart)
-	cosgo.On(cosgo.EventTypClosing, xclient.Close)
-	cosgo.On(cosgo.EventTypStopped, xserver.Close)
+	if len(xshare.Service) > 0 {
+		cosgo.On(cosgo.EventTypLoaded, rpcStart)
+		cosgo.On(cosgo.EventTypClosing, xclient.Close)
+		cosgo.On(cosgo.EventTypStopped, xserver.Close)
+	}
 	return nil
 }
 
