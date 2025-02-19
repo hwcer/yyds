@@ -1,16 +1,15 @@
 package gateway
 
 import (
-	"strings"
 	"time"
 )
 
 const elapsedMillisecond = 100 * time.Millisecond
 
 // Formatter 格式化路径
-var Formatter = func(s string) string {
-	return strings.ToLower(s)
-}
+//var Formatter = func(s string) string {
+//	return strings.ToLower(s)
+//}
 
 //var Writer = func(c *cosweb.Context, reply []byte, cookie *http.Cookie) error {
 //	return c.Bytes(cosweb.ContentTypeApplicationJSON, reply)

@@ -3,7 +3,7 @@ package players
 import (
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
@@ -15,18 +15,23 @@ import (
 )
 
 // Connect 连线，不包括断线重连等
-func Connect(p *player.Player, meta xshare.Metadata) (err error) {
+func Connect(p *player.Player, meta values.Metadata) (err error) {
 	status := p.Status
 	gateway := uint64(meta.GetInt64(options.ServicePlayerGateway))
 	if gateway == 0 {
 		return errors.New("gateway is empty")
 	}
+	defer func() {
+		if err == nil {
+			p.KeepAlive(0)
+			p.Login = p.Unix()
+		}
+	}()
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
-			return nil
-			//return values.Errorf(0, "Please do not log in again")
+			return player.Emit(player.EventReconnect, p, meta)
 		} else {
-			//顶号
+			return player.Emit(player.EventReplace, p, meta)
 		}
 	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusRecycling {
 		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
@@ -39,21 +44,22 @@ func Connect(p *player.Player, meta xshare.Metadata) (err error) {
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}
-	p.Login = p.Unix()
-	p.KeepAlive(0)
-	return nil
+	atomic.AddInt32(&playersOnline, 1)
+	return player.Emit(player.EventConnect, p, meta)
 }
 
 // Disconnect 下线,心跳超时,断开连接等
 func Disconnect(p *player.Player) bool {
 	status := p.Status
-	if !(status == player.StatusConnected) {
+	if status != player.StatusConnected {
 		return false
 	}
 	if !atomic.CompareAndSwapInt32(&p.Status, player.StatusConnected, player.StatusDisconnect) {
 		return false
 	}
 	p.KeepAlive(0)
+	atomic.AddInt32(&playersOnline, -1)
+	_ = player.Emit(player.EventDisconnect, p, nil)
 	return true
 }
 
@@ -66,18 +72,14 @@ func recycling(p *player.Player) bool {
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusRecycling) {
 		return false
 	}
-	if status == player.StatusDisconnect {
-		atomic.AddInt32(&playersOnline, -1)
-	}
 	p.KeepAlive(0)
-	//playersReleaseDict = append(playersReleaseDict, p)
 	return true
 }
 
 // release 释放用户实例
 func release(p *player.Player) (ok bool) {
 	status := p.Status
-	if !(status == player.StatusRecycling) {
+	if status != player.StatusRecycling {
 		return false
 	}
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusRelease) {

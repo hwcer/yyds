@@ -48,6 +48,13 @@ func (this *Server) init() (err error) {
 	access.Headers(strings.Join(headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Register("/*", this.proxy, Method...)
+
+	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
+		static := this.Server.Static(options.Gate.Static.Route, options.Gate.Static.Root)
+		if options.Gate.Static.Index != "" {
+			static.Index(options.Gate.Static.Index)
+		}
+	}
 	return nil
 }
 
@@ -137,8 +144,8 @@ func (this *httpProxy) Delete() error {
 	return this.Context.Session.Delete()
 }
 
-func (this *httpProxy) Metadata() xshare.Metadata {
-	r := make(xshare.Metadata)
+func (this *httpProxy) Metadata() values.Metadata {
+	r := make(values.Metadata)
 	q := this.Context.Request.URL.Query()
 	for k, _ := range q {
 		r[k] = q.Get(k)

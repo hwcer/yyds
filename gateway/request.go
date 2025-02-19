@@ -18,11 +18,11 @@ type Request interface {
 	Login(guid string, cookie values.Values) error
 	Buffer() (buf *bytes.Buffer, err error)
 	Delete() error
-	Metadata() xshare.Metadata
+	Metadata() values.Metadata
 }
 
 // request rpc转发,返回实际转发的servicePath
-func request(p *session.Data, path string, args []byte, req, res xshare.Metadata, reply any) (err error) {
+func request(p *session.Data, path string, args []byte, req, res values.Metadata, reply any) (err error) {
 	if strings.HasPrefix(path, "/") {
 		path = strings.TrimPrefix(path, "/")
 	}
@@ -37,7 +37,7 @@ func request(p *session.Data, path string, args []byte, req, res xshare.Metadata
 	}
 	if p != nil {
 		if serviceAddress := p.GetString(options.GetServiceSelectorAddress(servicePath)); serviceAddress != "" {
-			req.SetAddress(serviceAddress)
+			req.Set(xshare.ServiceSelectorServerAddress, serviceAddress)
 		}
 	}
 	Emitter.emit(EventTypeRequest, p, path, req)
@@ -51,7 +51,7 @@ func proxy(h Request) ([]byte, error) {
 		return nil, err
 	}
 	req := h.Metadata()
-	res := make(xshare.Metadata)
+	res := make(values.Metadata)
 	//defer func() {
 	//	logger.Debug("发送确认包  PATH:%v, META:%+v", path, req)
 	//}()

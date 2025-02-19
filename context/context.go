@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/options"
@@ -63,7 +64,7 @@ func (this *Context) Gateway() string {
 	if this.Player != nil {
 		code = this.Player.Gateway
 	} else {
-		meta := this.Metadata()
+		meta := values.Metadata(this.Metadata())
 		code = uint64(meta.GetInt64(options.ServicePlayerGateway))
 	}
 	if code == 0 {
@@ -85,14 +86,14 @@ func (this *Context) Async(ctx context.Context, servicePath, serviceMethod strin
 }
 
 // Send 推送消息，必须长连接在线
-func (this *Context) Send(path string, v any, req xshare.Metadata) {
+func (this *Context) Send(path string, v any, req values.Metadata) {
 	b, err := this.Binder(xshare.BinderModRes).Marshal(v)
 	if err != nil {
 		logger.Error(err)
 		return
 	}
 	if req == nil {
-		req = xshare.NewMetadata()
+		req = values.Metadata{}
 	}
 	if _, ok := req[options.ServiceMetadataGUID]; !ok {
 		req[options.ServiceMetadataGUID] = this.GUid()

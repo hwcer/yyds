@@ -1,6 +1,8 @@
 package player
 
-import "github.com/hwcer/cosgo/logger"
+import (
+	"github.com/hwcer/cosgo/logger"
+)
 
 const ProcessName = "_sys_process_player"
 
@@ -23,13 +25,13 @@ type EmitterConfig interface {
 }
 
 // GetRoleCreateTime 角色创建时间
-var GetRoleCreateTime func(player *Player) int64 = func(player *Player) int64 {
+var GetRoleCreateTime = func(player *Player) int64 {
 	logger.Alert("请设置 player.GetRoleCreateTime 才能正确使用角色创建时间")
 	return 0
 }
 
 // GetEmitterConfig 获取事件配置
-var GetEmitterConfig func(id int32) EmitterConfig = func(id int32) EmitterConfig {
+var GetEmitterConfig = func(id int32) EmitterConfig {
 	logger.Alert("请设置 player.GetEmitterConfig 才能使用全局事件")
 	return nil
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosnet/tcp"
-	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"net"
@@ -93,7 +92,7 @@ func (this *socketProxy) Delete() error {
 	return nil
 }
 
-func (this *socketProxy) Metadata() xshare.Metadata {
+func (this *socketProxy) Metadata() values.Metadata {
 	q := this.Message.Query()
 	return q
 }

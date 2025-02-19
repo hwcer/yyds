@@ -50,7 +50,7 @@ func send(c *xshare.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	Emitter.emit(EventTypeMessage, p, path, mate)
 	sock := players.Players.Socket(p)
-	logger.Debug("推送消息  GUID:%v PATH:%v META:%v  BODY：%s", guid, path, mate, c.Bytes())
+	logger.Debug("推送消息  GUID:%v PATH:%v BODY：%s", guid, path, c.Bytes())
 	if sock == nil {
 		return nil
 	}
