@@ -2,6 +2,7 @@ package channel
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/await"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/player"
 	"sync"
@@ -13,7 +14,7 @@ var (
 )
 
 func Start() *Players {
-	w.Start(1024, time.Second*5)
+	w = await.New(1024, time.Second*5)
 	return &instance
 }
 

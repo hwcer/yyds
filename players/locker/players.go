@@ -1,6 +1,7 @@
 package locker
 
 import (
+	"github.com/hwcer/cosgo/await"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/player"
 	"sync"
@@ -12,7 +13,7 @@ var (
 )
 
 func Start() *Players {
-	w.Start(10, time.Second*5)
+	w = await.New(10, time.Second*5)
 	return &instance
 }
 

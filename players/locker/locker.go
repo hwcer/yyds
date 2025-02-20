@@ -5,11 +5,7 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-//func NewMulti(readOnly bool) *Locker {
-//	return &Locker{dict: map[uint64]*players.Player{}, readOnly: readOnly}
-//}
-
-var w = await.New()
+var w *await.Await
 
 type Args struct {
 	uid    []uint64

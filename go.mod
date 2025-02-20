@@ -2,11 +2,10 @@ module github.com/hwcer/yyds
 
 go 1.23.0
 
-toolchain go1.23.2
+toolchain go1.23.4
 
 replace (
 	github.com/hwcer/cosgo v1.1.0 => ./cosgo
-	github.com/hwcer/cosmo v1.0.5 => ./cosmo
 	github.com/hwcer/cosnet v0.2.1 => ./cosnet
 	github.com/hwcer/cosrpc v0.0.6 => ./cosrpc
 	github.com/hwcer/cosweb v0.1.0 => ./cosweb
