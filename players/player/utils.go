@@ -170,6 +170,28 @@ func (p *Player) SubItems(items interface{}, multi ...int32) {
 	}
 }
 
+func (p *Player) AddArr(arr []int32) {
+	for i := 0; i < len(arr); i += 2 {
+		j := i + 1
+		if j < len(arr) {
+			if arr[i] > 0 && arr[j] > 0 {
+				p.Add(arr[i], arr[j])
+			}
+		}
+	}
+}
+
+func (p *Player) SubArr(arr []int32) {
+	for i := 0; i < len(arr); i += 2 {
+		j := i + 1
+		if j < len(arr) {
+			if arr[i] > 0 && arr[j] > 0 {
+				p.Sub(arr[i], arr[j])
+			}
+		}
+	}
+}
+
 // MustUpdate 客户端数据是否需要更新
 // -1 : 不需要强制更新
 // 0 : 强制更新

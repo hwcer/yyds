@@ -102,7 +102,7 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 
 	req.Set(options.ServiceMessagePath, path)
 	if gateway := this.Gateway(); gateway != "" {
-		req.Set(xshare.ServiceSelectorServerAddress, gateway)
+		req.Set(options.SelectorAddress, gateway)
 	} else {
 		logger.Alert("grpc gateway is nil")
 	}

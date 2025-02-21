@@ -37,7 +37,7 @@ func request(p *session.Data, path string, args []byte, req, res values.Metadata
 	}
 	if p != nil {
 		if serviceAddress := p.GetString(options.GetServiceSelectorAddress(servicePath)); serviceAddress != "" {
-			req.Set(xshare.ServiceSelectorServerAddress, serviceAddress)
+			req.Set(options.SelectorAddress, serviceAddress)
 		}
 	}
 	Emitter.emit(EventTypeRequest, p, path, req)

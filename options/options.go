@@ -28,6 +28,7 @@ func Initialize() error {
 	if err := cosgo.Config.Unmarshal(Options); err != nil {
 		return err
 	}
+	xshare.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 	xshare.Options.BasePath = Options.Appid
 	if Game.Time != "" {
 		if t, err := times.Parse(Game.Time); err != nil {
