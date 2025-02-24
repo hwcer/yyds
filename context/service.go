@@ -155,7 +155,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 }
 
 var handlerMetadata xshare.HandlerMetadata = func() string {
-	return fmt.Sprintf("%v=%v", options.Options.Appid, options.Game.Sid)
+	return fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid)
 }
 
 func serializeDefault(c *Context, reply *Message) ([]byte, error) {

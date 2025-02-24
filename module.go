@@ -51,7 +51,7 @@ func (this *Module) Init() (err error) {
 		}
 		if options.Game.Address == "" {
 			addr := xshare.Address()
-			if addr.Host == "0.0.0.0" {
+			if addr.Host == "0.0.0.0" || addr.Host == "127.0.0.1" || addr.Host == "localhost" {
 				options.Game.Address = fmt.Sprintf("%v:%v", ip, addr.Port)
 			} else {
 				options.Game.Address = addr.String()
