@@ -12,14 +12,12 @@ import (
 type MasterApiType string
 
 const (
-	//MasterApiTypeServiceStart     MasterApiType = "/service/start"
-	MasterApiTypeGameServerUpdate = "/service/update"
-	MasterApiTypeServiceClose     = "/service/close"
-	//MasterApiTypeUCenterStart               = "/ucenter/start" //ucenter启动
-	MasterApiTypeOrderCreate  = "/order/create"
-	MasterApiTypeOrderRefresh = "/order/refresh" //重新拉起之前放弃的订单
-	MasterApiTypeOrderSubmit  = "/order/submit"
-	MasterApiTypeConfigInfo   = "/CS/info"
+	MasterApiTypeGameServerStart = "/server/start"
+	MasterApiTypeGameServerClose = "/server/close"
+	MasterApiTypeOrderCreate     = "/order/create"
+	MasterApiTypeOrderRefresh    = "/order/refresh" //重新拉起之前放弃的订单
+	MasterApiTypeOrderSubmit     = "/order/submit"
+	MasterApiTypeConfigInfo      = "/CS/info"
 
 	MasterApiTypeConfigCreate = "/CS/create"
 	MasterApiTypeAccessUpdate = "/access/update"

@@ -17,6 +17,11 @@ var mod *Module
 
 func init() {
 	mod = &Module{}
+	cosgo.On(cosgo.EventTypStarted, func() error {
+		logger.Trace("当前服务器编号：%v", options.Game.Sid)
+		logger.Trace("当前服务器地址：%v", options.Game.Local)
+		return nil
+	})
 }
 
 func New() *Module {
@@ -41,21 +46,24 @@ func (this *Module) Init() (err error) {
 		return errors.New("secret empty")
 	}
 
-	var ip string
-	if ip, err = utils.LocalIpv4(); err != nil {
-		return
+	addr := xshare.Address()
+	if options.Game.Local == "" {
+		options.Game.Local = addr.Local()
 	}
+	if utils.LocalValid(options.Game.Local) {
+		return errors.New("无法自动获取内网ip或者内网ip配置错误")
+	}
+
 	if options.Options.Debug {
 		if options.Game.Sid == 0 {
-			options.Game.Sid = autoServerId(ip)
+			options.Game.Sid = autoServerId(options.Game.Local)
 		}
 		if options.Game.Address == "" {
-			addr := xshare.Address()
-			if addr.Host == "0.0.0.0" || addr.Host == "127.0.0.1" || addr.Host == "localhost" {
-				options.Game.Address = fmt.Sprintf("%v:%v", ip, addr.Port)
-			} else {
-				options.Game.Address = addr.String()
+			gate := utils.NewAddress(options.Gate.Address)
+			if !gate.Valid() {
+				gate.Host = options.Game.Local
 			}
+			options.Game.Address = gate.String()
 		}
 	}
 
@@ -64,41 +72,23 @@ func (this *Module) Init() (err error) {
 	}
 	if options.Game.Address == "" {
 		return errors.New(" share.Options.Game.Address empty")
-	} else {
-		uri := utils.NewAddress(options.Game.Address)
-		if uri.Scheme == "" {
-			uri.Scheme = "http"
-		}
-		if uri.Empty() {
-			uri.Host = ip
-		}
-		options.Game.Address = uri.String(true)
 	}
 
 	args := map[string]any{
 		"sid":     options.Game.Sid,
 		"name":    options.Game.Name,
+		"local":   fmt.Sprintf("%s:%d", options.Game.Local, addr.Port),
 		"address": options.Game.Address,
 	}
 
-	if options.Game.Notify != "" {
-		uri := utils.NewAddress(options.Game.Notify)
-		if uri.Scheme == "" {
-			uri.Scheme = "http"
-		}
-		if uri.Empty() {
-			uri.Host = ip
-		}
-		args["notify"] = uri.String(true)
-	}
-
-	if err = options.Master.Post(options.MasterApiTypeGameServerUpdate, args, nil); err != nil {
+	if err = options.Master.Post(options.MasterApiTypeGameServerStart, args, nil); err != nil {
 		if errors.Is(err, errors.ErrMasterEmpty) {
 			logger.Alert("配置项[master]为空,部分功能无法使用")
 		} else {
-			return fmt.Errorf(err.Error()+"，当前回调地址:%v", options.Game.Notify)
+			return fmt.Errorf(err.Error()+"，当前回调地址:%v", args["local"])
 		}
 	}
+
 	return nil
 }
 
@@ -107,10 +97,19 @@ func (this *Module) Start() error {
 }
 
 func (this *Module) Close() (err error) {
+	args := map[string]any{
+		"sid": options.Game.Sid,
+	}
+	if err = options.Master.Post(options.MasterApiTypeGameServerClose, args, nil); err != nil && !errors.Is(err, errors.ErrMasterEmpty) {
+		logger.Alert("配置项[master]为空,部分功能无法使用:%v", err)
+	}
 	return nil
 }
 
 func autoServerId(ip string) (sid int32) {
+	if i := strings.Index(ip, ":"); i >= -1 {
+		ip = ip[:i-1]
+	}
 	ips := strings.Split(ip, ".")
 	var pos uint = 8
 	for i := 2; i <= 3; i++ {

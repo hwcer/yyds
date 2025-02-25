@@ -70,7 +70,7 @@ func (this *Context) Gateway() string {
 	if code == 0 {
 		return ""
 	}
-	return utils.Ipv4Decode(code)
+	return utils.IPv4Decode(code)
 }
 
 func (this *Context) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
