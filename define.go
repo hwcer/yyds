@@ -20,7 +20,7 @@ func init() {
 	cosgo.Config.SetDefault("pprof", "") //开启性能分析工具
 	cosgo.On(cosgo.EventTypStarted, func() error {
 		var s []string
-		cosgo.Range(func(m cosgo.IModule) bool {
+		cosgo.Range(func(m cosgo.Module) bool {
 			s = append(s, m.Id())
 			return true
 		})

@@ -29,7 +29,6 @@ func New() *Module {
 }
 
 type Module struct {
-	cosgo.Module
 }
 
 func (this *Module) Id() string {

@@ -10,11 +10,13 @@ replace (
 	github.com/hwcer/cosrpc v0.0.6 => ./cosrpc
 	github.com/hwcer/cosweb v0.1.0 => ./cosweb
 	github.com/hwcer/coswss v0.0.1 => ./coswss
+	github.com/hwcer/cosmo v1.0.5 => ./cosmo
 	github.com/hwcer/updater v1.0.5 => ./updater
 )
 
 require (
 	github.com/hwcer/cosgo v1.1.0
+	github.com/hwcer/cosmo v1.0.5
 	github.com/hwcer/cosnet v0.2.1
 	github.com/hwcer/cosrpc v0.0.6
 	github.com/hwcer/cosweb v0.1.0
@@ -56,6 +58,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/hwcer/logger v0.0.5 // indirect
+	github.com/hwcer/schema v0.0.4 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect

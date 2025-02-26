@@ -23,7 +23,6 @@ type Module struct {
 	mux    cmux.CMux
 	Socket *Socket
 	Server *Server
-	//WebSocket *coswss.Server
 }
 
 func (this *Module) Id() string {
@@ -117,9 +116,7 @@ func (this *Module) Start() (err error) {
 
 	return err
 }
-func (this *Module) Reload() error {
-	return nil
-}
+
 func (this *Module) Close() (err error) {
 	if this.mux != nil {
 		this.mux.Close()
