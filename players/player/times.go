@@ -39,7 +39,9 @@ func (this *Times) Start(t int32, v int64) (r int64, err error) {
 	case ExpireTimeTimeStamp:
 		return v, nil
 	case ExpireTimePlayerCreate:
-		dt := times.Timestamp(GetRoleCreateTime(this.p)).Daily(int(v - 1))
+		role := this.p.Document(options.ITypeRole)
+		create := role.Get(Fields.Create)
+		dt := times.Timestamp(values.ParseInt64(create)).Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerCreate:
 		dt := times.Timestamp(options.GetServerTime())
@@ -72,7 +74,9 @@ func (this *Times) Expire(t int32, v int64) (r int64, err error) {
 		return v, nil
 	case ExpireTimePlayerCreate:
 		if v > 0 {
-			dt := times.Timestamp(GetRoleCreateTime(this.p)).Daily(int(v)).Add(-1)
+			role := this.p.Document(options.ITypeRole)
+			create := role.Get(Fields.Create)
+			dt := times.Timestamp(values.ParseInt64(create)).Daily(int(v)).Add(-1)
 			r = dt.Unix()
 		}
 		return

@@ -2,13 +2,44 @@ package player
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/emitter"
 	"reflect"
 	"sync/atomic"
 )
+
+func (p *Player) Send(path string, v any, req values.Metadata) {
+	if p.Status != StatusConnected {
+		logger.Debug("player disconnected:%v", p.Uid())
+		return
+	}
+	if p.Gateway == 0 {
+		logger.Debug("player gateway empty:%v", p.Uid())
+		return
+	}
+	if req == nil {
+		req = values.Metadata{}
+	}
+
+	role := p.Document(options.ITypeRole)
+	guid := role.Get(Fields.Guid)
+	if guid == nil {
+		logger.Debug("player gateway empty:%v", p.Uid())
+		return
+	}
+	req.Set(options.ServiceMetadataGUID, guid)
+	req.Set(options.ServiceMessagePath, path)
+	req.Set(options.ServiceMetadataRequestId, utils.IPv4Decode(p.Gateway))
+
+	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
+}
 
 // Loading 加载数据
 // init 是否立即加载玩家数据，true:是
@@ -50,19 +81,18 @@ func (p *Player) Destroy() error {
 }
 
 func (p *Player) Emit(t int32, v int32, args ...int32) {
-	c := GetEmitterConfig(t)
+	c := GetEmitter(t)
 	if c == nil {
 		return
 	}
-	replace := c.GetReplace()
-	if i := c.GetDaily(); i > 0 {
-		p.EventUpdate(i, v, replace)
+	if c.Daily > 0 {
+		p.EventUpdate(c.Daily, v, c.Replace)
 	}
-	if i := c.GetRecord(); i > 0 {
-		p.EventUpdate(i, v, replace)
+	if c.Record > 0 {
+		p.EventUpdate(c.Record, v, c.Replace)
 	}
-	if i := c.GetEvents(); i > 0 {
-		p.Emitter.Emit(i, v, args...)
+	if c.Event > 0 {
+		p.Emitter.Emit(c.Event, v, args...)
 	}
 }
 func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {

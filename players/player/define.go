@@ -1,8 +1,15 @@
 package player
 
-import (
-	"github.com/hwcer/cosgo/logger"
-)
+import "github.com/hwcer/cosgo/logger"
+
+// Fields 角色字段名，一般情况下不需要设置
+var Fields = &struct {
+	Guid   string `json:"guid"`
+	Create string `json:"create"`
+}{
+	Guid:   "Guid",
+	Create: "Create",
+}
 
 const ProcessName = "_sys_process_player"
 
@@ -16,22 +23,15 @@ type itemProbability interface {
 	GetVal() int32
 }
 
-type EmitterConfig interface {
-	GetDaily() int32
-	GetRecord() int32
-	GetEvents() int32
-	GetUpdate() int32
-	GetReplace() int32
+type Emitter struct {
+	Event   int32
+	Daily   int32
+	Record  int32
+	Replace int32 //是否替换模式
 }
 
-// GetRoleCreateTime 角色创建时间
-var GetRoleCreateTime = func(player *Player) int64 {
-	logger.Alert("请设置 player.GetRoleCreateTime 才能正确使用角色创建时间")
-	return 0
-}
-
-// GetEmitterConfig 获取事件配置
-var GetEmitterConfig = func(id int32) EmitterConfig {
+// GetEmitter 获取事件配置
+var GetEmitter = func(id int32) *Emitter {
 	logger.Alert("请设置 player.GetEmitterConfig 才能使用全局事件")
 	return nil
 }

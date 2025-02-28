@@ -87,29 +87,30 @@ func (this *Context) Async(ctx context.Context, servicePath, serviceMethod strin
 
 // Send 推送消息，必须长连接在线
 func (this *Context) Send(path string, v any, req values.Metadata) {
-	b, err := this.Binder(xshare.BinderModRes).Marshal(v)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-	if req == nil {
-		req = values.Metadata{}
-	}
-	if _, ok := req[options.ServiceMetadataGUID]; !ok {
-		req[options.ServiceMetadataGUID] = this.GUid()
-	}
-	//req.Set(xshare.MetadataHeaderContentTypeRequest, this.Binder(xshare.BinderModReq))
-
-	req.Set(options.ServiceMessagePath, path)
-	if gateway := this.Gateway(); gateway != "" {
-		req.Set(options.SelectorAddress, gateway)
-	} else {
-		logger.Alert("grpc gateway is nil")
-	}
-	if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
-		req.Set(options.ServiceMetadataRequestId, rid)
-	}
-	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", b, nil)
+	this.Player.Send(path, v, req)
+	//b, err := this.Binder(xshare.BinderModRes).Marshal(v)
+	//if err != nil {
+	//	logger.Error(err)
+	//	return
+	//}
+	//if req == nil {
+	//	req = values.Metadata{}
+	//}
+	//if _, ok := req[options.ServiceMetadataGUID]; !ok {
+	//	req[options.ServiceMetadataGUID] = this.GUid()
+	//}
+	////req.Set(xshare.MetadataHeaderContentTypeRequest, this.Binder(xshare.BinderModReq))
+	//
+	//req.Set(options.ServiceMessagePath, path)
+	//if gateway := this.Gateway(); gateway != "" {
+	//	req.Set(options.SelectorAddress, gateway)
+	//} else {
+	//	logger.Alert("grpc gateway is nil")
+	//}
+	//if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
+	//	req.Set(options.ServiceMetadataRequestId, rid)
+	//}
+	//_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", b, nil)
 }
 
 // Channel 频道操作器
