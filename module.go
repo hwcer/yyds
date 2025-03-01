@@ -106,7 +106,7 @@ func (this *Module) Close() (err error) {
 }
 
 func autoServerId(ip string) (sid int32) {
-	if i := strings.Index(ip, ":"); i >= -1 {
+	if i := strings.Index(ip, ":"); i >= 0 {
 		ip = ip[:i-1]
 	}
 	ips := strings.Split(ip, ".")
