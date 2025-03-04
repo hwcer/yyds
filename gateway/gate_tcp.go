@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"bytes"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -94,5 +95,8 @@ func (this *socketProxy) Delete() error {
 
 func (this *socketProxy) Metadata() values.Metadata {
 	q := this.Message.Query()
+	if _, ok := q[binder.HeaderContentType]; !ok {
+		q[binder.HeaderContentType] = options.Options.Binder
+	}
 	return q
 }

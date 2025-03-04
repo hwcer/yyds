@@ -7,6 +7,7 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"strings"
@@ -52,23 +53,27 @@ func proxy(h Request) ([]byte, error) {
 	}
 	req := h.Metadata()
 	res := make(values.Metadata)
-	//defer func() {
-	//	logger.Debug("发送确认包  PATH:%v, META:%+v", path, req)
-	//}()
-
 	var p *session.Data
 	limit := options.OAuth.Get(path)
 	if limit != options.OAuthTypeNone {
 		if p, err = h.Data(); err != nil {
 			return nil, values.Parse(err)
 		} else if p == nil {
-			return nil, values.Error("not login")
+			return nil, errors.ErrLogin
 		}
 		p.KeepAlive()
 		if limit == options.OAuthTypeOAuth {
-			req[options.ServiceMetadataGUID] = p.UUID()
+			if uuid := p.UUID(); uuid == "" {
+				return nil, errors.ErrLogin
+			} else {
+				req[options.ServiceMetadataGUID] = p.UUID()
+			}
 		} else {
-			req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
+			if uid := p.GetString(options.ServiceMetadataUID); uid == "" {
+				return nil, errors.ErrNotSelectRole
+			} else {
+				req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
+			}
 		}
 	}
 	req.Set(options.ServicePlayerGateway, xshare.Address().Encode())

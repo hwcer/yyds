@@ -2,12 +2,10 @@ package options
 
 import (
 	"context"
-	"fmt"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/smallnest/rpcx/share"
 	"net/url"
 	"strconv"
-	"strings"
 )
 
 const (
@@ -21,68 +19,79 @@ func NewSelector(servicePath string) *Selector {
 }
 
 type selectorNode struct {
+	sid     string //服务器
+	index   uint64
 	Address string //tcp@127.0.0.1:8000
 	Average int    //负载
-	//ServerId string //服务器
 }
 
 type Selector struct {
-	share       []*selectorNode
+	all         map[string]*selectorNode
 	services    map[string][]*selectorNode
 	servicePath string
 }
 
-// Select 默认按负载
-func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod string, args interface{}) string {
-	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
-	var list []*selectorNode
-	if metadata != nil {
-		if address, ok := metadata[SelectorAddress]; ok {
-			return xshare.AddressFormat(address)
-		}
-		if v, ok := metadata[SelectorServerId]; ok {
-			list = this.services[v]
-		} else {
-			list = this.share
-		}
-	} else {
-		list = this.share
-	}
+func (this *Selector) SelectWithServerId(list []*selectorNode) (r string) {
 	var s *selectorNode
 	for _, v := range list {
 		if s == nil || v.Average < s.Average {
 			s = v
 		}
 	}
-	if s == nil {
-		return ""
+	if s != nil {
+		s.Average += 1
+		r = s.Address
 	}
-	s.Average += 1
-	return s.Address
+	return
+}
+
+// Select 默认按负载
+func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod string, args interface{}) (r string) {
+	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
+	if metadata != nil {
+		if address, ok := metadata[SelectorAddress]; ok {
+			return xshare.AddressFormat(address)
+		}
+		if v, ok := metadata[SelectorServerId]; ok {
+			return this.SelectWithServerId(this.services[v])
+		}
+	}
+
+	var s *selectorNode
+	for _, v := range this.all {
+		if s == nil || v.Average < s.Average {
+			s = v
+		}
+	}
+	if s != nil {
+		s.Average += 1
+		r = s.Address
+	}
+	return
 }
 
 func (this *Selector) UpdateServer(servers map[string]string) {
-	var nodes []*selectorNode
+	all := make(map[string]*selectorNode)
 	service := make(map[string][]*selectorNode)
 
 	//logger.Debug("===================UpdateServer:%v============================", this.servicePath)
-	prefix := fmt.Sprintf("%v/%v/", xshare.Options.BasePath, this.servicePath)
 	for address, value := range servers {
-		if !strings.HasPrefix(address, prefix) {
-			continue
-		}
-		//logger.Debug("UpdateServer  address：%v value:%v", address, value)
 		s := &selectorNode{}
-		s.Address = strings.TrimPrefix(address, prefix)
+		s.Address = address
+		if v, ok := this.all[address]; ok {
+			s.index = v.index
+		}
 		if query, err := url.ParseQuery(value); err == nil {
+			s.sid = query.Get(ServiceMetadataServerId)
 			s.Average, _ = strconv.Atoi(query.Get(SelectorAverage))
-			if sid := query.Get(SelectorServerId); sid != "" {
-				service[sid] = append(service[sid], s)
-			} else {
-				nodes = append(nodes, s)
-			}
+		}
+		all[address] = s
+	}
+	for _, v := range all {
+		if v.sid != "" {
+			service[v.sid] = append(service[v.sid], v)
 		}
 	}
-	this.share = nodes
+	this.all = all
 	this.services = service
 }

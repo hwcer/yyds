@@ -1,12 +1,12 @@
 package gateway
 
 import (
+	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/yyds/gateway/players"
@@ -44,7 +44,7 @@ func (this *Server) init() (err error) {
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")
 	access.Methods(Method...)
-	headers := []string{session.Options.Name, "Content-Type", "Set-Cookie", "X-Forwarded-Key", "X-Forwarded-Val", "*"}
+	headers := []string{session.Options.Name, "Content-Type", "Set-Cookie", "X-Forwarded-Key", "X-Forwarded-Val"}
 	access.Headers(strings.Join(headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Register("/*", this.proxy, Method...)
@@ -98,13 +98,39 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 			reply = []byte(sb.String())
 		}
 	}
-	return c.Bytes(cosweb.ContentTypeApplicationJSON, reply)
-
+	b := h.Binder()
+	if b == nil {
+		return errors.New("unknown accept content type")
+	}
+	return c.Bytes(cosweb.ContentType(b.String()), reply)
 }
 
 type httpProxy struct {
 	*cosweb.Context
-	uri *url.URL
+	uri      *url.URL
+	metadata values.Metadata
+}
+
+func (this *httpProxy) Binder() binder.Binder {
+	var t string
+	meta := this.Metadata()
+	if t = meta[binder.HeaderAccept]; t == "" {
+		t = meta[binder.HeaderContentType]
+	}
+	return binder.Get(t)
+}
+
+func (this *httpProxy) Error(err error) error {
+	data := values.Parse(err)
+	b := this.Binder()
+	if b == nil {
+		return err
+	}
+	s, err := b.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return this.Context.Bytes(cosweb.ContentType(b.String()), s)
 }
 
 func (this *httpProxy) Path() (string, error) {
@@ -145,15 +171,35 @@ func (this *httpProxy) Delete() error {
 }
 
 func (this *httpProxy) Metadata() values.Metadata {
-	r := make(values.Metadata)
+	if this.metadata != nil {
+		return this.metadata
+	}
+	this.metadata = make(values.Metadata)
 	q := this.Context.Request.URL.Query()
 	for k, _ := range q {
-		r[k] = q.Get(k)
+		this.metadata[k] = q.Get(k)
 	}
-	if t := this.Context.Request.Header.Get(binder.ContentType); t != "" {
-		r.Set(xshare.MetadataHeaderContentTypeRequest, t)
+	if t := this.ContentType(binder.HeaderContentType); t != "" {
+		this.metadata.Set(binder.HeaderContentType, t)
 	} else {
-		r.Set(xshare.MetadataHeaderContentTypeRequest, "json")
+		this.metadata.Set(binder.HeaderContentType, options.Options.Binder)
 	}
-	return r
+	if t := this.ContentType(binder.HeaderAccept); t != "" {
+		this.metadata.Set(binder.HeaderAccept, t)
+	}
+	return this.metadata
+}
+
+func (this *httpProxy) ContentType(name string) string {
+	t := this.Context.Request.Header.Get(name)
+	if t == "" {
+		return ""
+	}
+	arr := strings.Split(t, ",")
+	for _, s := range arr {
+		if b := binder.Get(s); b != nil {
+			return b.Name()
+		}
+	}
+	return ""
 }

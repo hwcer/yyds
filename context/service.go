@@ -1,7 +1,6 @@
 package context
 
 import (
-	"fmt"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
@@ -28,7 +27,7 @@ const (
 使用updater时必须使用playerHandle.data()来获取updater
 */
 
-var Service = xserver.Service(options.ServiceTypeGame, handlerMetadata, handlerCaller, handlerFilter)
+var Service = xserver.Service(options.ServiceTypeGame, handlerCaller, handlerFilter)
 var Serialize func(c *Context, reply *Message) ([]byte, error) = serializeDefault
 
 type Caller interface {
@@ -152,10 +151,6 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		return Serialize(c, Parse(err))
 	}
 	return
-}
-
-var handlerMetadata xshare.HandlerMetadata = func() string {
-	return fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid)
 }
 
 func serializeDefault(c *Context, reply *Message) ([]byte, error) {

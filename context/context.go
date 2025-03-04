@@ -2,6 +2,7 @@ package context
 
 import (
 	"context"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/values"
@@ -90,17 +91,16 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	if req == nil {
 		req = values.Metadata{}
 	}
-	req[xshare.MetadataHeaderContentTypeRequest] = this.Binder(xshare.BinderModRes).String()
+	req[options.ServiceMessagePath] = path
+	req[binder.HeaderContentType] = this.Binder(xshare.BinderModRes).String()
 	if this.Player != nil {
-		this.Player.Send(path, v, req)
+		this.Player.Send(v, req)
 		return
 	}
-
 	if _, ok := req[options.ServiceMetadataGUID]; !ok {
 		req[options.ServiceMetadataGUID] = this.GUid()
 	}
 
-	req.Set(options.ServiceMessagePath, path)
 	if gateway := this.Gateway(); gateway != "" {
 		req.Set(options.SelectorAddress, gateway)
 	} else {

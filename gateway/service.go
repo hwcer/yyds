@@ -36,7 +36,7 @@ func send(c *xshare.Context) any {
 		return nil
 	}
 	if uid != "" {
-		if id := p.GetString(options.ServiceMetadataUID); id != uid {
+		if id := p.GetString(options.ServiceMetadataUID); id != "" && id != uid {
 			logger.Debug("用户UID不匹配,UID:%v GUID:%v", uid, guid)
 			return nil
 		}
@@ -66,8 +66,8 @@ func send(c *xshare.Context) any {
 }
 
 func broadcast(c *xshare.Context) any {
-	//logger.Debug("推送消息:%v  %v  %v", c.GetMetadata(rpcx.MetadataMessagePath), uid, string(c.Payload()))
 	path := c.GetMetadata(options.ServiceMessagePath)
+	logger.Debug("广播消息:%v", path)
 	mate := c.Metadata()
 	ignore := c.GetMetadata(options.ServiceMessageIgnore)
 	ignoreMap := make(map[string]struct{})

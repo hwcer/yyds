@@ -15,7 +15,29 @@ import (
 	"sync/atomic"
 )
 
-func (p *Player) Send(path string, v any, req values.Metadata) {
+func GetReqMeta(rp any) (req values.Metadata) {
+	switch t := rp.(type) {
+	case string:
+		req = values.Metadata{}
+		req.Set(options.ServiceMessagePath, t)
+	case map[string]string:
+		req = t
+	case values.Metadata:
+		req = t
+	default:
+		logger.Alert("unknown req type %v", reflect.TypeOf(rp))
+		return
+	}
+	if _, ok := req[options.ServiceMessagePath]; !ok {
+		logger.Alert("req no service message path:%v", rp)
+		return
+	}
+	return
+}
+
+// Send 推送消息
+// rp  req |  path
+func (p *Player) Send(v any, rp any) {
 	if p.Status != StatusConnected {
 		logger.Debug("player disconnected:%v", p.Uid())
 		return
@@ -24,20 +46,19 @@ func (p *Player) Send(path string, v any, req values.Metadata) {
 		logger.Debug("player gateway empty:%v", p.Uid())
 		return
 	}
+	req := GetReqMeta(rp)
 	if req == nil {
-		req = values.Metadata{}
+		return
 	}
-
 	role := p.Document(options.ITypeRole)
 	guid := role.Get(Fields.Guid)
 	if guid == nil {
 		logger.Debug("player gateway empty:%v", p.Uid())
 		return
 	}
+	req.Set(options.SelectorAddress, utils.IPv4Decode(p.Gateway))
+	req.Set(options.ServiceMetadataUID, p.uid)
 	req.Set(options.ServiceMetadataGUID, guid)
-	req.Set(options.ServiceMessagePath, path)
-	req.Set(options.ServiceMetadataRequestId, utils.IPv4Decode(p.Gateway))
-
 	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
 }
 

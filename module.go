@@ -87,7 +87,8 @@ func (this *Module) Init() (err error) {
 			return fmt.Errorf(err.Error()+"，当前回调地址:%v", args["local"])
 		}
 	}
-
+	//设置游戏Metadata
+	xshare.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid))
 	return nil
 }
 

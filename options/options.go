@@ -3,7 +3,6 @@ package options
 import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
@@ -28,6 +27,7 @@ func Initialize() error {
 	if err := cosgo.Config.Unmarshal(Options); err != nil {
 		return err
 	}
+	xshare.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
 	xshare.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 	xshare.Options.BasePath = Options.Appid
 	if Game.Time != "" {
@@ -39,14 +39,23 @@ func Initialize() error {
 	}
 	if len(xshare.Service) > 0 {
 		cosgo.On(cosgo.EventTypLoaded, rpcStart)
-		cosgo.On(cosgo.EventTypClosing, xclient.Close)
 		cosgo.On(cosgo.EventTypStopped, xserver.Close)
 	}
 	return nil
 }
 
-func rpcStart() error {
-	return utils.Assert(xserver.Start, xclient.Start)
+func rpcStart() (err error) {
+	var register xserver.Register
+	if register, err = Register(xshare.Address()); err != nil {
+		return err
+	}
+	if err = xserver.Start(register); err != nil {
+		return err
+	}
+	if err = xclient.Start(Discovery); err != nil {
+		return err
+	}
+	return nil
 }
 
 var Options = &struct {
@@ -54,14 +63,17 @@ var Options = &struct {
 	Debug   bool
 	Appid   string
 	Master  string
-	Secret  string //秘钥,必须8位
-	Verify  int8   `json:"monitor"` //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
-	Service map[string]string
+	Secret  string            `json:"secret"`  //秘钥,必须8位
+	Verify  int8              `json:"verify"`  //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
+	Binder  string            `json:"binder"`  //公网请求默认序列化方式，默认JSON
+	Service map[string]string `json:"service"` //
+	Redis   string            `json:"redis"`   //rpc服务器注册发现 pub/sub 订阅服务
 	Game    *game
 	Gate    *gate
 	Rpcx    *xshare.Rpcx
 }{
 	Verify:  1,
+	Binder:  "json",
 	Service: xshare.Service,
 	Game:    Game,
 	Gate:    Gate,
