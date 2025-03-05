@@ -2,6 +2,7 @@ package context
 
 import (
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
@@ -153,9 +154,12 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	return
 }
 
-func serializeDefault(c *Context, reply *Message) ([]byte, error) {
-	b := c.Binder(xshare.BinderModRes)
-	return b.Marshal(reply)
+func serializeDefault(c *Context, r *Message) ([]byte, error) {
+	if r.Code == 0 && r.Data == nil {
+		return nil, nil
+	}
+	b := c.Binder(binder.ContentTypeModRes)
+	return b.Marshal(r)
 }
 
 func (c *Context) handle(node *registry.Node) (any, error) {
@@ -183,14 +187,14 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 	}
 	var err error
 	//直接返回二进制不做任何处理
-	if r, ok := v.([]byte); ok {
+	if b, ok := v.([]byte); ok {
 		if c.Player != nil {
 			_, err = c.Player.Submit()
 		}
 		if err != nil {
 			return Error(err)
 		} else {
-			return Parse(r)
+			return Parse(b)
 		}
 	}
 
@@ -202,8 +206,6 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 		} else {
 			r = Error(err)
 		}
-
 	}
-
 	return r
 }

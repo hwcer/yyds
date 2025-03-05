@@ -2,6 +2,7 @@ package options
 
 import (
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xserver"
@@ -46,8 +47,12 @@ func Initialize() error {
 
 func rpcStart() (err error) {
 	var register xserver.Register
-	if register, err = Register(xshare.Address()); err != nil {
-		return err
+	if Options.Redis != "" {
+		if register, err = Register(xshare.Address()); err != nil {
+			return err
+		}
+	} else {
+		logger.Alert("")
 	}
 	if err = xserver.Start(register); err != nil {
 		return err

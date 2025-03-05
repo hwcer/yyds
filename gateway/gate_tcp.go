@@ -54,13 +54,14 @@ func (this *Socket) ping(c *cosnet.Context) interface{} {
 	return []byte(strconv.Itoa(int(time.Now().Unix())))
 }
 
-func (this *Socket) proxy(c *cosnet.Context) interface{} {
+func (this *Socket) proxy(c *cosnet.Context) (r any) {
 	h := &socketProxy{Context: c}
-	reply, err := proxy(h)
-	if err != nil {
-		return c.Errorf(0, err)
+	var err error
+	if r, err = proxy(h); err != nil {
+		r = nil
+		c.Error(err)
 	}
-	return reply
+	return
 }
 
 //func (this *Socket) Connected(sock *cosnet.Socket, _ interface{}) {

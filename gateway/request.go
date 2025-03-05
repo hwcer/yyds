@@ -79,11 +79,11 @@ func proxy(h Request) ([]byte, error) {
 	req.Set(options.ServicePlayerGateway, xshare.Address().Encode())
 	buff, err := h.Buffer()
 	if err != nil {
-		return nil, values.Parse(err)
+		return nil, err
 	}
 	reply := make([]byte, 0)
 	if err = request(p, path, buff.Bytes(), req, res, &reply); err != nil {
-		return nil, values.Parse(err)
+		return nil, err
 	}
 	Emitter.emit(EventTypeConfirm, p, path, req)
 	if len(res) == 0 {
@@ -99,7 +99,7 @@ func proxy(h Request) ([]byte, error) {
 		CookiesUpdate(res, p)
 	}
 	if err != nil {
-		return nil, values.Parse(err)
+		return nil, err
 	} else {
 		return reply, nil
 	}

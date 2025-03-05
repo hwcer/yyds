@@ -92,7 +92,7 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		req = values.Metadata{}
 	}
 	req[options.ServiceMessagePath] = path
-	req[binder.HeaderContentType] = this.Binder(xshare.BinderModRes).String()
+	req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).String()
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return

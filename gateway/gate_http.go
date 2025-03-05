@@ -44,7 +44,7 @@ func (this *Server) init() (err error) {
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")
 	access.Methods(Method...)
-	headers := []string{session.Options.Name, "Content-Type", "Set-Cookie", "X-Forwarded-Key", "X-Forwarded-Val"}
+	headers := []string{session.Options.Name, "Accept", "Content-Type", "Set-Cookie", "X-Forwarded-Key", "X-Forwarded-Val"}
 	access.Headers(strings.Join(headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Register("/*", this.proxy, Method...)
@@ -87,7 +87,7 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 	h := &httpProxy{Context: c}
 	reply, err := proxy(h)
 	if err != nil {
-		return c.JSON(values.Parse(err))
+		return h.Error(err)
 	}
 	if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
 		if s := string(reply); strings.HasPrefix(s, "{") {
@@ -179,23 +179,23 @@ func (this *httpProxy) Metadata() values.Metadata {
 	for k, _ := range q {
 		this.metadata[k] = q.Get(k)
 	}
-	if t := this.ContentType(binder.HeaderContentType); t != "" {
+	if t := this.ContentType(binder.HeaderContentType, ";"); t != "" {
 		this.metadata.Set(binder.HeaderContentType, t)
 	} else {
 		this.metadata.Set(binder.HeaderContentType, options.Options.Binder)
 	}
-	if t := this.ContentType(binder.HeaderAccept); t != "" {
+	if t := this.ContentType(binder.HeaderAccept, ","); t != "" {
 		this.metadata.Set(binder.HeaderAccept, t)
 	}
 	return this.metadata
 }
 
-func (this *httpProxy) ContentType(name string) string {
+func (this *httpProxy) ContentType(name string, split string) string {
 	t := this.Context.Request.Header.Get(name)
 	if t == "" {
 		return ""
 	}
-	arr := strings.Split(t, ",")
+	arr := strings.Split(t, split)
 	for _, s := range arr {
 		if b := binder.Get(s); b != nil {
 			return b.Name()
