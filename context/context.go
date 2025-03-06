@@ -92,11 +92,14 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		req = values.Metadata{}
 	}
 	req[options.ServiceMessagePath] = path
-	req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).String()
+	if _, ok := req[binder.HeaderContentType]; !ok {
+		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
+	}
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return
 	}
+	req[binder.HeaderAccept] = binder.Json.Name()
 	if _, ok := req[options.ServiceMetadataGUID]; !ok {
 		req[options.ServiceMetadataGUID] = this.GUid()
 	}

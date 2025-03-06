@@ -2,6 +2,7 @@ package player
 
 import (
 	"fmt"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/times"
@@ -56,6 +57,7 @@ func (p *Player) Send(v any, rp any) {
 		logger.Debug("player gateway empty:%v", p.Uid())
 		return
 	}
+	req.Set(binder.HeaderAccept, binder.Json.Name())
 	req.Set(options.SelectorAddress, utils.IPv4Decode(p.Gateway))
 	req.Set(options.ServiceMetadataUID, p.uid)
 	req.Set(options.ServiceMetadataGUID, guid)
