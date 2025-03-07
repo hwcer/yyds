@@ -5,9 +5,9 @@ import "github.com/hwcer/cosgo/values"
 type Handle func(l *Listener, val int32) bool //满足条件后的更新器,返回false移除监听
 
 type Listener struct {
-	args   []int32 //任务匹配参数
-	handle Handle  //回调信息
-	Filter Filter  //过滤函数
+	args   []int32    //任务匹配参数
+	handle Handle     //回调信息
+	Filter FilterFunc //过滤函数
 	Attach values.Values
 }
 
@@ -37,6 +37,5 @@ func (l *Listener) compare(t int32, args []int32) bool {
 	if l.Filter != nil {
 		return l.Filter(l.args, args)
 	}
-	f := Require(t)
-	return f(l.args, args)
+	return Filters.Compare(t, l.args, args)
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/yyds/players/channel"
+	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
 	"sync/atomic"
@@ -71,4 +72,19 @@ func Locker(uid []uint64, handle player.LockerHandle, done ...func()) (any, erro
 
 func Range(f func(uint64, *player.Player) bool) {
 	ps.Range(f)
+}
+
+// Filter 全局任务条件判断方式
+func Filter(t int32, f emitter.FilterFunc) {
+	emitter.Filters.Register(t, f)
+}
+
+// Emitter 注册全局事件
+func Emitter(f emitter.EventsFunc) {
+	emitter.Events.Register(f)
+}
+
+// Preload 设置预加载函数
+func Preload(f preload) {
+	preloadFunc = f
 }

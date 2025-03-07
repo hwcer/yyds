@@ -1,19 +1,25 @@
 package emitter
 
 // 条件过滤器
-var filters = map[int32]Filter{}
+var Filters = filters{}
 
-type Filter func(tar, args []int32) bool //条件过滤器
+type filters map[int32]FilterFunc
 
-func Register(t int32, f Filter) {
-	filters[t] = f
+type FilterFunc func(tar, args []int32) bool //条件过滤器
+
+func (fs filters) Register(t int32, f FilterFunc) {
+	fs[t] = f
 }
 
-func Require(t int32) Filter {
-	if v, ok := filters[t]; ok {
-		return v
+func (fs filters) Compare(t int32, tar, args []int32) bool {
+	var f FilterFunc
+	if v, ok := Filters[t]; ok {
+		f = v
 	}
-	return defaultFilter
+	if f == nil {
+		f = defaultFilter
+	}
+	return f(tar, args)
 }
 
 func defaultFilter(tar, args []int32) bool {

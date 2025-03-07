@@ -102,32 +102,14 @@ func (p *Player) Destroy() error {
 	p.Updater = nil
 	return nil
 }
-
+func (p *Player) On(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
+	return p.Emitter.Listen(t, args, handle)
+}
 func (p *Player) Emit(t int32, v int32, args ...int32) {
-	c := GetEmitter(t)
-	if c == nil {
-		return
-	}
-	if c.Daily > 0 {
-		p.EventUpdate(c.Daily, v, c.Replace)
-	}
-	if c.Record > 0 {
-		p.EventUpdate(c.Record, v, c.Replace)
-	}
-	if c.Event > 0 {
-		p.Emitter.Emit(c.Event, v, args...)
-	}
+	p.Emitter.Emit(t, v, args...)
 }
 func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
 	return p.Emitter.Listen(t, args, handle)
-}
-
-func (p *Player) EventUpdate(k int32, v int32, replace int32) {
-	if replace != 0 {
-		p.Updater.Set(k, v)
-	} else {
-		p.Updater.Add(k, v)
-	}
 }
 
 func (p *Player) Heartbeat() int64 {

@@ -6,19 +6,21 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-var Preload func(limit int, callback func(uid uint64, name string) (next bool)) error
+type preload func(limit int, callback func(uid uint64, name string) (next bool)) error
+
+var preloadFunc preload
 
 // loading 初始加载用户到内存
 func loading() (err error) {
 	if Options.MemoryInstall == 0 {
 		return nil
 	}
-	if Preload == nil {
-		logger.Alert("未设置预加载函数 players.Preload,放弃预加载")
+	if preloadFunc == nil {
+		logger.Alert("未设置预加载函数 players.preload,放弃预加载")
 		return nil
 	}
 	var n int
-	err = Preload(Options.MemoryInstall, func(uid uint64, name string) (next bool) {
+	err = preloadFunc(Options.MemoryInstall, func(uid uint64, name string) (next bool) {
 		p := player.New(uid)
 		if err = p.Loading(true); err == nil {
 			n += 1
