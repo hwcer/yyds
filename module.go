@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/errors"
@@ -11,6 +12,7 @@ import (
 	"github.com/hwcer/yyds/players"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var mod *Module
@@ -20,6 +22,7 @@ func init() {
 	cosgo.On(cosgo.EventTypStarted, func() error {
 		logger.Trace("当前服务器编号：%v", options.Game.Sid)
 		logger.Trace("当前服务器地址：%v", options.Game.Local)
+		logger.Trace("当前服务器时间：%v", times.Format())
 		return nil
 	})
 }
@@ -35,6 +38,10 @@ func (this *Module) Id() string {
 	return "yyds"
 }
 func (this *Module) Init() (err error) {
+	if t := time.Now(); t.IsZero() {
+		return errors.New("启动失败,无法获取系统时间")
+	}
+
 	if err = options.Initialize(); err != nil {
 		return err
 	}

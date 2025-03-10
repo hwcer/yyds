@@ -95,6 +95,10 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	if _, ok := req[binder.HeaderContentType]; !ok {
 		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
 	}
+	if magic := this.GetMetadata("magic"); magic != "" {
+		req["magic"] = magic
+	}
+
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return
