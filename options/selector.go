@@ -82,7 +82,7 @@ func (this *Selector) UpdateServer(servers map[string]string) {
 			s.index = v.index
 		}
 		if query, err := url.ParseQuery(value); err == nil {
-			s.sid = query.Get(ServiceMetadataServerId)
+			s.sid = query.Get(SelectorServerId)
 			s.Average, _ = strconv.Atoi(query.Get(SelectorAverage))
 		}
 		all[address] = s
