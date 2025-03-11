@@ -1,6 +1,8 @@
 package options
 
-import "strings"
+import (
+	"strings"
+)
 
 type protocol int8
 
@@ -46,6 +48,7 @@ type gate = struct {
 	Address   string   `json:"address"`   //连接地址
 	Protocol  protocol `json:"protocol"`  //1-短链接，2-长连接，3-长短链接全开
 	Websocket string   `json:"websocket"` //开启websocket时,路由前缀
+
 }
 
 type Static struct {

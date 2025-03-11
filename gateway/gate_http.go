@@ -90,10 +90,15 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 		return h.Error(err)
 	}
 	if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
-		if s := string(reply); strings.HasPrefix(s, "{") {
+		s := string(reply)
+		if strings.Contains(s, "%CookieKey%") {
+			s = strings.Replace(s, "%CookieKey%", session.Options.Name, -1)
+			s = strings.Replace(s, "%CookieVal%", v, -1)
+			reply = []byte(s)
+		} else if strings.HasPrefix(s, "{") {
 			sb := strings.Builder{}
 			sb.WriteString("{")
-			sb.WriteString(fmt.Sprintf(`"cookie":{"name":"%v","value":"%v"},`, session.Options.Name, v))
+			sb.WriteString(fmt.Sprintf(`"cookie":{"key":"%v","val":"%v"},`, session.Options.Name, v))
 			sb.WriteString(s[1:])
 			reply = []byte(sb.String())
 		}

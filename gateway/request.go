@@ -13,6 +13,19 @@ import (
 	"strings"
 )
 
+type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)
+
+var Router router = func(path string, req values.Metadata) (servicePath, serviceMethod string, err error) {
+	i := strings.Index(path, "/")
+	if i < 0 {
+		err = values.Errorf(404, "page not found")
+		return
+	}
+	servicePath = strings.ToLower(path[0:i])
+	serviceMethod = registry.Formatter(path[i:])
+	return
+}
+
 type Request interface {
 	Path() (string, error)
 	Data() (*session.Data, error)
@@ -23,16 +36,7 @@ type Request interface {
 }
 
 // request rpc转发,返回实际转发的servicePath
-func request(p *session.Data, path string, args []byte, req, res values.Metadata, reply any) (err error) {
-	if strings.HasPrefix(path, "/") {
-		path = strings.TrimPrefix(path, "/")
-	}
-	i := strings.Index(path, "/")
-	if i < 0 {
-		return values.Errorf(404, "page not found")
-	}
-	servicePath := path[0:i]
-	serviceMethod := registry.Formatter(path[i:])
+func request(p *session.Data, servicePath, serviceMethod string, args []byte, req, res values.Metadata, reply any) error {
 	if options.Gate.Prefix != "" {
 		serviceMethod = registry.Join(options.Gate.Prefix, serviceMethod)
 	}
@@ -41,9 +45,8 @@ func request(p *session.Data, path string, args []byte, req, res values.Metadata
 			req.Set(options.SelectorAddress, serviceAddress)
 		}
 	}
-	Emitter.emit(EventTypeRequest, p, path, req)
-	err = xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
-	return
+
+	return xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
 }
 
 func proxy(h Request) ([]byte, error) {
@@ -54,6 +57,16 @@ func proxy(h Request) ([]byte, error) {
 	req := h.Metadata()
 	res := make(values.Metadata)
 	var p *session.Data
+
+	if strings.HasPrefix(path, "/") {
+		path = strings.TrimPrefix(path, "/")
+	}
+	servicePath, serviceMethod, err := Router(path, req)
+	if err != nil {
+		return nil, err
+	}
+	path = strings.Join([]string{servicePath, strings.TrimPrefix(serviceMethod, "/")}, "/")
+
 	limit := options.OAuth.Get(path)
 	if limit != options.OAuthTypeNone {
 		if p, err = h.Data(); err != nil {
@@ -82,7 +95,8 @@ func proxy(h Request) ([]byte, error) {
 		return nil, err
 	}
 	reply := make([]byte, 0)
-	if err = request(p, path, buff.Bytes(), req, res, &reply); err != nil {
+	Emitter.emit(EventTypeRequest, p, path, req)
+	if err = request(p, servicePath, serviceMethod, buff.Bytes(), req, res, &reply); err != nil {
 		return nil, err
 	}
 	Emitter.emit(EventTypeConfirm, p, path, req)

@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
@@ -19,26 +18,26 @@ func WSVerify(w http.ResponseWriter, r *http.Request) (meta map[string]string, e
 	//logger.Trace("Sec-Websocket-Key:%v", r.Head.Get("Sec-Websocket-Key"))
 	//logger.Trace("Sec-Websocket-Protocol:%v", r.Head.Get("Sec-Websocket-Protocol"))
 	//logger.Trace("Sec-Websocket-Branch:%v", r.Head.Get("Sec-Websocket-Branch"))
-	token := r.Header.Get("Sec-Websocket-Protocol")
-	if token == "" || len(token) < 2 {
-		//return nil, values.Error("token empty")
-		return nil, nil
-	}
-	req := values.Metadata{}
-	res := values.Metadata{}
-	reply := make([]byte, 0)
+	//token := r.Header.Get("Sec-Websocket-Protocol")
+	//if token == "" || len(token) < 2 {
+	//	//return nil, values.Error("token empty")
+	//	return nil, nil
+	//}
+	//req := values.Metadata{}
+	//res := values.Metadata{}
+	//reply := make([]byte, 0)
 
-	err = request(nil, options.Gate.Login, []byte{}, req, res, &reply)
-	if err != nil {
-		return nil, err
-	}
+	//err = request(nil, options.Gate.Login, []byte{}, req, res, &reply)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	//sess := session.New()
 	//if err = sess.Verify(token); err != nil {
 	//	return "", values.Parse(err)
 	//}
 	//uuid = res[options.ServiceMetadataGUID]
-	return res, nil
+	return nil, nil
 }
 func WSAccept(s *cosnet.Socket, meta map[string]string) {
 	if len(meta) == 0 {
