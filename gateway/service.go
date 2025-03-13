@@ -59,7 +59,7 @@ func send(c *xshare.Context) any {
 		return nil //仅仅设置信息，不需要发送
 	}
 
-	if err := sock.Send(path, c.Bytes(), mate); err != nil {
+	if err := sock.Send(p.Atomic(), path, c.Bytes()); err != nil {
 		return err
 	}
 	return nil
@@ -86,7 +86,7 @@ func broadcast(c *xshare.Context) any {
 		CookiesUpdate(mate, p)
 		Emitter.emit(EventTypeMessage, p, path, mate)
 		if sock := players.Socket(p); sock != nil {
-			_ = sock.Send(path, c.Bytes(), mate)
+			_ = sock.Send(0, path, c.Bytes())
 		}
 		return true
 	})

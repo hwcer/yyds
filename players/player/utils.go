@@ -205,26 +205,28 @@ func (p *Player) SubItems(items interface{}, multi ...int32) {
 	}
 }
 
-func (p *Player) AddArr(arr []int32) {
+func (p *Player) AddWithSlice(arr []int32) (r []int32) {
 	for i := 0; i < len(arr); i += 2 {
-		j := i + 1
-		if j < len(arr) {
+		if j := i + 1; j < len(arr) {
 			if arr[i] > 0 && arr[j] > 0 {
+				r = append(r, arr[i])
 				p.Add(arr[i], arr[j])
 			}
 		}
 	}
+	return
 }
 
-func (p *Player) SubArr(arr []int32) {
+func (p *Player) SubWithSlice(arr []int32) (r []int32) {
 	for i := 0; i < len(arr); i += 2 {
-		j := i + 1
-		if j < len(arr) {
+		if j := i + 1; j < len(arr) {
 			if arr[i] > 0 && arr[j] > 0 {
+				r = append(r, arr[i])
 				p.Sub(arr[i], arr[j])
 			}
 		}
 	}
+	return
 }
 
 // MustUpdate 客户端数据是否需要更新

@@ -29,6 +29,13 @@ func (e *emitter) emit(evt EventType, player *session.Data, path string, meta va
 	}
 }
 
-func (e *emitter) Listen(evt EventType, h func(player *session.Data, path string, meta values.Metadata)) {
+func (e *emitter) Listen(evt EventType, h EventHandle) {
 	e.events[evt] = append(e.events[evt], h)
+}
+
+func On(evt EventType, h EventHandle) {
+	Emitter.Listen(evt, h)
+}
+func Listen(evt EventType, h EventHandle) {
+	Emitter.Listen(evt, h)
 }

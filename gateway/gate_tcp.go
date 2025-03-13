@@ -11,9 +11,15 @@ import (
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"net"
+	"net/url"
 	"strconv"
 	"time"
 )
+
+// 默认返回错误
+var Errorf func(*cosnet.Context, error) any = func(c *cosnet.Context, err error) any {
+	return values.Error(err)
+}
 
 type Socket struct {
 }
@@ -24,9 +30,6 @@ func (this *Socket) init() error {
 	}
 	service := cosnet.Service("")
 	_ = service.Register(this.proxy, "/*")
-	cosnet.On(cosnet.EventTypeError, this.Errorf)
-	//cosnet.On(cosnet.EventTypeConnected, this.Connected)
-	//cosnet.On(cosnet.EventTypeDisconnect, this.Disconnect)
 	return nil
 }
 
@@ -44,10 +47,6 @@ func (this *Socket) Accept(ln net.Listener) error {
 	return nil
 }
 
-func (this *Socket) Errorf(socket *cosnet.Socket, err interface{}) {
-	logger.Alert(err)
-}
-
 func (this *Socket) ping(c *cosnet.Context) interface{} {
 	var s string
 	_ = c.Bind(&s)
@@ -58,24 +57,19 @@ func (this *Socket) proxy(c *cosnet.Context) (r any) {
 	h := &socketProxy{Context: c}
 	var err error
 	if r, err = proxy(h); err != nil {
-		r = nil
-		c.Error(err)
+		r = Errorf(c, err)
 	}
 	return
 }
-
-//func (this *Socket) Connected(sock *cosnet.Socket, _ interface{}) {
-//	logger.Debug("Connected:%v", sock.Id())
-//}
-//
-//func (this *Socket) Disconnect(sock *cosnet.Socket, _ interface{}) {
-//	logger.Debug("Disconnect:%v", sock.Id())
-//}
 
 type socketProxy struct {
 	*cosnet.Context
 }
 
+func (this *socketProxy) Path() (string, error) {
+	r, _, err := this.Context.Path()
+	return r, err
+}
 func (this *socketProxy) Data() (*session.Data, error) {
 	return this.Context.Socket.Data(), nil
 }
@@ -95,9 +89,14 @@ func (this *socketProxy) Delete() error {
 }
 
 func (this *socketProxy) Metadata() values.Metadata {
-	q := this.Message.Query()
-	if _, ok := q[binder.HeaderContentType]; !ok {
-		q[binder.HeaderContentType] = options.Options.Binder
+	meta := values.Metadata{}
+	if _, q, _ := this.Context.Path(); q != "" {
+		query, _ := url.ParseQuery(q)
+		for k, _ := range query {
+			meta[k] = query.Get(k)
+		}
 	}
-	return q
+	magic := this.Message.Magic()
+	meta[binder.HeaderContentType] = magic.Binder.Name()
+	return meta
 }

@@ -84,3 +84,12 @@ var Options = &struct {
 	Gate:    Gate,
 	Rpcx:    xshare.Options,
 }
+
+// Cookies 仅仅 http+json模式下 Cookie模板,网关会将 %CookieKey% %CookieValue% 替换成对应值
+var Cookies = &struct {
+	Name  string
+	Value string
+}{
+	Name:  "%CookieKey%",
+	Value: "%CookieValue%",
+}
