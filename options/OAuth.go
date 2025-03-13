@@ -22,6 +22,8 @@ func init() {
 		"/ping":        OAuthTypeNone,
 		"/login":       OAuthTypeNone,
 		"/roles":       OAuthTypeOAuth,
+		"/create":      OAuthTypeOAuth,
+		"/select":      OAuthTypeOAuth,
 		"/version":     OAuthTypeOAuth,
 		"/reconnect":   OAuthTypeNone,
 		"/role/create": OAuthTypeOAuth,

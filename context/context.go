@@ -95,15 +95,15 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	if _, ok := req[binder.HeaderContentType]; !ok {
 		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
 	}
-	if magic := this.GetMetadata("magic"); magic != "" {
-		req["magic"] = magic
+	if _, ok := req[options.ServiceMetadataRequestId]; !ok {
+		if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
+			req.Set(options.ServiceMetadataRequestId, rid)
+		}
 	}
-
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return
 	}
-	req[binder.HeaderAccept] = binder.Json.Name()
 	if _, ok := req[options.ServiceMetadataGUID]; !ok {
 		req[options.ServiceMetadataGUID] = this.GUid()
 	}
@@ -113,9 +113,7 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	} else {
 		logger.Alert("grpc gateway is nil")
 	}
-	if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
-		req.Set(options.ServiceMetadataRequestId, rid)
-	}
+
 	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
 }
 

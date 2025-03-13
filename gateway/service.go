@@ -7,6 +7,7 @@ import (
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
+	"strconv"
 	"strings"
 )
 
@@ -15,7 +16,6 @@ var Service = xserver.Service(options.ServiceTypeGate)
 func init() {
 	Register(send)
 	Register(broadcast)
-	//Register(rooms.Broadcast, "room/broadcast")
 }
 
 // Register 注册协议，用于服务器推送消息
@@ -50,7 +50,6 @@ func send(c *xshare.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	Emitter.emit(EventTypeMessage, p, path, mate)
 	sock := players.Players.Socket(p)
-	logger.Debug("推送消息  GUID:%v PATH:%v BODY：%s", guid, path, c.Bytes())
 	if sock == nil {
 		return nil
 	}
@@ -58,8 +57,13 @@ func send(c *xshare.Context) any {
 	if len(path) == 0 {
 		return nil //仅仅设置信息，不需要发送
 	}
-
-	if err := sock.Send(p.Atomic(), path, c.Bytes()); err != nil {
+	var rid int32
+	if s, ok := mate[options.ServiceMetadataRequestId]; ok {
+		i, _ := strconv.Atoi(s)
+		rid = int32(i)
+	}
+	logger.Debug("推送消息  GUID:%s RID:%d PATH:%s BODY：%s", guid, rid, path, c.Bytes())
+	if err := sock.Send(rid, path, c.Bytes()); err != nil {
 		return err
 	}
 	return nil

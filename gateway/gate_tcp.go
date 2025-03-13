@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/session"
@@ -98,5 +99,6 @@ func (this *socketProxy) Metadata() values.Metadata {
 	}
 	magic := this.Message.Magic()
 	meta[binder.HeaderContentType] = magic.Binder.Name()
+	meta[options.ServiceMetadataRequestId] = fmt.Sprintf("%d", this.Context.Message.Index())
 	return meta
 }
