@@ -17,11 +17,6 @@ import (
 	"time"
 )
 
-// 默认返回错误
-var Errorf func(*cosnet.Context, error) any = func(c *cosnet.Context, err error) any {
-	return values.Error(err)
-}
-
 type Socket struct {
 }
 

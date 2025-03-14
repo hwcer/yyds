@@ -13,19 +13,6 @@ import (
 	"strings"
 )
 
-type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)
-
-var Router router = func(path string, req values.Metadata) (servicePath, serviceMethod string, err error) {
-	i := strings.Index(path, "/")
-	if i < 0 {
-		err = values.Errorf(404, "page not found")
-		return
-	}
-	servicePath = strings.ToLower(path[0:i])
-	serviceMethod = registry.Formatter(path[i:])
-	return
-}
-
 type Request interface {
 	Path() (string, error)
 	Data() (*session.Data, error)
