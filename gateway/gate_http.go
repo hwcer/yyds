@@ -87,7 +87,7 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 	h := &httpProxy{Context: c}
 	reply, err := proxy(h)
 	if err != nil {
-		return h.Error(err)
+		return h.errorf(c, err)
 	}
 	if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
 		s := string(reply)
@@ -114,6 +114,7 @@ type httpProxy struct {
 	*cosweb.Context
 	uri      *url.URL
 	metadata values.Metadata
+	Errorf   func(*cosweb.Context, error) error
 }
 
 func (this *httpProxy) Binder() binder.Binder {
@@ -125,7 +126,10 @@ func (this *httpProxy) Binder() binder.Binder {
 	return binder.Get(t)
 }
 
-func (this *httpProxy) Error(err error) error {
+func (this *httpProxy) errorf(c *cosweb.Context, err error) error {
+	if this.Errorf != nil {
+		return this.Errorf(c, err)
+	}
 	data := values.Parse(err)
 	b := this.Binder()
 	if b == nil {

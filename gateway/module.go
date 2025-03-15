@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var mod = &Module{}
+var mod = &Module{Socket: &Socket{}, Server: &Server{}}
 
 func New() *Module {
 	return mod
@@ -43,13 +43,11 @@ func (this *Module) Init() (err error) {
 	}
 	p := options.Gate.Protocol
 	if p.Has(options.ProtocolTypeTCP) || p.Has(options.ProtocolTypeWSS) {
-		this.Socket = &Socket{}
 		if err = this.Socket.init(); err != nil {
 			return err
 		}
 	}
 	if p.Has(options.ProtocolTypeHTTP) {
-		this.Server = &Server{}
 		if err = this.Server.init(); err != nil {
 			return err
 		}

@@ -18,6 +18,7 @@ import (
 )
 
 type Socket struct {
+	Errorf func(*cosnet.Context, error) any
 }
 
 func (this *Socket) init() error {
@@ -53,9 +54,15 @@ func (this *Socket) proxy(c *cosnet.Context) (r any) {
 	h := &socketProxy{Context: c}
 	var err error
 	if r, err = proxy(h); err != nil {
-		r = Errorf(c, err)
+		r = this.errorf(c, err)
 	}
 	return
+}
+func (this *Socket) errorf(c *cosnet.Context, err error) any {
+	if this.Errorf != nil {
+		return this.Errorf(c, err)
+	}
+	return values.Error(err)
 }
 
 type socketProxy struct {
