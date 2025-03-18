@@ -81,7 +81,7 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 	defer func() {
 		if elapsed := time.Since(startTime); elapsed > elapsedMillisecond {
 			buff, _ := c.Buffer()
-			logger.Debug("发现高延时请求,TIME:%v,PATH:%v,BODY:%v", elapsed, c.Request.URL.Path, string(buff.Bytes()))
+			logger.Alert("发现高延时请求,TIME:%v,PATH:%v,BODY:%v", elapsed, c.Request.URL.Path, string(buff.Bytes()))
 		}
 	}()
 	h := &httpProxy{Context: c}
@@ -157,13 +157,13 @@ func (this *httpProxy) Data() (*session.Data, error) {
 	return this.Context.Session.Data, nil
 }
 
-func (this *httpProxy) Login(guid string, value values.Values) (err error) {
-	cookie := &http.Cookie{Name: session.Options.Name, Path: "/"}
-	cookie.Value, err = this.Context.Session.Create(guid, value)
-	if err != nil {
-		return err
-	}
-	err = players.Login(this.Context.Session.Data, nil)
+func (this *httpProxy) Login(sess *session.Session) (err error) {
+	this.Context.Session = sess
+	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: sess.Token()}
+	err = players.Login(sess.Data, func(data *session.Data, _ bool) error {
+		this.Context.Session.Data = data
+		return nil
+	})
 	if err != nil {
 		return err
 	}

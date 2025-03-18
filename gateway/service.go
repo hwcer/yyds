@@ -48,7 +48,7 @@ func send(c *xshare.Context) any {
 		return nil
 	}
 	path := c.GetMetadata(options.ServiceMessagePath)
-	Emitter.emit(EventTypeMessage, p, path, mate)
+	Emitter.emit(EventTypeResponse, p, path, mate)
 	sock := players.Players.Socket(p)
 	if sock == nil {
 		return nil
@@ -88,7 +88,7 @@ func broadcast(c *xshare.Context) any {
 			return true
 		}
 		CookiesUpdate(mate, p)
-		Emitter.emit(EventTypeMessage, p, path, mate)
+		Emitter.emit(EventTypeResponse, p, path, mate)
 		if sock := players.Socket(p); sock != nil {
 			_ = sock.Send(0, path, c.Bytes())
 		}

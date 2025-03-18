@@ -16,7 +16,7 @@ import (
 type Request interface {
 	Path() (string, error)
 	Data() (*session.Data, error)
-	Login(guid string, cookie values.Values) error
+	Login(sess *session.Session) error
 	Buffer() (buf *bytes.Buffer, err error)
 	Delete() error
 	Metadata() values.Metadata
@@ -91,7 +91,10 @@ func proxy(h Request) ([]byte, error) {
 		return reply, nil
 	}
 	if guid, ok := res[options.ServicePlayerOAuth]; ok {
-		err = h.Login(guid, CookiesFilter(res))
+		s := session.New()
+		if _, err = s.Create(guid, CookiesFilter(res)); err == nil {
+			err = h.Login(s)
+		}
 	} else if _, ok = res[options.ServicePlayerLogout]; ok {
 		if err = h.Delete(); err == nil && p != nil {
 			players.Delete(p)

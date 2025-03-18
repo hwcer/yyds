@@ -81,9 +81,8 @@ func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	buff := bytes.NewBuffer(this.Context.Message.Body())
 	return buff, nil
 }
-func (this *socketProxy) Login(guid string, value values.Values) (err error) {
-	_, err = players.Binding(this.Context.Socket, guid, value)
-	return
+func (this *socketProxy) Login(sess *session.Session) (err error) {
+	return players.Connect(this.Context.Socket, sess.Data)
 }
 
 func (this *socketProxy) Delete() error {

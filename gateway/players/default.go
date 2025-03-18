@@ -28,7 +28,12 @@ func Login(p *session.Data, callback loginCallback) (err error) {
 	return Players.Login(p, callback)
 }
 
-// Binding 身份认证绑定socket
-func Binding(socket *cosnet.Socket, uuid string, data map[string]any) (r *session.Data, err error) {
-	return Players.Binding(socket, uuid, data)
+// Connect 长连接登陆
+func Connect(socket *cosnet.Socket, v *session.Data) error {
+	return Players.Connect(socket, v)
+}
+
+// Reconnect 长连接断线重连
+func Reconnect(sock *cosnet.Socket, secret string) error {
+	return Players.Reconnect(sock, secret)
 }

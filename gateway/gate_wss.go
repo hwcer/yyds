@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"github.com/hwcer/cosgo/logger"
+	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
@@ -39,7 +41,7 @@ func WSVerify(w http.ResponseWriter, r *http.Request) (meta map[string]string, e
 	//uuid = res[options.ServiceMetadataGUID]
 	return nil, nil
 }
-func WSAccept(s *cosnet.Socket, meta map[string]string) {
+func WSAccept(sock *cosnet.Socket, meta map[string]string) {
 	if len(meta) == 0 {
 		return
 	}
@@ -47,6 +49,13 @@ func WSAccept(s *cosnet.Socket, meta map[string]string) {
 	if !ok {
 		return
 	}
-	_, _ = players.Players.Binding(s, uuid, CookiesFilter(meta))
-	return
+	sess := session.New()
+	if _, err := sess.Create(uuid, CookiesFilter(meta)); err != nil {
+		logger.Alert("wss session create fail:%v", err)
+		return
+	}
+	if err := players.Connect(sock, sess.Data); err != nil {
+		logger.Alert("wss session create fail:%v", err)
+	}
+	
 }

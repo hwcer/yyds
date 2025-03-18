@@ -1,8 +1,10 @@
 package players
 
 import (
+	"errors"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
+	"strings"
 	"sync"
 )
 
@@ -16,14 +18,17 @@ type players struct {
 	sync.Map
 }
 
-// replace 顶号
+// Replace  长连接顶号
 func (this *players) replace(p *session.Data, socket *cosnet.Socket) {
 	old := this.Socket(p)
 	p.Set(SessionPlayerSocketName, socket, true)
-	if old == nil || old.Id() == socket.Id() {
-		return
+	if old != nil && old.Id() != socket.Id() {
+		ip := socket.RemoteAddr().String()
+		if i := strings.Index(ip, ":"); i > 0 {
+			ip = ip[:i]
+		}
+		old.Replaced(ip)
 	}
-	old.Close()
 	return
 }
 
@@ -67,11 +72,17 @@ func (this *players) Delete(p *session.Data) bool {
 }
 
 func (this *players) Login(p *session.Data, callback loginCallback) (err error) {
+	loaded := false
+	defer func() {
+		if loaded {
+			_ = session.Options.Storage.Delete(p)
+		}
+	}()
 	p.Lock()
 	defer p.Unlock()
 	r := p
-	i, loaded := this.Map.LoadOrStore(p.UUID(), p)
-	if loaded {
+	var i any
+	if i, loaded = this.Map.LoadOrStore(p.UUID(), p); loaded {
 		sp, _ := i.(*session.Data)
 		sp.Lock()
 		defer sp.Unlock()
@@ -84,24 +95,28 @@ func (this *players) Login(p *session.Data, callback loginCallback) (err error) 
 	}
 	return
 }
-
-// Binding 身份认证绑定socket
-func (this *players) Binding(socket *cosnet.Socket, uuid string, data map[string]any) (r *session.Data, err error) {
-	p := session.NewData(uuid, "", data)
-	var re bool
-	err = this.Login(p, func(player *session.Data, loaded bool) error {
-		re = loaded
+func (this *players) Connect(sock *cosnet.Socket, v *session.Data) error {
+	err := this.Login(v, func(data *session.Data, loaded bool) error {
 		if loaded {
-			this.replace(player, socket)
+			this.replace(data, sock)
 		} else {
-			player.Set(SessionPlayerSocketName, socket, true)
+			data.Set(SessionPlayerSocketName, sock, true)
 		}
-		r = player
+		sock.OAuth(data)
 		return nil
 	})
-	if err != nil {
-		return nil, err
+	return err
+}
+
+func (this *players) Reconnect(sock *cosnet.Socket, secret string) (err error) {
+	if v := sock.Data(); v != nil {
+		return errors.New("please do not login again")
 	}
-	socket.OAuth(r, re)
+	s := session.New()
+	if err = s.Verify(secret); err != nil {
+		return
+	}
+	this.replace(s.Data, sock)
+	sock.Reconnect(s.Data)
 	return
 }

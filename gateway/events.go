@@ -12,9 +12,9 @@ type EventType int8
 type EventHandle func(player *session.Data, path string, meta values.Metadata)
 
 const (
-	EventTypeRequest EventType = iota //请求时
-	EventTypeConfirm                  //确认消息
-	EventTypeMessage                  //推送消息时
+	EventTypeRequest  EventType = iota //请求时
+	EventTypeConfirm                   //确认消息
+	EventTypeResponse                  //推送消息时
 )
 
 type emitter struct {
