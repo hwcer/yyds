@@ -31,15 +31,6 @@ type Server struct {
 
 func (this *Server) init() (err error) {
 	this.Server = cosweb.New()
-	if this.redis != nil {
-		session.Options.Storage, err = session.NewRedis(this.redis)
-	} else {
-		session.Options.Storage = session.NewMemory()
-	}
-	if err != nil {
-		return err
-	}
-
 	//跨域
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")

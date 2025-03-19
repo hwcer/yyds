@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-const elapsedMillisecond = 100 * time.Millisecond
+const elapsedMillisecond = 200 * time.Millisecond
 
 // Formatter 格式化路径
 //var Formatter = func(s string) string {

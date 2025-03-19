@@ -3,6 +3,7 @@ package gateway
 import (
 	"errors"
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
@@ -36,6 +37,16 @@ func (this *Module) Init() (err error) {
 	if options.Gate.Address == "" {
 		return errors.New("网关地址没有配置")
 	}
+	//session
+	if options.Gate.Redis != "" {
+		session.Options.Storage, err = session.NewRedis(options.Gate.Redis)
+	} else {
+		session.Options.Storage = session.NewMemory(options.Gate.Capacity)
+	}
+	if err != nil {
+		return err
+	}
+
 	if i := strings.Index(options.Gate.Address, ":"); i < 0 {
 		return errors.New("网关地址配置错误,格式: ip:port")
 	} else if options.Gate.Address[0:i] == "" {

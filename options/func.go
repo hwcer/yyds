@@ -31,5 +31,5 @@ func TrimServiceMethod(path string) string {
 }
 
 func GetServerTime() int64 {
-	return Game.timeUnix
+	return Game.Unix
 }

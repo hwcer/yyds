@@ -59,7 +59,14 @@ func (this *Module) Init() (err error) {
 	if utils.LocalValid(options.Game.Local) {
 		return errors.New("无法自动获取内网ip或者内网ip配置错误")
 	}
-
+	if options.Game.Time != "" {
+		var t *times.Times
+		if t, err = times.Parse(options.Game.Time); err != nil {
+			return err
+		} else if t != nil {
+			options.Game.Unix = t.Unix()
+		}
+	}
 	if options.Options.Debug {
 		if options.Game.Sid == 0 {
 			options.Game.Sid = autoServerId(options.Game.Local)

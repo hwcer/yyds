@@ -2,7 +2,6 @@ package options
 
 import (
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
@@ -20,23 +19,18 @@ const (
 	ServiceTypeSocial = "social" //社交用户中心
 )
 
-func Initialize() error {
+func Initialize() (err error) {
 	if !atomic.CompareAndSwapInt32(&initialize, 0, 1) {
 		return nil
 	}
-	if err := cosgo.Config.Unmarshal(Options); err != nil {
+	if err = cosgo.Config.Unmarshal(Options); err != nil {
 		return err
 	}
+	
 	xshare.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
 	xshare.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 	xshare.Options.BasePath = Options.Appid
-	if Game.Time != "" {
-		if t, err := times.Parse(Game.Time); err != nil {
-			return err
-		} else if t != nil {
-			Game.timeUnix = t.Unix()
-		}
-	}
+
 	if len(xshare.Service) > 0 {
 		cosgo.On(cosgo.EventTypLoaded, rpcStart)
 		cosgo.On(cosgo.EventTypStopped, xserver.Close)
