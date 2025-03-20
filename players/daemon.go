@@ -1,6 +1,7 @@
 package players
 
 import (
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
@@ -21,12 +22,14 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 	if gateway == 0 {
 		return errors.New("gateway is empty")
 	}
+
 	defer func() {
 		if err == nil {
 			p.KeepAlive(0)
 			p.Login = p.Unix()
 		}
 	}()
+	//todo 不同端不同协议顶号
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
 			return player.Emit(player.EventReconnect, p, meta)
@@ -41,6 +44,7 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 		return errors.ErrLoginWaiting
 	}
 	p.Gateway = gateway
+	p.Binder = binder.GetContentType(meta, binder.ContentTypeModRes)
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}

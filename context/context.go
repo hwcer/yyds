@@ -2,15 +2,18 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
 	"github.com/smallnest/rpcx/client"
+	"github.com/smallnest/rpcx/share"
 	"strconv"
 	"strings"
 	"time"
@@ -84,6 +87,17 @@ func (this *Context) Call(ctx context.Context, servicePath, serviceMethod string
 
 func (this *Context) Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Call, err error) {
 	return xclient.Async(ctx, servicePath, serviceMethod, args)
+}
+
+func (this *Context) AsyncWithPlayer(uid uint64, serviceMethod string, args any) (call *client.Call, err error) {
+	u := &uuid.UUID{}
+	if err = u.Parse(fmt.Sprintf("%d", uid), uuid.BaseSize); err != nil {
+		return nil, err
+	}
+	req := map[string]string{}
+	req[options.SelectorServerId] = fmt.Sprintf("%d", u.GetShard())
+	ctx := context.WithValue(context.Background(), share.ReqMetaDataKey, req)
+	return xclient.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
 }
 
 // Send 推送消息，必须长连接在线

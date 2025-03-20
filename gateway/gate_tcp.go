@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
@@ -82,6 +83,13 @@ func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	return buff, nil
 }
 func (this *socketProxy) Login(sess *session.Session) (err error) {
+	if v := this.Socket.Data(); v != nil {
+		if v.UUID() == sess.UUID() {
+			return nil
+		} else {
+			return errors.New("please do not login again")
+		}
+	}
 	return players.Connect(this.Context.Socket, sess.Data)
 }
 

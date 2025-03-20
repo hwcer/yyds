@@ -28,7 +28,6 @@ func Register(i any, prefix ...string) {
 func send(c *xshare.Context) any {
 	uid := c.GetMetadata(options.ServiceMetadataUID)
 	guid := c.GetMetadata(options.ServiceMetadataGUID)
-	//logger.Debug("推送消息:%v  %v  %v", c.GetMetadata(rpcx.MetadataMessagePath), uid, string(c.Payload()))
 	p := players.Players.Get(guid)
 	//sock := Sockets.Socket(uid)
 	if p == nil {

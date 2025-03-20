@@ -47,6 +47,10 @@ func (p *Player) Send(v any, rp any) {
 		logger.Debug("player gateway empty:%v", p.Uid())
 		return
 	}
+	if p.Binder == nil {
+		logger.Debug("player binder empty:%v", p.Uid())
+		return
+	}
 	req := GetReqMeta(rp)
 	if req == nil {
 		return
@@ -57,7 +61,7 @@ func (p *Player) Send(v any, rp any) {
 		logger.Debug("player gateway empty:%v", p.Uid())
 		return
 	}
-	req.Set(binder.HeaderAccept, binder.Json.Name())
+	req.Set(binder.HeaderContentType, p.Binder.Name())
 	req.Set(options.SelectorAddress, utils.IPv4Decode(p.Gateway))
 	req.Set(options.ServiceMetadataUID, p.uid)
 	req.Set(options.ServiceMetadataGUID, guid)
