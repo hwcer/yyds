@@ -103,11 +103,12 @@ func (this *Module) Init() (err error) {
 	}
 	//设置游戏Metadata
 	xshare.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid))
+	cosgo.On(cosgo.EventTypLoaded, players.Start)
 	return nil
 }
 
 func (this *Module) Start() error {
-	return players.Start()
+	return nil
 }
 
 func (this *Module) Close() (err error) {

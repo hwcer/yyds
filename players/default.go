@@ -2,7 +2,6 @@ package players
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/yyds/players/channel"
 	"github.com/hwcer/yyds/players/emitter"
@@ -24,7 +23,7 @@ func Start() error {
 	if !atomic.CompareAndSwapInt32(&playersStarted, 0, 1) {
 		return nil
 	}
-	cosgo.On(cosgo.EventTypStarted, loading)
+	//cosgo.On(cosgo.EventTypStarted, loading)
 	if Options.AsyncModel == AsyncModelLocker {
 		ps = locker.Start()
 	} else if Options.AsyncModel == AsyncModelChannel {
@@ -33,7 +32,7 @@ func Start() error {
 		return fmt.Errorf("players: invalid options")
 	}
 	scc.CGO(daemon)
-	return nil
+	return loading()
 }
 func Online() int32 {
 	return playersOnline
@@ -82,9 +81,4 @@ func Filter(t int32, f emitter.FilterFunc) {
 // Emitter 注册全局事件
 func Emitter(f emitter.EventsFunc) {
 	emitter.Events.Register(f)
-}
-
-// Preload 设置预加载函数
-func Preload(f preload) {
-	preloadFunc = f
 }

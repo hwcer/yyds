@@ -23,5 +23,5 @@ var Options = struct {
 	ReleaseTime:   10,
 	MemoryPlayer:  5000,
 	MemoryRelease: 500,
-	MemoryInstall: 1000,
+	MemoryInstall: 10000,
 }

@@ -4,9 +4,11 @@ package player
 var Fields = &struct {
 	Guid   string `json:"guid"`
 	Create string `json:"create"`
+	Update string `json:"update"`
 }{
-	Guid:   "Guid",
-	Create: "Create",
+	Guid:   "guid",
+	Create: "create",
+	Update: "update",
 }
 
 const ProcessName = "_sys_process_player"
