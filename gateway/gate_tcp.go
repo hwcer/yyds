@@ -18,11 +18,16 @@ import (
 	"time"
 )
 
-type Socket struct {
+func NewTCPServer() *TcpServer {
+	s := &TcpServer{}
+	return s
+}
+
+type TcpServer struct {
 	Errorf func(*cosnet.Context, error) any
 }
 
-func (this *Socket) init() error {
+func (this *TcpServer) init() error {
 	if !cosnet.Start() {
 		return nil
 	}
@@ -31,7 +36,7 @@ func (this *Socket) init() error {
 	return nil
 }
 
-func (this *Socket) Listen(address string) error {
+func (this *TcpServer) Listen(address string) error {
 	_, err := cosnet.Listen(address)
 	if err == nil {
 		logger.Trace("网关长连接启动：%v", options.Gate.Address)
@@ -39,19 +44,19 @@ func (this *Socket) Listen(address string) error {
 	return err
 }
 
-func (this *Socket) Accept(ln net.Listener) error {
+func (this *TcpServer) Accept(ln net.Listener) error {
 	cosnet.Accept(&tcp.Listener{Listener: ln})
 	logger.Trace("网关长连接启动：%v", options.Gate.Address)
 	return nil
 }
 
-func (this *Socket) ping(c *cosnet.Context) interface{} {
+func (this *TcpServer) ping(c *cosnet.Context) interface{} {
 	var s string
 	_ = c.Bind(&s)
 	return []byte(strconv.Itoa(int(time.Now().Unix())))
 }
 
-func (this *Socket) proxy(c *cosnet.Context) (r any) {
+func (this *TcpServer) proxy(c *cosnet.Context) (r any) {
 	h := &socketProxy{Context: c}
 	var err error
 	if r, err = proxy(h); err != nil {
@@ -59,7 +64,7 @@ func (this *Socket) proxy(c *cosnet.Context) (r any) {
 	}
 	return
 }
-func (this *Socket) errorf(c *cosnet.Context, err error) any {
+func (this *TcpServer) errorf(c *cosnet.Context, err error) any {
 	if this.Errorf != nil {
 		return this.Errorf(c, err)
 	}

@@ -14,16 +14,17 @@ import (
 	"time"
 )
 
-var mod = &Module{Socket: &Socket{}, Server: &Server{}}
+var mod = &Module{}
+
+var TCP = NewTCPServer()
+var HTTP = NewHttpServer()
 
 func New() *Module {
 	return mod
 }
 
 type Module struct {
-	mux    cmux.CMux
-	Socket *Socket
-	Server *Server
+	mux cmux.CMux
 }
 
 func (this *Module) Id() string {
@@ -54,12 +55,12 @@ func (this *Module) Init() (err error) {
 	}
 	p := options.Gate.Protocol
 	if p.Has(options.ProtocolTypeTCP) || p.Has(options.ProtocolTypeWSS) {
-		if err = this.Socket.init(); err != nil {
+		if err = TCP.init(); err != nil {
 			return err
 		}
 	}
 	if p.Has(options.ProtocolTypeHTTP) {
-		if err = this.Server.init(); err != nil {
+		if err = HTTP.init(); err != nil {
 			return err
 		}
 	}
@@ -81,9 +82,9 @@ func (this *Module) Start() (err error) {
 	if p.Has(options.ProtocolTypeTCP) {
 		if this.mux != nil {
 			so := this.mux.Match(cosnet.Matcher)
-			err = this.Socket.Accept(so)
+			err = TCP.Accept(so)
 		} else {
-			err = this.Socket.Listen(options.Gate.Address)
+			err = TCP.Listen(options.Gate.Address)
 		}
 		if err != nil {
 			return err
@@ -93,9 +94,9 @@ func (this *Module) Start() (err error) {
 	if p.Has(options.ProtocolTypeHTTP) {
 		if this.mux != nil {
 			so := this.mux.Match(cmux.HTTP1Fast())
-			err = this.Server.Accept(so)
+			err = HTTP.Accept(so)
 		} else {
-			err = this.Server.Listen(options.Gate.Address)
+			err = HTTP.Listen(options.Gate.Address)
 		}
 		if err != nil {
 			return err
@@ -107,7 +108,7 @@ func (this *Module) Start() (err error) {
 		//this.WebSocket.Verify = WSVerify
 		//this.WebSocket.Accept = WSAccept
 		if p.Has(options.ProtocolTypeHTTP) {
-			err = coswss.Binding(this.Server.Server, options.Options.Gate.Websocket)
+			err = coswss.Binding(HTTP.Server, options.Options.Gate.Websocket)
 		} else {
 			err = coswss.Listen(options.Gate.Address, options.Options.Gate.Websocket)
 		}

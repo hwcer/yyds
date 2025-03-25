@@ -24,12 +24,17 @@ func init() {
 	session.Options.Name = "_cookie_vars"
 }
 
-type Server struct {
+func NewHttpServer() *HttpServer {
+	s := &HttpServer{}
+	return s
+}
+
+type HttpServer struct {
 	*cosweb.Server
 	redis any //是否使用redis存储session信息
 }
 
-func (this *Server) init() (err error) {
+func (this *HttpServer) init() (err error) {
 	this.Server = cosweb.New()
 	//跨域
 	access := middleware.NewAccessControlAllow()
@@ -49,20 +54,20 @@ func (this *Server) init() (err error) {
 	return nil
 }
 
-func (this *Server) Listen(address string) (err error) {
+func (this *HttpServer) Listen(address string) (err error) {
 	if err = this.Server.Listen(address); err == nil {
 		logger.Trace("网关短连接启动：%v", options.Gate.Address)
 	}
 	return
 }
-func (this *Server) Accept(ln net.Listener) (err error) {
+func (this *HttpServer) Accept(ln net.Listener) (err error) {
 	if err = this.Server.Accept(ln); err == nil {
 		logger.Trace("网关短连接启动：%v", options.Gate.Address)
 	}
 	return
 }
 
-func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
+func (this *HttpServer) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = values.Errorf(0, r)
@@ -78,7 +83,7 @@ func (this *Server) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
 	h := &httpProxy{Context: c}
 	reply, err := proxy(h)
 	if err != nil {
-		return h.errorf(c, err)
+		return err
 	}
 	if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
 		s := string(reply)
@@ -105,7 +110,6 @@ type httpProxy struct {
 	*cosweb.Context
 	uri      *url.URL
 	metadata values.Metadata
-	Errorf   func(*cosweb.Context, error) error
 }
 
 func (this *httpProxy) Binder() binder.Binder {
@@ -117,21 +121,21 @@ func (this *httpProxy) Binder() binder.Binder {
 	return binder.Get(t)
 }
 
-func (this *httpProxy) errorf(c *cosweb.Context, err error) error {
-	if this.Errorf != nil {
-		return this.Errorf(c, err)
-	}
-	data := values.Parse(err)
-	b := this.Binder()
-	if b == nil {
-		return err
-	}
-	s, err := b.Marshal(data)
-	if err != nil {
-		return err
-	}
-	return this.Context.Bytes(cosweb.ContentType(b.String()), s)
-}
+//func (this *httpProxy) errorf(c *cosweb.Context, err error) error {
+//	if mod.Server.Errorf != nil {
+//		return mod.Server.Errorf(c, err)
+//	}
+//	data := values.Parse(err)
+//	b := this.Binder()
+//	if b == nil {
+//		return err
+//	}
+//	s, err := b.Marshal(data)
+//	if err != nil {
+//		return err
+//	}
+//	return this.Context.Bytes(cosweb.ContentType(b.String()), s)
+//}
 
 func (this *httpProxy) Path() (string, error) {
 	return this.Context.Request.URL.Path, nil
