@@ -24,7 +24,7 @@ func NewTCPServer() *TcpServer {
 }
 
 type TcpServer struct {
-	Errorf func(*cosnet.Context, error) any
+	//Errorf func(*cosnet.Context, error) any
 }
 
 func (this *TcpServer) init() error {
@@ -56,20 +56,24 @@ func (this *TcpServer) ping(c *cosnet.Context) interface{} {
 	return []byte(strconv.Itoa(int(time.Now().Unix())))
 }
 
-func (this *TcpServer) proxy(c *cosnet.Context) (r any) {
+func (this *TcpServer) proxy(c *cosnet.Context) error {
 	h := &socketProxy{Context: c}
-	var err error
-	if r, err = proxy(h); err != nil {
-		r = this.errorf(c, err)
+	b, err := proxy(h)
+	if err != nil {
+		return err
 	}
-	return
-}
-func (this *TcpServer) errorf(c *cosnet.Context, err error) any {
-	if this.Errorf != nil {
-		return this.Errorf(c, err)
+	if c.Message.Confirm() {
+		return c.Reply(b)
 	}
-	return values.Error(err)
+	return nil
 }
+
+//func (this *TcpServer) errorf(c *cosnet.Context, err error) any {
+//	if this.Errorf != nil {
+//		return this.Errorf(c, err)
+//	}
+//	return values.Error(err)
+//}
 
 type socketProxy struct {
 	*cosnet.Context
