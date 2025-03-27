@@ -1,5 +1,7 @@
 package player
 
+var ITypeRole int32 = 10
+
 // Fields 角色字段名，一般情况下不需要设置
 var Fields = &struct {
 	Guid   string `json:"guid"`

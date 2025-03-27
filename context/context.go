@@ -39,8 +39,7 @@ func (this *Context) Uid() uint64 {
 // GUid 账号ID
 func (this *Context) GUid() string {
 	if this.Player != nil {
-		doc := this.Player.Document(options.ITypeRole)
-		return doc.Get("guid").(string)
+		return this.Player.Guid()
 	}
 	if r := this.GetMetadata(options.ServiceMetadataGUID); r != "" {
 		return r

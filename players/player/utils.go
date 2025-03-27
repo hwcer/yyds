@@ -55,9 +55,8 @@ func (p *Player) Send(v any, rp any) {
 	if req == nil {
 		return
 	}
-	role := p.Document(options.ITypeRole)
-	guid := role.Get(Fields.Guid)
-	if guid == nil {
+	guid := p.Guid()
+	if guid == "" {
 		logger.Debug("player gateway empty:%v", p.Uid())
 		return
 	}
@@ -97,6 +96,10 @@ func (p *Player) Loading(init bool) (err error) {
 
 func (p *Player) Uid() uint64 {
 	return p.uid
+}
+func (p *Player) Guid() string {
+	doc := p.Document(ITypeRole)
+	return doc.Get(Fields.Guid).(string)
 }
 
 func (p *Player) Destroy() error {
