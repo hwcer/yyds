@@ -13,6 +13,7 @@ import (
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/emitter"
 	"reflect"
+	"strings"
 	"sync/atomic"
 )
 
@@ -224,6 +225,15 @@ func (p *Player) AddWithSlice(arr []int32) (r []int32) {
 	return
 }
 
+func (p *Player) AddWithString(s string, split string) (r []int32) {
+	if s == "" || !strings.Contains(split, split) {
+		return
+	}
+	as := strings.Split(s, split)
+	ai := utils.SliceStringToInt32(as)
+	return p.AddWithSlice(ai)
+}
+
 func (p *Player) SubWithSlice(arr []int32) (r []int32) {
 	for i := 0; i < len(arr); i += 2 {
 		if j := i + 1; j < len(arr) {
@@ -234,6 +244,15 @@ func (p *Player) SubWithSlice(arr []int32) (r []int32) {
 		}
 	}
 	return
+}
+
+func (p *Player) SubWithString(s string, split string) (r []int32) {
+	if s == "" || !strings.Contains(split, split) {
+		return
+	}
+	as := strings.Split(s, split)
+	ai := utils.SliceStringToInt32(as)
+	return p.SubWithSlice(ai)
 }
 
 // MustUpdate 客户端数据是否需要更新

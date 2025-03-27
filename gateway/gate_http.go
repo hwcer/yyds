@@ -20,10 +20,6 @@ import (
 
 var Method = []string{"POST", "GET", "OPTIONS"}
 
-func init() {
-	session.Options.Name = "_cookie_vars"
-}
-
 func NewHttpServer() *HttpServer {
 	s := &HttpServer{}
 	return s

@@ -33,17 +33,17 @@ func (p protocol) CMux() bool {
 }
 
 var Gate = &gate{
-	Login:     "/game/login",
+	//Login:     "/game/login",
 	Static:    &Static{},
 	Prefix:    "handle",
 	Address:   "0.0.0.0:80",
-	Capacity:  2048,
+	Capacity:  10240,
 	Protocol:  2,
 	Websocket: "ws",
 }
 
 type gate = struct {
-	Login     string   `json:"login"`     //登录接口
+	//Login     string   `json:"login"`     //登录接口
 	Redis     string   `json:"redis"`     //使用redis存储session，开启长连接时，请不要使用redis存储session
 	Static    *Static  `json:"static"`    //静态服务器
 	Prefix    string   `json:"prefix"`    //路由强制前缀
