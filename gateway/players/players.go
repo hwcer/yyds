@@ -72,26 +72,23 @@ func (this *players) Delete(p *session.Data) bool {
 }
 
 func (this *players) Login(p *session.Data, callback loginCallback) (err error) {
-	loaded := false
+	var old *session.Data
 	defer func() {
-		if loaded {
-			_ = session.Options.Storage.Delete(p)
+		if old != nil {
+			_ = session.Options.Storage.Delete(old)
 		}
 	}()
 	p.Lock()
 	defer p.Unlock()
-	r := p
-	var i any
-	if i, loaded = this.Map.LoadOrStore(p.UUID(), p); loaded {
-		sp, _ := i.(*session.Data)
-		sp.Lock()
-		defer sp.Unlock()
-		sp.Reset()
-		sp.Merge(p, true)
-		r = sp
+	i, loaded := this.Map.LoadOrStore(p.UUID(), p)
+	if loaded {
+		old, _ = i.(*session.Data)
+		old.Lock()
+		defer old.Unlock()
+		p.Merge(old, true)
 	}
 	if callback != nil {
-		err = callback(r, loaded)
+		err = callback(p, loaded)
 	}
 	return
 }

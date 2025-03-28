@@ -1,6 +1,7 @@
 package players
 
 import (
+	"context"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
@@ -8,7 +9,6 @@ import (
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
-	"golang.org/x/net/context"
 	"runtime/debug"
 	"sort"
 	"sync/atomic"
