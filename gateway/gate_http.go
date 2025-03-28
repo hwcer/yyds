@@ -151,7 +151,7 @@ func (this *httpProxy) Data() (*session.Data, error) {
 func (this *httpProxy) Login(sess *session.Session) (err error) {
 	this.Context.Session = sess
 	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: sess.Token()}
-	err = players.Login(sess.Data, func(data *session.Data, _ bool) error {
+	err = players.Login(sess.Data, func(data, old *session.Data) error {
 		this.Context.Session.Data = data
 		return nil
 	})

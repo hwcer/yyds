@@ -12,7 +12,7 @@ const (
 	SessionPlayerSocketName = "player.sock"
 )
 
-type loginCallback func(player *session.Data, loaded bool) error
+type loginCallback func(player *session.Data, old *session.Data) error
 
 type players struct {
 	sync.Map
@@ -20,14 +20,13 @@ type players struct {
 
 // Replace  长连接顶号
 func (this *players) replace(p *session.Data, socket *cosnet.Socket) {
-	old := this.Socket(p)
-	p.Set(SessionPlayerSocketName, socket, true)
-	if old != nil && old.Id() != socket.Id() {
+	os := this.Socket(p)
+	if os != nil && os.Id() != socket.Id() {
 		ip := socket.RemoteAddr().String()
 		if i := strings.Index(ip, ":"); i > 0 {
 			ip = ip[:i]
 		}
-		old.Replaced(ip)
+		os.Replaced(ip)
 	}
 	return
 }
@@ -80,25 +79,23 @@ func (this *players) Login(p *session.Data, callback loginCallback) (err error) 
 	}()
 	p.Lock()
 	defer p.Unlock()
-	i, loaded := this.Map.LoadOrStore(p.UUID(), p)
-	if loaded {
+	if i, loaded := this.Map.LoadOrStore(p.UUID(), p); loaded {
 		old, _ = i.(*session.Data)
 		old.Lock()
 		defer old.Unlock()
 		p.Merge(old, true)
 	}
 	if callback != nil {
-		err = callback(p, loaded)
+		err = callback(p, old)
 	}
 	return
 }
 func (this *players) Connect(sock *cosnet.Socket, v *session.Data) error {
-	err := this.Login(v, func(data *session.Data, loaded bool) error {
-		if loaded {
-			this.replace(data, sock)
-		} else {
-			data.Set(SessionPlayerSocketName, sock, true)
+	err := this.Login(v, func(data *session.Data, old *session.Data) error {
+		if old != nil {
+			this.replace(old, sock)
 		}
+		data.Set(SessionPlayerSocketName, sock, true)
 		sock.OAuth(data)
 		return nil
 	})
@@ -114,6 +111,7 @@ func (this *players) Reconnect(sock *cosnet.Socket, secret string) (err error) {
 		return
 	}
 	this.replace(s.Data, sock)
+	s.Data.Set(SessionPlayerSocketName, sock, true)
 	sock.Reconnect(s.Data)
 	return
 }
