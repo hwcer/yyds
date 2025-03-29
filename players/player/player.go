@@ -14,13 +14,13 @@ type Message struct {
 }
 type Handle func(*Player) error
 
-func New(uid uint64) *Player {
+func New(uid string) *Player {
 	return &Player{uid: uid}
 }
 
 type Player struct {
 	*updater.Updater
-	uid       uint64
+	uid       string
 	mutex     sync.Mutex       //底层自动使用锁，不要手动调用
 	heartbeat int64            //最后心跳时间
 	Times     *Times           //时间控制器

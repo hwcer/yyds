@@ -15,7 +15,7 @@ import (
 // Preload
 type preload interface {
 	Record() int //需要预加载的实际条数
-	Handle(page, size int, callback func(uid uint64, name string))
+	Handle(page, size int, callback func(uid string, name string))
 }
 
 var Preload preload
@@ -48,7 +48,7 @@ func loading() (err error) {
 		go func(page int) {
 			defer wg.Done()
 			var pn int
-			Preload.Handle(page, size, func(uid uint64, name string) {
+			Preload.Handle(page, size, func(uid string, name string) {
 				pn += 1
 				progress.Add(1)
 				p := player.New(uid)

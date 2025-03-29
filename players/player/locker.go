@@ -2,7 +2,7 @@ package player
 
 type Locker interface {
 	Data() error
-	Get(uid uint64) *Player
+	Get(uid string) *Player
 	Range(f func(player *Player) bool)
 	Select(keys ...any)
 	Verify() error

@@ -13,7 +13,7 @@ import (
 var (
 	playersOnline      int32 //在线人数
 	playersStarted     int32
-	playersRecycling   map[uint64]*player.Player
+	playersRecycling   map[string]*player.Player
 	playersReleaseTime int //距离上次内存清理的事件间隔
 )
 
@@ -39,23 +39,23 @@ func Online() int32 {
 }
 
 // Try 获取在线玩家, 使用TryLock 尝试获得锁
-func Try(uid uint64, handle player.Handle) error {
+func Try(uid string, handle player.Handle) error {
 	return ps.Try(uid, handle)
 }
 
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁
-func Get(uid uint64, handle player.Handle) error {
+func Get(uid string, handle player.Handle) error {
 	return ps.Get(uid, handle)
 }
 
 // Load 加载玩家数据,如果不在线则实时读写数据库
 // init 是否立即初始化所有数据
-func Load(uid uint64, init bool, handle player.Handle) (err error) {
+func Load(uid string, init bool, handle player.Handle) (err error) {
 	return ps.Load(uid, init, handle)
 }
 
 // Login 登录成功,只能在登录时调用
-func Login(uid uint64, meta map[string]string, handle player.Handle) (err error) {
+func Login(uid string, meta map[string]string, handle player.Handle) (err error) {
 	err = ps.Load(uid, true, func(p *player.Player) error {
 		if e := Connect(p, meta); e != nil {
 			return e
@@ -65,11 +65,11 @@ func Login(uid uint64, meta map[string]string, handle player.Handle) (err error)
 	return
 }
 
-func Locker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
+func Locker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
 	return ps.Locker(uid, handle, done...)
 }
 
-func Range(f func(uint64, *player.Player) bool) {
+func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
 }
 

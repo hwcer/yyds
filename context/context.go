@@ -14,7 +14,6 @@ import (
 	"github.com/hwcer/yyds/players/player"
 	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/share"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -25,15 +24,14 @@ type Context struct {
 }
 
 // Uid 角色ID
-func (this *Context) Uid() uint64 {
+func (this *Context) Uid() string {
 	if this.Player != nil {
 		return this.Player.Uid()
 	}
 	if r := this.GetMetadata(options.ServiceMetadataUID); r != "" {
-		v, _ := strconv.ParseUint(r, 10, 64)
-		return v
+		return r
 	}
-	return 0
+	return ""
 }
 
 // GUid 账号ID

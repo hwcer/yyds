@@ -12,27 +12,27 @@ import (
 var w *await.Await
 
 type Args struct {
-	uid    []uint64
+	uid    []string
 	done   []func()
 	handle player.LockerHandle
 }
 
 // 已经在控制携程内
-func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
+func NewLocker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, done: done}
 	l := &Locker{}
 	return l.call(msg)
 }
 
 // NewLockerWithLocker 通常在脚本或者不在控制携程之内才使用这个方法先进入防并发携程
-func NewLockerWithLocker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
+func NewLockerWithLocker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, done: done}
 	l := &Locker{}
 	return w.Call(l.call, msg)
 }
 
 type Locker struct {
-	dict map[uint64]*player.Player
+	dict map[string]*player.Player
 	done []func()
 }
 
@@ -58,9 +58,9 @@ func (this *Locker) release() {
 	this.dict = nil
 }
 
-func (this *Locker) loading(uid uint64) (err error) {
+func (this *Locker) loading(uid string) (err error) {
 	if this.dict == nil {
-		this.dict = map[uint64]*player.Player{}
+		this.dict = map[string]*player.Player{}
 	}
 	if _, ok := this.dict[uid]; ok {
 		return nil
@@ -96,7 +96,7 @@ func (this *Locker) Data() error {
 	return nil
 }
 
-func (this *Locker) Get(uid uint64) *player.Player {
+func (this *Locker) Get(uid string) *player.Player {
 	return this.dict[uid]
 }
 

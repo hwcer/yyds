@@ -95,7 +95,7 @@ func (p *Player) Loading(init bool) (err error) {
 	return nil
 }
 
-func (p *Player) Uid() uint64 {
+func (p *Player) Uid() string {
 	return p.uid
 }
 func (p *Player) Guid() string {

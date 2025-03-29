@@ -37,7 +37,7 @@ func (this *Players) call(args any) (reply any, err error) {
 	if msg == nil {
 		return nil, fmt.Errorf("channel Players.call args error:%v", args)
 	}
-	uid := msg[playerAwaitArgsUid].(uint64)
+	uid := msg[playerAwaitArgsUid].(string)
 	init := msg[playerAwaitArgsInit].(bool)
 	caller := msg[playerAwaitArgsCaller].(int8)
 	handle := msg[playerAwaitArgsHandle].(player.Handle)
@@ -55,7 +55,7 @@ func (this *Players) call(args any) (reply any, err error) {
 }
 
 // 1
-func (this *Players) get(uid uint64, handle player.Handle) error {
+func (this *Players) get(uid string, handle player.Handle) error {
 	var p *player.Player
 	if i, ok := this.dict.Load(uid); ok {
 		p = i.(*player.Player)
@@ -69,7 +69,7 @@ func (this *Players) get(uid uint64, handle player.Handle) error {
 }
 
 // 2
-func (this *Players) try(uid uint64, handle player.Handle) (err error) {
+func (this *Players) try(uid string, handle player.Handle) (err error) {
 	p := player.New(uid)
 	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
 		p = i.(*player.Player)
@@ -87,7 +87,7 @@ func (this *Players) try(uid uint64, handle player.Handle) (err error) {
 }
 
 // 3
-func (this *Players) load(uid uint64, init bool, handle player.Handle) (err error) {
+func (this *Players) load(uid string, init bool, handle player.Handle) (err error) {
 	p := player.New(uid)
 	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
 		p = i.(*player.Player)
@@ -103,7 +103,7 @@ func (this *Players) load(uid uint64, init bool, handle player.Handle) (err erro
 	defer p.Release()
 	return handle(p)
 }
-func (this *Players) Get(uid uint64, handle player.Handle) (err error) {
+func (this *Players) Get(uid string, handle player.Handle) (err error) {
 	args := playerAwaitArgs{}
 	args[playerAwaitArgsUid] = uid
 	args[playerAwaitArgsInit] = false
@@ -112,7 +112,7 @@ func (this *Players) Get(uid uint64, handle player.Handle) (err error) {
 	_, err = w.Call(this.call, args)
 	return err
 }
-func (this *Players) Try(uid uint64, handle player.Handle) (err error) {
+func (this *Players) Try(uid string, handle player.Handle) (err error) {
 	args := playerAwaitArgs{}
 	args[playerAwaitArgsUid] = uid
 	args[playerAwaitArgsInit] = true
@@ -122,7 +122,7 @@ func (this *Players) Try(uid uint64, handle player.Handle) (err error) {
 	return err
 }
 
-func (this *Players) Load(uid uint64, init bool, handle player.Handle) (err error) {
+func (this *Players) Load(uid string, init bool, handle player.Handle) (err error) {
 	args := playerAwaitArgs{}
 	args[playerAwaitArgsUid] = uid
 	args[playerAwaitArgsInit] = init
@@ -132,21 +132,21 @@ func (this *Players) Load(uid uint64, init bool, handle player.Handle) (err erro
 	return err
 }
 
-func (this *Players) Range(f func(uint64, *player.Player) bool) {
+func (this *Players) Range(f func(string, *player.Player) bool) {
 	this.dict.Range(func(key, value interface{}) bool {
-		return f(key.(uint64), value.(*player.Player))
+		return f(key.(string), value.(*player.Player))
 	})
 }
 
 // Store 存储玩家对象，用于初始化
-func (this *Players) Store(k uint64, v *player.Player) {
+func (this *Players) Store(k string, v *player.Player) {
 	this.dict.Store(k, v)
 }
-func (this *Players) Delete(k uint64) {
+func (this *Players) Delete(k string) {
 	this.dict.Delete(k)
 }
 
-func (this *Players) Locker(uid []uint64, handle player.LockerHandle, done ...func()) (any, error) {
+func (this *Players) Locker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
 	return NewLocker(uid, handle, done...)
 }
 

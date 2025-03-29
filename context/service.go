@@ -111,7 +111,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		}
 	}
 	uid := c.Uid()
-	if uid == 0 {
+	if uid == "" {
 		return nil, values.Errorf(0, "not select role")
 	}
 	err = players.Try(uid, func(p *player.Player) error {

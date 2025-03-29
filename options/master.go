@@ -1,12 +1,12 @@
 package options
 
 import (
+	"github.com/hwcer/cosgo/await"
 	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/request"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/errors"
 	"strings"
-	"sync"
 )
 
 type MasterApiType string
@@ -27,18 +27,17 @@ var Master = &master{}
 
 func init() {
 	Master.client = request.New()
+	Master.initialize = await.NewInitialize()
 }
 
 type master struct {
 	//url  string
-	auth   *request.OAuth
-	client *request.Client
-	mutex  sync.Mutex
+	auth       *request.OAuth
+	client     *request.Client
+	initialize *await.Initialize
 }
 
-func (m *master) init() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
+func (m *master) init() error {
 	if m.auth == nil && Options.Verify > 0 {
 		m.auth = request.NewOAuth(Options.Appid, Options.Secret)
 		if Options.Verify >= 2 {
@@ -46,19 +45,17 @@ func (m *master) init() {
 		}
 		m.client.Use(m.auth.Request)
 	}
-}
-
-func (m *master) OAuth() *request.OAuth {
-	if m.auth == nil {
-		m.init()
-	}
-	return m.auth
+	return nil
 }
 
 func (m *master) Post(api MasterApiType, args interface{}, reply interface{}) (err error) {
 	if Options.Master == "" {
 		return errors.ErrMasterEmpty
 	}
+	if m.auth == nil {
+		_ = m.initialize.Try(m.init)
+	}
+
 	url := Options.Master
 	if strings.HasSuffix(url, "/") {
 		url = strings.TrimSuffix(url, "/")
@@ -73,7 +70,6 @@ func (m *master) Post(api MasterApiType, args interface{}, reply interface{}) (e
 	b.WriteString(Options.Appid)
 	b.WriteString(string(api))
 	msg := values.Parse(nil)
-	_ = m.OAuth()
 
 	if err = m.client.Post(b.String(), args, msg); err != nil {
 		logger.Trace("加载master错误:%v", b.String())

@@ -107,7 +107,7 @@ func worker() {
 		}
 	}()
 	if playersRecycling == nil {
-		playersRecycling = map[uint64]*player.Player{}
+		playersRecycling = map[string]*player.Player{}
 	}
 	playersReleaseTime++
 	now := times.Now().Unix()
@@ -115,7 +115,7 @@ func worker() {
 	releaseTime := now - PlayersRelease
 
 	var tot int
-	ps.Range(func(uid uint64, p *player.Player) bool {
+	ps.Range(func(uid string, p *player.Player) bool {
 		tot += 1
 		//检查掉线情况
 		//logger.Debug("uid:%v   status:%v   heartbeat:%v ", p.Uid(), p.status, p.heartbeat)
@@ -159,7 +159,7 @@ func worker() {
 		return dict[i].Heartbeat() < dict[j].Heartbeat()
 	})
 
-	next := map[uint64]*player.Player{}
+	next := map[string]*player.Player{}
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && release(p) {
 			ct--
@@ -192,7 +192,7 @@ func shutdown() {
 		return
 	}
 	//关闭所有用户
-	ps.Range(func(uid uint64, p *player.Player) bool {
+	ps.Range(func(uid string, p *player.Player) bool {
 		_ = release(p)
 		return true
 	})
