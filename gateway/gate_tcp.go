@@ -91,15 +91,15 @@ func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	buff := bytes.NewBuffer(this.Context.Message.Body())
 	return buff, nil
 }
-func (this *socketProxy) Login(sess *session.Session) (err error) {
+func (this *socketProxy) Login(guid string, value values.Values) (err error) {
 	if v := this.Socket.Data(); v != nil {
-		if v.UUID() == sess.UUID() {
+		if v.UUID() == guid {
 			return nil
 		} else {
 			return errors.New("please do not login again")
 		}
 	}
-	return players.Connect(this.Context.Socket, sess.Data)
+	return players.Connect(this.Context.Socket, guid, value)
 }
 
 func (this *socketProxy) Delete() error {

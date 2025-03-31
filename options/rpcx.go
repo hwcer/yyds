@@ -12,6 +12,15 @@ import (
 	"time"
 )
 
+var Rpcx = &rpcx{
+	Rpcx: xshare.Options,
+}
+
+type rpcx struct {
+	*xshare.Rpcx
+	Redis string `json:"redis"` //rpc服务器注册发现 pub/sub 订阅服务
+}
+
 //var rpcxRegister *redis.Register
 
 func Discovery(servicePath string) (client.ServiceDiscovery, error) {
@@ -50,11 +59,11 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 }
 
 func getRedisAddress() (address []string, opts *store.Config, err error) {
-	if Options.Redis == "" {
+	if Rpcx.Redis == "" {
 		return nil, nil, errors.New("redis address is empty")
 	}
 	var uri *url.URL
-	uri, err = utils.NewUrl(Options.Redis, "tcp")
+	uri, err = utils.NewUrl(Rpcx.Redis, "tcp")
 	if err != nil {
 		return
 	}

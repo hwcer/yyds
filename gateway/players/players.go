@@ -3,6 +3,7 @@ package players
 import (
 	"errors"
 	"github.com/hwcer/cosgo/session"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 	"strings"
 	"sync"
@@ -12,7 +13,7 @@ const (
 	SessionPlayerSocketName = "player.sock"
 )
 
-type loginCallback func(player *session.Data, old *session.Data) error
+type loginCallback func(player *session.Data, loaded bool) error
 
 type players struct {
 	sync.Map
@@ -70,30 +71,34 @@ func (this *players) Delete(p *session.Data) bool {
 	return true
 }
 
-func (this *players) Login(p *session.Data, callback loginCallback) (err error) {
-	var old *session.Data
-	defer func() {
-		if old != nil {
-			_ = session.Options.Storage.Delete(old)
-		}
-	}()
-	p.Lock()
-	defer p.Unlock()
-	if i, loaded := this.Map.LoadOrStore(p.UUID(), p); loaded {
-		old, _ = i.(*session.Data)
-		old.Lock()
-		defer old.Unlock()
-		p.Merge(old, true)
+func (this *players) create() any {
+	return nil
+}
+func (this *players) Login(guid string, value values.Values, callback loginCallback) (err error) {
+	r := session.NewData(guid, value)
+	r.Lock()
+	defer r.Unlock()
+	i, loaded := this.Map.LoadOrStore(guid, r)
+	if loaded {
+		p, _ := i.(*session.Data)
+		p.Lock()
+		defer p.Unlock()
+		p.Merge(r, true)
+		r = p
+	} else {
+		err = session.Options.Storage.New(r)
 	}
 	if callback != nil {
-		err = callback(p, old)
+		err = callback(r, loaded)
 	}
 	return
 }
-func (this *players) Connect(sock *cosnet.Socket, v *session.Data) error {
-	err := this.Login(v, func(data *session.Data, old *session.Data) error {
-		if old != nil {
-			this.replace(old, sock)
+
+// todo
+func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Values) error {
+	err := this.Login(guid, value, func(data *session.Data, loaded bool) error {
+		if loaded {
+			this.replace(data, sock)
 		}
 		data.Set(SessionPlayerSocketName, sock, true)
 		sock.OAuth(data)

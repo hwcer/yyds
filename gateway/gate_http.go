@@ -148,13 +148,13 @@ func (this *httpProxy) Data() (*session.Data, error) {
 	return this.Context.Session.Data, nil
 }
 
-func (this *httpProxy) Login(sess *session.Session) (err error) {
-	this.Context.Session = sess
-	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: sess.Token()}
-	err = players.Login(sess.Data, func(data, old *session.Data) error {
-		this.Context.Session.Data = data
+func (this *httpProxy) Login(guid string, value values.Values) (err error) {
+	var data *session.Data
+	err = players.Login(guid, value, func(d *session.Data, _ bool) error {
+		data = d
 		return nil
 	})
+	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: data.Id()}
 	if err != nil {
 		return err
 	}

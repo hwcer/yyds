@@ -86,9 +86,9 @@ func (this *Context) Async(ctx context.Context, servicePath, serviceMethod strin
 	return xclient.Async(ctx, servicePath, serviceMethod, args)
 }
 
-func (this *Context) AsyncWithPlayer(uid uint64, serviceMethod string, args any) (call *client.Call, err error) {
+func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any) (call *client.Call, err error) {
 	u := &uuid.UUID{}
-	if err = u.Parse(fmt.Sprintf("%d", uid), uuid.BaseSize); err != nil {
+	if err = u.Parse(uid, uuid.BaseSize); err != nil {
 		return nil, err
 	}
 	req := map[string]string{}
@@ -125,7 +125,9 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		logger.Alert("grpc gateway is nil")
 	}
 
-	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
+	if err := xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil); err != nil {
+		logger.Error(err)
+	}
 }
 
 // Channel 频道操作器
