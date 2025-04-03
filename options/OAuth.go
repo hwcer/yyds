@@ -8,9 +8,10 @@ import (
 // 接口权限设置
 
 const (
-	OAuthTypeNone      int8 = iota //不需要登录
-	OAuthTypeOAuth                 //需要认证
-	OAuthTypeCharacter             //需要选择角色
+	OAuthTypeNone    int8 = iota //不需要登录
+	OAuthTypeOAuth               //需要认证
+	OAuthTypeSelect              //需要选择角色,默认
+	OAuthTypeRenewal             //需要续约时，仍然可以访问
 )
 
 var OAuth = authorizes{}
@@ -19,15 +20,16 @@ type authorizes map[string]int8
 
 func init() {
 	s := map[string]int8{
-		"/ping":        OAuthTypeNone,
-		"/login":       OAuthTypeNone,
-		"/roles":       OAuthTypeOAuth,
-		"/create":      OAuthTypeOAuth,
-		"/select":      OAuthTypeOAuth,
-		"/version":     OAuthTypeOAuth,
-		"/reconnect":   OAuthTypeNone,
-		"/role/create": OAuthTypeOAuth,
-		"/role/select": OAuthTypeOAuth,
+		"/ping":         OAuthTypeNone,
+		"/login":        OAuthTypeNone,
+		"/roles":        OAuthTypeOAuth,
+		"/create":       OAuthTypeOAuth,
+		"/select":       OAuthTypeOAuth,
+		"/version":      OAuthTypeOAuth,
+		"/reconnect":    OAuthTypeNone,
+		"/role/create":  OAuthTypeOAuth,
+		"/role/select":  OAuthTypeOAuth,
+		"/role/renewal": OAuthTypeRenewal,
 	}
 	for k, v := range s {
 		OAuth.Set(ServiceTypeGame, k, v)
@@ -49,7 +51,7 @@ func (auth authorizes) Get(s string) int8 {
 		s = "/" + s
 	}
 	if v, ok := auth[s]; !ok {
-		return OAuthTypeCharacter
+		return OAuthTypeSelect
 	} else {
 		return v
 	}

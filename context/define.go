@@ -6,8 +6,7 @@ import (
 )
 
 const (
-	ServiceMethodDebug       = "/debug"
-	ServiceMethodRoleRenewal = "/role/renewal" //续约
+	ServiceMethodDebug = "/debug"
 )
 
 func MethodGrade(s string) (l int8, p string) {

@@ -59,6 +59,14 @@ func (this *Context) Unix() int64 {
 	return time.Now().Unix()
 }
 
+// Milli 毫秒
+func (this *Context) Milli() int64 {
+	if this.Player != nil {
+		return this.Player.Milli()
+	}
+	return time.Now().UnixMilli()
+}
+
 // Gateway 网关地址
 func (this *Context) Gateway() string {
 	var code uint64
