@@ -26,7 +26,6 @@ func Initialize() (err error) {
 	if err = cosgo.Config.Unmarshal(Options); err != nil {
 		return err
 	}
-
 	xshare.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
 	xshare.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 	xshare.Options.BasePath = Options.Appid
@@ -39,11 +38,13 @@ func Initialize() (err error) {
 }
 
 func rpcStart() (err error) {
+	var addr string
 	var register xserver.Register
-	if Options.Rpcx.Redis != "" {
-		if register, err = Register(xshare.Address()); err != nil {
-			return err
-		}
+	if addr, err = rpcxRedisAddress(); err == nil && addr != "" {
+		register, err = Register(xshare.Address())
+	}
+	if err != nil {
+		return err
 	}
 	if err = xserver.Start(register); err != nil {
 		return err
@@ -65,14 +66,14 @@ var Options = &struct {
 	Service map[string]string `json:"service"` //
 	Game    *game
 	Gate    *gate
-	Rpcx    *rpcx
+	Rpcx    *xshare.Rpcx
 }{
 	Verify:  1,
 	Binder:  "json",
 	Service: xshare.Service,
 	Game:    Game,
 	Gate:    Gate,
-	Rpcx:    Rpcx,
+	Rpcx:    xshare.Options,
 }
 
 // Cookies 仅仅 http+json模式下 Cookie模板,网关会将 %CookieKey% %CookieValue% 替换成对应值

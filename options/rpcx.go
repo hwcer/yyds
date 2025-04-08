@@ -3,6 +3,7 @@ package options
 import (
 	"errors"
 	"fmt"
+	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/hwcer/cosrpc/xshare"
@@ -12,19 +13,19 @@ import (
 	"time"
 )
 
-var Rpcx = &rpcx{
-	Rpcx: xshare.Options,
-}
-
-type rpcx struct {
-	*xshare.Rpcx
-	Redis string `json:"redis"` //rpc服务器注册发现 pub/sub 订阅服务
-}
+//var Rpcx = &rpcx{
+//	Rpcx: xshare.Options,
+//}
+//
+//type rpcx struct {
+//	*xshare.Rpcx
+//	Redis string `json:"redis"` //rpc服务器注册发现 pub/sub 订阅服务
+//}
 
 //var rpcxRegister *redis.Register
 
 func Discovery(servicePath string) (client.ServiceDiscovery, error) {
-	address, opt, err := getRedisAddress()
+	address, opt, err := rpcxRedisParse()
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func Discovery(servicePath string) (client.ServiceDiscovery, error) {
 }
 
 func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
-	address, opt, err := getRedisAddress()
+	address, opt, err := rpcxRedisParse()
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +59,20 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 	return rpcxRegister, nil
 }
 
-func getRedisAddress() (address []string, opts *store.Config, err error) {
-	if Rpcx.Redis == "" {
+func rpcxRedisAddress() (addr string, err error) {
+	err = cosgo.Config.UnmarshalKey("rpcx.redis", &addr)
+	return
+}
+
+func rpcxRedisParse() (address []string, opts *store.Config, err error) {
+	var addr string
+	if addr, err = rpcxRedisAddress(); err != nil {
+		return
+	} else if addr == "" {
 		return nil, nil, errors.New("redis address is empty")
 	}
 	var uri *url.URL
-	uri, err = utils.NewUrl(Rpcx.Redis, "tcp")
+	uri, err = utils.NewUrl(addr, "tcp")
 	if err != nil {
 		return
 	}
