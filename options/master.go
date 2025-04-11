@@ -2,9 +2,9 @@ package options
 
 import (
 	"github.com/hwcer/cosgo/await"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/request"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
 	"strings"
 )

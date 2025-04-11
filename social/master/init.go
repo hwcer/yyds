@@ -2,11 +2,11 @@ package master
 
 import (
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/social/model"
 )

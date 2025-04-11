@@ -19,3 +19,6 @@
 [submodule "coswss"]
 	path = coswss
 	url = https://github.com/hwcer/coswss.git
+[submodule "logger"]
+	path = logger
+	url = https://github.com/hwcer/logger.git

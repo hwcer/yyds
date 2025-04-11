@@ -1,8 +1,8 @@
 package handle
 
 import (
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosrpc/xserver"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/social/model"
 )

@@ -1,8 +1,8 @@
 package yyds
 
 import (
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/uuid"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 )
 

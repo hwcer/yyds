@@ -1,8 +1,8 @@
 package verify
 
 import (
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 )
 

@@ -1,9 +1,9 @@
 package gateway
 
 import (
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"net/http"

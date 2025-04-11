@@ -2,10 +2,10 @@ package options
 
 import (
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xserver"
+	"github.com/hwcer/logger"
 	"os"
 	"plugin"
 	"sync"

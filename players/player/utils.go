@@ -3,12 +3,12 @@ package player
 import (
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xclient"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/emitter"
