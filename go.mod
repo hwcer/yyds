@@ -4,32 +4,10 @@ go 1.23.0
 
 toolchain go1.23.4
 
-replace (
-	github.com/hwcer/cosgo v1.2.0 => ./cosgo
-	github.com/hwcer/cosmo v1.1.0 => ./cosmo
-	github.com/hwcer/cosnet v0.2.1 => ./cosnet
-	github.com/hwcer/cosrpc v0.0.6 => ./cosrpc
-	github.com/hwcer/cosweb v0.1.0 => ./cosweb
-	github.com/hwcer/coswss v0.0.1 => ./coswss
-	github.com/hwcer/logger v0.0.5 => ./logger
-	github.com/hwcer/updater v0.0.1 => ./updater
-)
-
 require (
-	github.com/hwcer/cosgo v1.2.0
-	github.com/hwcer/cosmo v1.1.0
-	github.com/hwcer/cosnet v0.2.1
-	github.com/hwcer/cosrpc v0.0.6
-	github.com/hwcer/cosweb v0.1.0
-	github.com/hwcer/coswss v0.0.1
-	github.com/hwcer/logger v0.0.5
-	github.com/hwcer/updater v0.0.1
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
 	github.com/soheilhy/cmux v0.1.5
-)
-
-require (
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alitto/pond v1.9.2 // indirect
 	github.com/apache/thrift v0.21.0 // indirect
