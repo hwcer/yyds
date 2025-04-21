@@ -63,7 +63,7 @@ func (this *HttpServer) Accept(ln net.Listener) (err error) {
 	return
 }
 
-func (this *HttpServer) proxy(c *cosweb.Context, next cosweb.Next) (err error) {
+func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = values.Errorf(0, r)

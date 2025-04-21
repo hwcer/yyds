@@ -31,20 +31,20 @@ func init() {
 }
 
 type master struct {
-	//url  string
-	auth       *request.OAuth
 	client     *request.Client
+	started    bool
 	initialize *await.Initialize
 }
 
 func (m *master) init() error {
-	if m.auth == nil && Options.Verify > 0 {
-		m.auth = request.NewOAuth(Options.Appid, Options.Secret)
+	if Options.Verify > 0 {
+		var strict bool
 		if Options.Verify >= 2 {
-			m.auth.Strict = true
+			strict = true
 		}
-		m.client.Use(m.auth.Request)
+		m.client.OAuth(Options.Appid, Options.Secret, strict)
 	}
+	m.started = true
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (m *master) Post(api MasterApiType, args interface{}, reply interface{}) (e
 	if Options.Master == "" {
 		return errors.ErrMasterEmpty
 	}
-	if m.auth == nil {
+	if !m.started {
 		_ = m.initialize.Try(m.init)
 	}
 
