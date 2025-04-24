@@ -9,7 +9,7 @@ type emitterValues []int32
 
 func New(u *updater.Updater) *Emitter {
 	i := &Emitter{u: u}
-	u.Events.On(updater.OnPreSubmit, i.emit)
+	u.Events.On(updater.EventTypeSubmit, i.emit)
 	return i
 }
 

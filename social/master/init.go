@@ -35,7 +35,7 @@ func Start() (err error) {
 	return
 }
 
-func proxy(c *cosweb.Context, next cosweb.Next) error {
+func proxy(c *cosweb.Context) error {
 	sid := c.GetString("sid", cosweb.RequestDataTypeQuery)
 	if sid == "" {
 		return c.JSON(values.Error("sid is empty"))

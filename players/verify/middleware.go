@@ -7,7 +7,7 @@ type middleware struct {
 }
 
 func (this *middleware) Emit(u *updater.Updater, t updater.EventType) bool {
-	if t != updater.OnPreVerify {
+	if t != updater.EventTypeSubmit {
 		return true
 	}
 	for _, tar := range this.dict {
