@@ -31,12 +31,12 @@ func send(c *xshare.Context) any {
 	p := players.Players.Get(guid)
 	//sock := Sockets.Socket(uid)
 	if p == nil {
-		logger.Debug("用户不在线,消息丢弃,UID:%v GUID:%v", uid, guid)
+		logger.Debug("用户不在线,消息丢弃,UID:%s GUID:%s", uid, guid)
 		return nil
 	}
 	if uid != "" {
 		if id := p.GetString(options.ServiceMetadataUID); id != "" && id != uid {
-			logger.Debug("用户UID不匹配,UID:%v GUID:%v", uid, guid)
+			logger.Debug("用户UID不匹配,UID:%s GUID:%s", uid, guid)
 			return nil
 		}
 	}
@@ -50,6 +50,7 @@ func send(c *xshare.Context) any {
 	Emitter.emit(EventTypeResponse, p, path, mate)
 	sock := players.Players.Socket(p)
 	if sock == nil {
+		logger.Debug("长链接不在线,消息丢弃,UID:%s GUID:%s PATH:%s BODY：%s", uid, guid, path, string(c.Bytes()))
 		return nil
 	}
 	CookiesUpdate(mate, p)
@@ -61,7 +62,7 @@ func send(c *xshare.Context) any {
 		i, _ := strconv.Atoi(s)
 		rid = int32(i)
 	}
-	logger.Debug("推送消息  GUID:%s RID:%d PATH:%s BODY：%s", guid, rid, path, c.Bytes())
+	logger.Debug("推送消息  GUID:%s RID:%d PATH:%s BODY：%s", guid, rid, path, string(c.Bytes()))
 	if err := sock.Send(rid, path, c.Bytes()); err != nil {
 		return err
 	}
