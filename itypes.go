@@ -21,6 +21,10 @@ func (its ITypes) Add(k int32, iType int32, iMax int32, name string) {
 	its.set(k, it)
 }
 
+func (its ITypes) Is(iid int32, it int32) bool {
+	return its.GetIType(iid) == it
+}
+
 func (its ITypes) Has(k int32) bool {
 	_, ok := its[k]
 	return ok
