@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/random"
+	"github.com/hwcer/cosgo/slice"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/values"
@@ -226,11 +227,10 @@ func (p *Player) AddWithSlice(arr []int32) (r []int32) {
 }
 
 func (p *Player) AddWithString(s string, split string) (r []int32) {
-	if s == "" || !strings.Contains(split, split) {
+	if s == "" || !strings.Contains(s, split) {
 		return
 	}
-	as := strings.Split(s, split)
-	ai := utils.SliceStringToInt32(as)
+	ai := slice.Split(s, split)
 	return p.AddWithSlice(ai)
 }
 
@@ -247,11 +247,10 @@ func (p *Player) SubWithSlice(arr []int32) (r []int32) {
 }
 
 func (p *Player) SubWithString(s string, split string) (r []int32) {
-	if s == "" || !strings.Contains(split, split) {
+	if s == "" || !strings.Contains(s, split) {
 		return
 	}
-	as := strings.Split(s, split)
-	ai := utils.SliceStringToInt32(as)
+	ai := slice.Split(s, split)
 	return p.SubWithSlice(ai)
 }
 
