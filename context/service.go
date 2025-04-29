@@ -91,15 +91,16 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	//	}
 	//}()
 	path := c.ServiceMethod()
-	if strings.HasPrefix(path, ServiceMethodDebug) && !cosgo.Debug() {
-		return nil, values.Errorf(0, "unauthorized")
-	}
 
 	if !options.HasServiceMethod(path) {
 		return c.handle(node) //内网通信不启用玩家数据
 	}
 
-	l, _ := MethodGrade(path)
+	l, p := MethodGrade(path)
+	if strings.HasPrefix(p, ServiceMethodDebug) && !cosgo.Debug() {
+		return values.Errorf(0, "unauthorized"), nil
+	}
+
 	if l == options.OAuthTypeNone {
 		return c.handle(node)
 	}
