@@ -13,8 +13,6 @@ var Fields = &struct {
 	Update: "update",
 }
 
-const ProcessName = "_sys_process_player"
-
 type itemGroup interface {
 	GetId() int32
 	GetNum() int32

@@ -6,6 +6,7 @@ import (
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
@@ -32,9 +33,11 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 	//todo 不同端不同协议顶号
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
-			return player.Emit(player.EventReconnect, p, meta)
+			updater.Emit(p.Updater, player.EventReconnect)
+			return
 		} else {
-			return player.Emit(player.EventReplace, p, meta)
+			updater.Emit(p.Updater, player.EventReplace)
+			return
 		}
 	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusRecycling {
 		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
@@ -49,7 +52,8 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 		p.Message = &player.Message{}
 	}
 	atomic.AddInt32(&playersOnline, 1)
-	return player.Emit(player.EventConnect, p, meta)
+	updater.Emit(p.Updater, player.EventConnect)
+	return
 }
 
 // Disconnect 下线,心跳超时,断开连接等
@@ -63,7 +67,7 @@ func Disconnect(p *player.Player) bool {
 	}
 	p.KeepAlive(0)
 	atomic.AddInt32(&playersOnline, -1)
-	_ = player.Emit(player.EventDisconnect, p, nil)
+	updater.Emit(p.Updater, player.EventDisconnect)
 	return true
 }
 
