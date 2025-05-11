@@ -66,6 +66,22 @@ type CS struct {
 func (c *CS) Register(i ...configHandle) {
 	configHandles = append(configHandles, i...)
 }
+func (its *CS) GetIMax(iid int32) (r int64) {
+	return its.ITypes.GetIMax(iid)
+}
+func (its *CS) GetIType(iid int32) (r int32) {
+	return its.ITypes.GetIType(iid)
+}
+func (its *CS) Parse(name string, items any, iType int32, iMax int32) (errs []error) {
+	return its.ITypes.Parse(name, items, iType, iMax)
+}
+func (its *CS) Is(iid int32, it int32) bool {
+	return its.ITypes.Is(iid, it)
+}
+
+func (its *CS) Has(k int32) bool {
+	return its.ITypes.Has(k)
+}
 
 //func (c *CS) GetIMax(iid int32) (r int64) {
 //	return cfg.GetIMax(iid)
@@ -104,7 +120,8 @@ func (*CS) Reload(data any) (err error) {
 	for _, v := range configHandles {
 		v.Handle(c, data)
 	}
-	Config = c
+	Config.ITypes = c.ITypes
+	Config.Process = c.Process
 	return
 }
 
