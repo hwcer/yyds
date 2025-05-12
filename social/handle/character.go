@@ -52,8 +52,8 @@ func (this *character) Find(c *xshare.Context) interface{} {
 
 // Invite 我邀请的人
 func (this *character) Invite(c *xshare.Context) interface{} {
-	uid := c.GetInt64("uid")
-	if uid == 0 {
+	uid := c.GetString("uid")
+	if uid == "" {
 		return c.Error("uid required")
 	}
 	size := c.GetInt32("size")

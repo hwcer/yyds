@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/yyds/social/model"
-	"strconv"
 )
 
 func init() {
@@ -25,6 +24,7 @@ func (this *Character) Caller(node *registry.Node, c *cosweb.Context) interface{
 
 type CharacterPageArgs struct {
 	*cosmo.Paging
+	Sid   int32  `json:"sid"`
 	Key   string `json:"key"`   //查询字段名
 	Value string `json:"value"` //查询值
 }
@@ -36,17 +36,13 @@ func (this *Character) Page(c *cosweb.Context) interface{} {
 	}
 	args.Paging.Rows = make([]*model.Character, 0)
 	tx := db.Order("update", -1)
+	if args.Sid != 0 {
+		tx = tx.Where("sid = ?", args.Sid)
+	}
 	args.Paging.Init(100)
-	if args.Key == "uid" && args.Value != "" {
-		if uid, err := strconv.ParseInt(args.Value, 10, 64); err != nil {
-			return values.Errorf(0, "search value error:%v", args.Value)
-		} else {
-			tx = tx.Where(uid)
-		}
-	} else if args.Key != "" && args.Value != "" {
+	if args.Key != "" && args.Value != "" {
 		tx = tx.Where(fmt.Sprintf("%v = ?", args.Key), args.Value)
 	}
-
 	if tx = tx.Page(args.Paging); tx.Error != nil {
 		return values.Error(tx.Error)
 	}
