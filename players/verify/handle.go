@@ -72,7 +72,7 @@ func taskTargetHandleData(u *updater.Updater, target Value) int64 {
 func taskTargetHandleWeekly(u *updater.Updater, target Value) (r int64) {
 	k := target.GetKey()
 	week := times.Weekly(0)
-	r, u.Error = Options.Count(u, k, week.Unix(), 0)
+	r, u.Error = Options.Count(u, k, week, nil)
 	return
 }
 
@@ -83,7 +83,9 @@ func taskTargetHandleHistory(u *updater.Updater, target Value) (r int64) {
 		ts = i.GetTimes()
 	}
 	k := target.GetKey()
-	r, u.Error = Options.Count(u, k, ts[0], ts[1])
+	st := times.Timestamp(ts[0])
+	et := times.Timestamp(ts[1])
+	r, u.Error = Options.Count(u, k, st, et)
 	return
 }
 

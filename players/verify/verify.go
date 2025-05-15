@@ -30,7 +30,7 @@ func (v *Verify) Auto(target Target) {
 }
 
 // Target 预读数据,手动验证
-func (v *Verify) Target(target Target) {
+func (v *Verify) Target(target Value) {
 	switch target.GetCondition() {
 	case ConditionData:
 		v.u.Select(target.GetKey())
