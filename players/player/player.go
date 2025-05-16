@@ -34,11 +34,11 @@ type Player struct {
 	uid       string
 	mutex     sync.Mutex       //底层自动使用锁，不要手动调用
 	heartbeat int64            //最后心跳时间
-	Times     *Times           //时间控制器
 	Dirty     Dirty            //短连接推送数据缓存
 	Login     int64            //登录时间
 	Binder    binder.Binder    //当前端使用的序列化方式
 	Status    int32            //在线状态
+	Times     *Times           //时间控制器
 	Verify    *verify.Verify   //全局条件验证
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
@@ -269,30 +269,4 @@ func (p *Player) SubWithString(s string, split string) (r []int32) {
 	}
 	ai := slice.Split(s, split)
 	return p.SubWithSlice(ai)
-}
-
-func (p *Player) Values(name any) *updater.Values {
-	i := p.Updater.Handle(name)
-	if i == nil {
-		return nil
-	}
-	r, _ := i.(*updater.Values)
-	return r
-}
-func (p *Player) Document(name any) *updater.Document {
-	i := p.Updater.Handle(name)
-	if i == nil {
-		return nil
-	}
-	r, _ := i.(*updater.Document)
-	return r
-}
-
-func (p *Player) Collection(name any) *updater.Collection {
-	i := p.Updater.Handle(name)
-	if i == nil {
-		return nil
-	}
-	r, _ := i.(*updater.Collection)
-	return r
 }
