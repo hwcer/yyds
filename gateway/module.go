@@ -3,10 +3,8 @@ package gateway
 import (
 	"errors"
 	"github.com/hwcer/cosgo/scc"
-	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
-	"github.com/hwcer/cosrpc/xclient"
-	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
@@ -18,15 +16,15 @@ import (
 
 var mod = &Module{}
 
+var TCP = NewTCPServer()
+var HTTP = NewHttpServer()
+
 func New() *Module {
 	return mod
 }
 
 type Module struct {
-	mux    cmux.CMux
-	Socket *Socket
-	Server *Server
-	//WebSocket *coswss.Server
+	mux cmux.CMux
 }
 
 func (this *Module) Id() string {
@@ -40,16 +38,31 @@ func (this *Module) Init() (err error) {
 	if options.Gate.Address == "" {
 		return errors.New("网关地址没有配置")
 	}
+	//session
+	if options.Gate.Redis != "" {
+		session.Options.Storage, err = session.NewRedis(options.Gate.Redis)
+	} else {
+		session.Options.Storage = session.NewMemory(options.Gate.Capacity)
+	}
+	if err != nil {
+		return err
+	}
+
 	if i := strings.Index(options.Gate.Address, ":"); i < 0 {
 		return errors.New("网关地址配置错误,格式: ip:port")
 	} else if options.Gate.Address[0:i] == "" {
 		options.Gate.Address = "0.0.0.0" + options.Gate.Address
 	}
-	if err = xserver.Start(); err != nil {
-		return err
+	p := options.Gate.Protocol
+	if p.Has(options.ProtocolTypeTCP) || p.Has(options.ProtocolTypeWSS) {
+		if err = TCP.init(); err != nil {
+			return err
+		}
 	}
-	if err = xclient.Start(); err != nil {
-		return err
+	if p.Has(options.ProtocolTypeHTTP) {
+		if err = HTTP.init(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -67,17 +80,11 @@ func (this *Module) Start() (err error) {
 	p := options.Gate.Protocol
 	//SOCKET
 	if p.Has(options.ProtocolTypeTCP) {
-		if this.Socket == nil {
-			this.Socket = &Socket{}
-		}
-		if err = this.Socket.init(); err != nil {
-			return err
-		}
 		if this.mux != nil {
 			so := this.mux.Match(cosnet.Matcher)
-			err = this.Socket.Accept(so)
+			err = TCP.Accept(so)
 		} else {
-			err = this.Socket.Listen(options.Gate.Address)
+			err = TCP.Listen(options.Gate.Address)
 		}
 		if err != nil {
 			return err
@@ -85,15 +92,11 @@ func (this *Module) Start() (err error) {
 	}
 	//http
 	if p.Has(options.ProtocolTypeHTTP) {
-		this.Server = &Server{}
-		if err = this.Server.init(); err != nil {
-			return err
-		}
 		if this.mux != nil {
 			so := this.mux.Match(cmux.HTTP1Fast())
-			err = this.Server.Accept(so)
+			err = HTTP.Accept(so)
 		} else {
-			err = this.Server.Listen(options.Gate.Address)
+			err = HTTP.Listen(options.Gate.Address)
 		}
 		if err != nil {
 			return err
@@ -102,16 +105,10 @@ func (this *Module) Start() (err error) {
 
 	// websocket
 	if p.Has(options.ProtocolTypeWSS) {
-		if this.Socket == nil {
-			this.Socket = &Socket{}
-		}
-		if err = this.Socket.init(); err != nil {
-			return err
-		}
 		//this.WebSocket.Verify = WSVerify
 		//this.WebSocket.Accept = WSAccept
 		if p.Has(options.ProtocolTypeHTTP) {
-			err = coswss.Binding(this.Server.Server, options.Options.Gate.Websocket)
+			err = coswss.Binding(HTTP.Server, options.Options.Gate.Websocket)
 		} else {
 			err = coswss.Listen(options.Gate.Address, options.Options.Gate.Websocket)
 		}
@@ -129,13 +126,10 @@ func (this *Module) Start() (err error) {
 
 	return err
 }
-func (this *Module) Reload() error {
-	return nil
-}
+
 func (this *Module) Close() (err error) {
 	if this.mux != nil {
 		this.mux.Close()
 	}
-	return utils.Assert(xclient.Close, xserver.Close)
-
+	return nil
 }

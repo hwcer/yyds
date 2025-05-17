@@ -5,27 +5,22 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-//func NewMulti(readOnly bool) *Locker {
-//	return &Locker{dict: map[uint64]*players.Player{}, readOnly: readOnly}
-//}
-
-var w = await.New()
+var w *await.Await
 
 type Args struct {
-	uid    []uint64
+	uid    []string
 	done   []func()
 	handle player.LockerHandle
 }
 
-func NewLocker(uid []uint64, handle player.LockerHandle, done ...func()) error {
+func NewLocker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, done: done}
 	l := &Locker{}
-	_, err := w.Call(l.call, msg)
-	return err
+	return w.Call(l.call, msg)
 }
 
 type Locker struct {
-	dict map[uint64]*player.Player
+	dict map[string]*player.Player
 	done []func()
 }
 
@@ -40,15 +35,29 @@ func (this *Locker) release() {
 	this.dict = nil
 }
 
-func (this *Locker) loading(uid uint64) error {
+func (this *Locker) loading(uid string) error {
 	if this.dict == nil {
-		this.dict = map[uint64]*player.Player{}
+		this.dict = map[string]*player.Player{}
 	}
-	err := instance.Load(uid, false, func(p *player.Player) error {
-		this.dict[uid] = p
+	if _, ok := this.dict[uid]; ok {
 		return nil
-	})
-	return err
+	}
+	r := player.New(uid)
+	r.Lock()
+	if i, loaded := instance.dict.LoadOrStore(uid, r); loaded {
+		r.Unlock()
+		r = i.(*player.Player)
+		r.Lock()
+	}
+	//未初始化
+	if err := r.Loading(false); err != nil {
+		r.Unlock()
+		instance.dict.Delete(uid)
+		return err
+	}
+	r.Reset()
+	this.dict[uid] = r
+	return nil
 }
 
 func (this *Locker) Select(keys ...any) {
@@ -66,7 +75,7 @@ func (this *Locker) Data() error {
 	return nil
 }
 
-func (this *Locker) Get(uid uint64) *player.Player {
+func (this *Locker) Get(uid string) *player.Player {
 	return this.dict[uid]
 }
 
@@ -88,30 +97,25 @@ func (this *Locker) Verify() error {
 }
 
 // Submit 统一提交
-// todo cache ...
 func (this *Locker) Submit() error {
 	for _, p := range this.dict {
-		if _, err := p.Updater.Submit(); err != nil {
+		if cc, err := p.Updater.Submit(); err != nil {
 			return err
+		} else {
+			p.Dirty.Push(cc...)
 		}
 	}
 	return nil
 }
 
-func (this *Locker) init(msg *Args) error {
+func (this *Locker) call(args any) (reply any, err error) {
+	msg, _ := args.(*Args)
 	bw := &Locker{done: msg.done}
 	for _, v := range msg.uid {
-		if err := bw.loading(v); err != nil {
-			bw.release()
-			return err
+		if err = bw.loading(v); err != nil {
+			return nil, err
 		}
 	}
 	defer bw.release()
-	msg.handle(bw)
-	return nil
-}
-func (this *Locker) call(args any) (reply any, err error) {
-	msg, _ := args.(*Args)
-	err = this.init(msg)
-	return
+	return msg.handle(bw)
 }

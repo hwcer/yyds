@@ -8,12 +8,13 @@ import (
 type emitterValues []int32
 
 func New(u *updater.Updater) *Emitter {
-	i := &Emitter{}
-	u.Events.On(updater.OnPreSubmit, i.emit)
+	i := &Emitter{u: u}
+	u.Events.On(updater.EventTypeSubmit, i.emit)
 	return i
 }
 
 type Emitter struct {
+	u      *updater.Updater
 	events map[int32][]*Listener
 	values map[int32][]emitterValues
 }
@@ -30,6 +31,7 @@ func (e *Emitter) Emit(name int32, v int32, args ...int32) {
 		e.values = map[int32][]emitterValues{}
 	}
 	e.values[name] = append(e.values[name], vs)
+	Events.emit(e.u, name, vs...)
 }
 
 // Listen 监听事件,并比较args 如果成功,则回调handle更新val

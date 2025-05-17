@@ -1,13 +1,15 @@
 package players
 
 import (
-	"github.com/hwcer/cosgo/logger"
+	"context"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/logger"
+	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
-	"golang.org/x/net/context"
 	"runtime/debug"
 	"sort"
 	"sync/atomic"
@@ -15,47 +17,57 @@ import (
 )
 
 // Connect 连线，不包括断线重连等
-func Connect(p *player.Player, meta map[string]string) error {
+func Connect(p *player.Player, meta values.Metadata) (err error) {
 	status := p.Status
-	session := meta[options.ServicePlayerSession]
+	gateway := uint64(meta.GetInt64(options.ServicePlayerGateway))
+	if gateway == 0 {
+		return errors.New("gateway is empty")
+	}
 
-	if status == player.StatusLocked || status == player.StatusRelease {
-		return errors.ErrLoginWaiting
-	}
-	if status == player.StatusConnected {
-		if session != "" && p.Session == session {
-			return values.Errorf(0, "Please do not log in again")
+	defer func() {
+		if err == nil {
+			p.KeepAlive(0)
+			p.Login = p.Unix()
 		}
-	} else if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
+	}()
+	//todo 不同端不同协议顶号
+	if status == player.StatusConnected {
+		if p.Gateway == gateway {
+			updater.Emit(p.Updater, player.EventReconnect)
+			return
+		} else {
+			updater.Emit(p.Updater, player.EventReplace)
+			return
+		}
+	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusRecycling {
+		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
+			return errors.ErrLoginWaiting
+		}
+	} else {
 		return errors.ErrLoginWaiting
 	}
-	if status == player.StatusNone || status == player.StatusRecycling {
-		atomic.AddInt32(&playersOnline, 1)
-	}
-	if session != "" {
-		p.Session = session
-	}
-	if gateway := meta[options.ServicePlayerGateway]; gateway != "" {
-		p.Gateway = gateway
-	}
+	p.Gateway = gateway
+	p.Binder = binder.GetContentType(meta, binder.ContentTypeModRes)
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}
-	p.Lively = p.Now.Unix()
-	p.KeepAlive(0)
-	return nil
+	atomic.AddInt32(&playersOnline, 1)
+	updater.Emit(p.Updater, player.EventConnect)
+	return
 }
 
 // Disconnect 下线,心跳超时,断开连接等
 func Disconnect(p *player.Player) bool {
 	status := p.Status
-	if !(status == player.StatusConnected) {
+	if status != player.StatusConnected {
 		return false
 	}
 	if !atomic.CompareAndSwapInt32(&p.Status, player.StatusConnected, player.StatusDisconnect) {
 		return false
 	}
 	p.KeepAlive(0)
+	atomic.AddInt32(&playersOnline, -1)
+	updater.Emit(p.Updater, player.EventDisconnect)
 	return true
 }
 
@@ -68,18 +80,14 @@ func recycling(p *player.Player) bool {
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusRecycling) {
 		return false
 	}
-	if status == player.StatusDisconnect {
-		atomic.AddInt32(&playersOnline, -1)
-	}
 	p.KeepAlive(0)
-	//playersReleaseDict = append(playersReleaseDict, p)
 	return true
 }
 
 // release 释放用户实例
 func release(p *player.Player) (ok bool) {
 	status := p.Status
-	if !(status == player.StatusRecycling) {
+	if status != player.StatusRecycling {
 		return false
 	}
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusRelease) {
@@ -103,7 +111,7 @@ func worker() {
 		}
 	}()
 	if playersRecycling == nil {
-		playersRecycling = map[uint64]*player.Player{}
+		playersRecycling = map[string]*player.Player{}
 	}
 	playersReleaseTime++
 	now := times.Now().Unix()
@@ -111,7 +119,7 @@ func worker() {
 	releaseTime := now - PlayersRelease
 
 	var tot int
-	ps.Range(func(uid uint64, p *player.Player) bool {
+	ps.Range(func(uid string, p *player.Player) bool {
 		tot += 1
 		//检查掉线情况
 		//logger.Debug("uid:%v   status:%v   heartbeat:%v ", p.Uid(), p.status, p.heartbeat)
@@ -155,7 +163,7 @@ func worker() {
 		return dict[i].Heartbeat() < dict[j].Heartbeat()
 	})
 
-	next := map[uint64]*player.Player{}
+	next := map[string]*player.Player{}
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && release(p) {
 			ct--
@@ -188,7 +196,7 @@ func shutdown() {
 		return
 	}
 	//关闭所有用户
-	ps.Range(func(uid uint64, p *player.Player) bool {
+	ps.Range(func(uid string, p *player.Player) bool {
 		_ = release(p)
 		return true
 	})

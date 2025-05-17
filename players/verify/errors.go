@@ -2,6 +2,7 @@ package verify
 
 import (
 	"errors"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/updater"
 )
@@ -12,11 +13,11 @@ var (
 )
 
 var Options = &struct {
-	Count func(u *updater.Updater, key int32, start, end int64) (r int64, err error)
+	Count func(u *updater.Updater, key int32, start, end *times.Times) (r int64, err error)
 }{
 	Count: defaultCountFunc,
 }
 
-func defaultCountFunc(u *updater.Updater, key int32, start, end int64) (r int64, err error) {
+func defaultCountFunc(u *updater.Updater, key int32, start, end *times.Times) (r int64, err error) {
 	return 0, errors.New("未设置统计函数，无法使用统计数据")
 }

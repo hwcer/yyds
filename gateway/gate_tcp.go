@@ -2,34 +2,41 @@ package gateway
 
 import (
 	"bytes"
-	"github.com/hwcer/cosgo/logger"
+	"errors"
+	"fmt"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosnet/tcp"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"net"
+	"net/url"
 	"strconv"
 	"time"
 )
 
-type Socket struct {
+func NewTCPServer() *TcpServer {
+	s := &TcpServer{}
+	return s
 }
 
-func (this *Socket) init() error {
+type TcpServer struct {
+	//Errorf func(*cosnet.Context, error) any
+}
+
+func (this *TcpServer) init() error {
 	if !cosnet.Start() {
 		return nil
 	}
 	service := cosnet.Service("")
 	_ = service.Register(this.proxy, "/*")
-	cosnet.On(cosnet.EventTypeError, this.Errorf)
-	cosnet.On(cosnet.EventTypeConnected, this.Connected)
-	cosnet.On(cosnet.EventTypeDisconnect, this.Disconnect)
 	return nil
 }
 
-func (this *Socket) Listen(address string) error {
+func (this *TcpServer) Listen(address string) error {
 	_, err := cosnet.Listen(address)
 	if err == nil {
 		logger.Trace("网关长连接启动：%v", options.Gate.Address)
@@ -37,56 +44,62 @@ func (this *Socket) Listen(address string) error {
 	return err
 }
 
-func (this *Socket) Accept(ln net.Listener) error {
+func (this *TcpServer) Accept(ln net.Listener) error {
 	cosnet.Accept(&tcp.Listener{Listener: ln})
 	logger.Trace("网关长连接启动：%v", options.Gate.Address)
 	return nil
 }
 
-func (this *Socket) Errorf(socket *cosnet.Socket, err interface{}) {
-	logger.Alert(err)
-}
-
-func (this *Socket) ping(c *cosnet.Context) interface{} {
+func (this *TcpServer) ping(c *cosnet.Context) interface{} {
 	var s string
 	_ = c.Bind(&s)
 	return []byte(strconv.Itoa(int(time.Now().Unix())))
 }
 
-func (this *Socket) proxy(c *cosnet.Context) interface{} {
+func (this *TcpServer) proxy(c *cosnet.Context) error {
 	h := &socketProxy{Context: c}
-	reply, err := proxy(h)
+	b, err := proxy(h)
 	if err != nil {
-		return c.Errorf(0, err)
+		return err
 	}
-	return reply
+	if c.Message.Confirm() {
+		return c.Reply(b)
+	}
+	return nil
 }
 
-func (this *Socket) Connected(sock *cosnet.Socket, _ interface{}) {
-	logger.Debug("Connected:%v", sock.Id())
-}
-
-func (this *Socket) Disconnect(sock *cosnet.Socket, _ interface{}) {
-	logger.Debug("Disconnect:%v", sock.Id())
-}
+//func (this *TcpServer) errorf(c *cosnet.Context, err error) any {
+//	if this.Errorf != nil {
+//		return this.Errorf(c, err)
+//	}
+//	return values.Error(err)
+//}
 
 type socketProxy struct {
 	*cosnet.Context
 }
 
+func (this *socketProxy) Path() (string, error) {
+	r, _, err := this.Context.Path()
+	return r, err
+}
 func (this *socketProxy) Data() (*session.Data, error) {
 	return this.Context.Socket.Data(), nil
 }
-func (this *socketProxy) Query() values.Values {
-	return this.Message.Query()
-}
+
 func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	buff := bytes.NewBuffer(this.Context.Message.Body())
 	return buff, nil
 }
 func (this *socketProxy) Login(guid string, value values.Values) (err error) {
-	_, err = players.Binding(this.Context.Socket, guid, value)
-	return
+	if v := this.Socket.Data(); v != nil {
+		if v.UUID() == guid {
+			return nil
+		} else {
+			return errors.New("please do not login again")
+		}
+	}
+	return players.Connect(this.Context.Socket, guid, value)
 }
 
 func (this *socketProxy) Delete() error {
@@ -94,6 +107,16 @@ func (this *socketProxy) Delete() error {
 	return nil
 }
 
-func (this *socketProxy) Session() string {
-	return strconv.FormatUint(this.Context.Socket.Id(), 32)
+func (this *socketProxy) Metadata() values.Metadata {
+	meta := values.Metadata{}
+	if _, q, _ := this.Context.Path(); q != "" {
+		query, _ := url.ParseQuery(q)
+		for k, _ := range query {
+			meta[k] = query.Get(k)
+		}
+	}
+	magic := this.Message.Magic()
+	meta[binder.HeaderContentType] = magic.Binder.Name()
+	meta[options.ServiceMetadataRequestId] = fmt.Sprintf("%d", this.Context.Message.Index())
+	return meta
 }

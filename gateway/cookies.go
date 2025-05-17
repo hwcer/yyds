@@ -3,7 +3,6 @@ package gateway
 import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/yyds/gateway/rooms"
 	"github.com/hwcer/yyds/options"
 	"strings"
@@ -20,7 +19,7 @@ func init() {
 	SetCookieName(options.ServiceMetadataServerId)
 }
 
-func CookiesFilter(cookie xshare.Metadata) values.Values {
+func CookiesFilter(cookie values.Metadata) values.Values {
 	r := values.Values{}
 	for k, v := range cookie {
 		if _, ok := cookiesAllowableName[k]; ok {
@@ -29,7 +28,7 @@ func CookiesFilter(cookie xshare.Metadata) values.Values {
 	}
 	return r
 }
-func CookiesUpdate(cookie xshare.Metadata, p *session.Data) {
+func CookiesUpdate(cookie values.Metadata, p *session.Data) {
 	vs := values.Values{}
 	for k, v := range cookie {
 		if strings.HasPrefix(k, options.ServicePlayerRoomJoin) {

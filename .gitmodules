@@ -13,12 +13,12 @@
 [submodule "cosweb"]
 	path = cosweb
 	url = https://github.com/hwcer/cosweb.git
-[submodule "logger"]
-	path = logger
-	url = https://github.com/hwcer/logger.git
 [submodule "updater"]
 	path = updater
 	url = https://github.com/hwcer/updater.git
 [submodule "coswss"]
 	path = coswss
 	url = https://github.com/hwcer/coswss.git
+[submodule "logger"]
+	path = logger
+	url = https://github.com/hwcer/logger.git

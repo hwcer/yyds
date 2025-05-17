@@ -29,3 +29,7 @@ func TrimServiceMethod(path string) string {
 	path = strings.TrimPrefix(path, "/")
 	return strings.TrimPrefix(path, Gate.Prefix)
 }
+
+func GetServerTime() int64 {
+	return Game.Unix
+}

@@ -11,16 +11,20 @@ import (
 // handle 获取批量操作权限
 // next   获取操作结束后是否需要回到玩家自身,
 
-func (this *Context) Locker(uids []uint64, handle player.LockerHandle, next ...func()) error {
+func (this *Context) Locker(uids []string, handle player.LockerHandle, next ...func()) (any, error) {
 	var p *player.Player
 	var done []func()
 	if this.Player != nil {
 		p = this.Player
 		this.Player = nil
 		p.Release()
-		p.Unlock()
+		if players.Options.AsyncModel == players.AsyncModelLocker {
+			p.Unlock()
+		}
 		done = append(done, func() {
-			p.Lock()
+			if players.Options.AsyncModel == players.AsyncModelLocker {
+				p.Lock()
+			}
 			p.Reset()
 			this.Player = p
 		})

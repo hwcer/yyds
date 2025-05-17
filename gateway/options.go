@@ -1,12 +1,21 @@
 package gateway
 
 import (
-	"github.com/hwcer/cosgo/session"
+	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
+	"strings"
 )
 
-var Options = struct {
-	Query func(player *session.Data) values.Values //Query 生成参数列表
-}{
-	Query: func(player *session.Data) values.Values { return make(values.Values) },
+type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)
+
+// Router 默认路由处理方式
+var Router router = func(path string, req values.Metadata) (servicePath, serviceMethod string, err error) {
+	i := strings.Index(path, "/")
+	if i < 0 {
+		err = values.Errorf(404, "page not found")
+		return
+	}
+	servicePath = strings.ToLower(path[0:i])
+	serviceMethod = registry.Formatter(path[i:])
+	return
 }

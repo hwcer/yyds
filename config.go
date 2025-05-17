@@ -5,19 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/logger"
 	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
 	"go/ast"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 )
 
-var Config = &CS{ITypes: configITypes{}, Process: configProcess{}}
+var Config = &CS{ITypes: ITypes{}, Process: configProcess{}}
 var configLocker sync.RWMutex
 var configHandles []configHandle
 
@@ -26,6 +25,9 @@ type iMax interface {
 }
 type iType interface {
 	GetIType() int32
+}
+type iName interface {
+	GetName() string
 }
 type configIType struct {
 	Name  string
@@ -39,14 +41,46 @@ type configHandle interface {
 	Verify(c *CS, d any) []error //配置检查
 }
 
+// 保存整理过后的配置或者概率表
+
+type configProcess map[string]any
+
+func (p configProcess) Get(name string) any {
+	return p[name]
+}
+
+func (p configProcess) Set(name string, value any) {
+	if _, ok := p[name]; ok {
+		logger.Error("SetProcess name exist:%s", name)
+		return
+	}
+	p[name] = value
+}
+
 type CS struct {
-	ITypes  configITypes
+	ITypes
 	Process configProcess
 }
 
 // Register 注册配置检查程序
 func (c *CS) Register(i ...configHandle) {
 	configHandles = append(configHandles, i...)
+}
+func (its *CS) GetIMax(iid int32) (r int64) {
+	return its.ITypes.GetIMax(iid)
+}
+func (its *CS) GetIType(iid int32) (r int32) {
+	return its.ITypes.GetIType(iid)
+}
+func (its *CS) Parse(name string, items any, iType int32, iMax int32) (errs []error) {
+	return its.ITypes.Parse(name, items, iType, iMax)
+}
+func (its *CS) Is(iid int32, it int32) bool {
+	return its.ITypes.Is(iid, it)
+}
+
+func (its *CS) Has(k int32) bool {
+	return its.ITypes.Has(k)
 }
 
 //func (c *CS) GetIMax(iid int32) (r int64) {
@@ -62,7 +96,7 @@ func (c *CS) Register(i ...configHandle) {
 func (*CS) Reload(data any) (err error) {
 	configLocker.Lock()
 	defer configLocker.Unlock()
-	c := &CS{ITypes: configITypes{}, Process: configProcess{}}
+	c := &CS{ITypes: ITypes{}, Process: configProcess{}}
 
 	files, err := os.Stat(cosgo.Abs(options.Options.Data))
 	if err != nil {
@@ -86,7 +120,8 @@ func (*CS) Reload(data any) (err error) {
 	for _, v := range configHandles {
 		v.Handle(c, data)
 	}
-	Config = c
+	Config.ITypes = c.ITypes
+	Config.Process = c.Process
 	return
 }
 
@@ -182,121 +217,11 @@ func (c *CS) getDataFromUrl(url string) (b []byte, err error) {
 	//
 	////logger.Debug("url:%v", strings.Join(arr, "/"))
 	//address := strings.Join(arr, "/")
-	//b, err = request.Request(http.MethodGet, address, nil)
+	//b, err = request.OnSend(http.MethodGet, address, nil)
 	//if err != nil {
 	//	logger.Trace("加载远程配置错误：%v", address)
 	//}
 
 	err = errors.New("无法加载远程配置")
 	return
-}
-
-type configITypes map[int32]*configIType
-
-func (its configITypes) set(k int32, v *configIType) {
-	its[k] = v
-}
-func (its configITypes) get(k int32) *configIType {
-	return its[k]
-}
-
-func (its configITypes) Add(k int32, iType int32, iMax int32, name string) {
-	it := &configIType{Name: name, IType: iType, IMax: iMax}
-	its.set(k, it)
-}
-
-func (its configITypes) Has(k int32) bool {
-	_, ok := its[k]
-	return ok
-}
-
-func (its configITypes) GetIMax(iid int32) (r int64) {
-	if i := its.get(iid); i != nil {
-		r = int64(i.IMax)
-	}
-	return
-}
-
-func (its configITypes) GetIType(iid int32) (r int32) {
-	if iid < 10 {
-		return 0
-	}
-	if i := its.get(iid); i != nil {
-		r = i.IType
-	} else {
-		s := strconv.Itoa(int(iid))
-		v, _ := strconv.Atoi(s[0:2])
-		r = int32(v)
-	}
-	return
-}
-
-func (its configITypes) Parse(name string, items any, iType int32, iMax int32) (errs []error) {
-	rv := reflect.ValueOf(items)
-	if rv.Kind() != reflect.Map {
-		errs = append(errs, fmt.Errorf("%v 不是有效的map", name))
-		return
-	}
-	sit := strconv.Itoa(int(iType))
-	for _, k := range rv.MapKeys() {
-		id, ok := k.Interface().(int32)
-		if !ok {
-			errs = append(errs, fmt.Errorf("%v的道具ID不是INT32", name))
-			return
-		}
-		v := rv.MapIndex(k)
-		i := v.Interface()
-		if x := its.get(id); x != nil {
-			errs = append(errs, fmt.Errorf("道具ID重复,%v[%v]=%v[%v]", name, id, x.Name, id))
-		}
-
-		it := &configIType{Name: name, IType: iType}
-		its.set(id, it)
-		if it.IMax = its.reflectIMax(id, i); it.IMax == 0 {
-			it.IMax = iMax
-		}
-		if iType != 0 {
-			if strings.HasPrefix(strconv.Itoa(int(id)), sit) {
-				it.IType = iType
-			} else {
-				errs = append(errs, fmt.Errorf("%v[%v]必须以itype[%v]开头", name, id, iType))
-			}
-		} else {
-			if it.IType = its.reflectIType(id, i); it.IType == 0 {
-				errs = append(errs, fmt.Errorf("IType为空:%v[%v]", name, id))
-			}
-		}
-	}
-	return
-}
-
-func (its configITypes) reflectIType(id int32, i interface{}) int32 {
-	if v, ok := i.(iType); ok {
-		return v.GetIType()
-	}
-	s := strconv.Itoa(int(id))
-	v, _ := strconv.Atoi(s[0:2])
-	return int32(v)
-}
-func (its configITypes) reflectIMax(id int32, i interface{}) int32 {
-	if v, ok := i.(iMax); ok {
-		return v.GetIMax()
-	}
-	return 0
-}
-
-// 保存整理过后的配置或者概率表
-
-type configProcess map[string]any
-
-func (p configProcess) Get(name string) any {
-	return p[name]
-}
-
-func (p configProcess) Set(name string, value any) {
-	if _, ok := p[name]; ok {
-		logger.Error("SetProcess name exist:%s", name)
-		return
-	}
-	p[name] = value
 }

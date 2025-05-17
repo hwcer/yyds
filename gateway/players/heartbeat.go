@@ -11,7 +11,7 @@ import (
 var started int32
 
 var PlayerTimeout int32 = 360 //N个心跳无活动开始清理
-var PlayerHeartbeat = time.Second * 10
+var PlayerHeartbeat = 10      //心跳检查间隔秒
 
 func Start() {
 	if atomic.CompareAndSwapInt32(&started, 0, 1) {
@@ -21,7 +21,8 @@ func Start() {
 
 // heartbeat 启动协程定时清理无效用户
 func heartbeat(ctx context.Context) {
-	ticker := time.NewTimer(PlayerHeartbeat)
+	heartbeatTime := time.Duration(PlayerHeartbeat) * time.Second
+	ticker := time.NewTimer(heartbeatTime)
 	defer ticker.Stop()
 	for {
 		select {
@@ -29,7 +30,7 @@ func heartbeat(ctx context.Context) {
 			return
 		case <-ticker.C:
 			scc.Try(doHeartbeat)
-			ticker.Reset(PlayerHeartbeat)
+			ticker.Reset(heartbeatTime)
 		}
 	}
 }

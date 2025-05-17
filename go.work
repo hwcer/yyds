@@ -1,0 +1,15 @@
+go 1.23.0
+
+toolchain go1.23.4
+
+use (
+	.
+	cosgo
+	cosmo
+	cosnet
+	cosrpc
+	cosweb
+	coswss
+	logger
+	updater
+)

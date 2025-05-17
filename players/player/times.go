@@ -39,10 +39,12 @@ func (this *Times) Start(t int32, v int64) (r int64, err error) {
 	case ExpireTimeTimeStamp:
 		return v, nil
 	case ExpireTimePlayerCreate:
-		dt := times.Timestamp(GetRoleCreateTime(this.p)).Daily(int(v - 1))
+		role := this.p.Document(ITypeRole)
+		create := role.Get(Fields.Create)
+		dt := times.Timestamp(values.ParseInt64(create)).Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerCreate:
-		dt := times.Timestamp(options.Game.ServerTime)
+		dt := times.Timestamp(options.GetServerTime())
 		dt = dt.Daily(int(v - 1))
 		return dt.Unix(), nil
 	case ExpireTimeServerAlways:
@@ -52,6 +54,15 @@ func (this *Times) Start(t int32, v int64) (r int64, err error) {
 		return
 	}
 
+}
+func (this *Times) ExpireWithArray(expire ...int64) (r int64, err error) {
+	if len(expire) == 0 {
+		return 0, nil
+	}
+	if len(expire) < 2 {
+		expire = append(expire, 1)
+	}
+	return this.Expire(int32(expire[0]), expire[1])
 }
 
 // Expire 过期时间
@@ -72,13 +83,15 @@ func (this *Times) Expire(t int32, v int64) (r int64, err error) {
 		return v, nil
 	case ExpireTimePlayerCreate:
 		if v > 0 {
-			dt := times.Timestamp(GetRoleCreateTime(this.p)).Daily(int(v)).Add(-1)
+			role := this.p.Document(ITypeRole)
+			create := role.Get(Fields.Create)
+			dt := times.Timestamp(values.ParseInt64(create)).Daily(int(v)).Add(-1)
 			r = dt.Unix()
 		}
 		return
 	case ExpireTimeServerCreate:
 		if v > 0 {
-			dt := times.Timestamp(options.Game.ServerTime)
+			dt := times.Timestamp(options.GetServerTime())
 			dt = dt.Daily(int(v)).Add(-1)
 			r = dt.Unix()
 		}

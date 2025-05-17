@@ -1,8 +1,11 @@
 package players
 
 import (
+	"errors"
 	"github.com/hwcer/cosgo/session"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
+	"strings"
 	"sync"
 )
 
@@ -16,14 +19,16 @@ type players struct {
 	sync.Map
 }
 
-// replace 顶号
+// Replace  长连接顶号
 func (this *players) replace(p *session.Data, socket *cosnet.Socket) {
-	old := this.Socket(p)
-	p.Set(SessionPlayerSocketName, socket, true)
-	if old == nil || old.Id() == socket.Id() {
-		return
+	os := this.Socket(p)
+	if os != nil && os.Id() != socket.Id() {
+		ip := socket.RemoteAddr().String()
+		if i := strings.Index(ip, ":"); i > 0 {
+			ip = ip[:i]
+		}
+		os.Replaced(ip)
 	}
-	old.Close()
 	return
 }
 
@@ -66,18 +71,22 @@ func (this *players) Delete(p *session.Data) bool {
 	return true
 }
 
-func (this *players) Login(p *session.Data, callback loginCallback) (err error) {
-	p.Lock()
-	defer p.Unlock()
-	r := p
-	i, loaded := this.Map.LoadOrStore(p.UUID(), p)
+func (this *players) create() any {
+	return nil
+}
+func (this *players) Login(guid string, value values.Values, callback loginCallback) (err error) {
+	r := session.NewData(guid, value)
+	r.Lock()
+	defer r.Unlock()
+	i, loaded := this.Map.LoadOrStore(guid, r)
 	if loaded {
-		sp, _ := i.(*session.Data)
-		sp.Lock()
-		defer sp.Unlock()
-		sp.Reset()
-		sp.Merge(p, true)
-		r = sp
+		p, _ := i.(*session.Data)
+		p.Lock()
+		defer p.Unlock()
+		p.Merge(r, true)
+		r = p
+	} else {
+		err = session.Options.Storage.New(r)
 	}
 	if callback != nil {
 		err = callback(r, loaded)
@@ -85,20 +94,29 @@ func (this *players) Login(p *session.Data, callback loginCallback) (err error) 
 	return
 }
 
-// Binding 身份认证绑定socket
-func (this *players) Binding(socket *cosnet.Socket, uuid string, data map[string]any) (r *session.Data, err error) {
-	p := session.NewData(uuid, "", data)
-	err = this.Login(p, func(player *session.Data, loaded bool) error {
+// todo
+func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Values) error {
+	err := this.Login(guid, value, func(data *session.Data, loaded bool) error {
 		if loaded {
-			this.replace(player, socket)
-		} else {
-			player.Set(SessionPlayerSocketName, socket, true)
+			this.replace(data, sock)
 		}
-		r = player
+		data.Set(SessionPlayerSocketName, sock, true)
+		sock.OAuth(data)
 		return nil
 	})
-	if err == nil {
-		socket.OAuth(r)
+	return err
+}
+
+func (this *players) Reconnect(sock *cosnet.Socket, secret string) (err error) {
+	if v := sock.Data(); v != nil {
+		return errors.New("please do not login again")
 	}
+	s := session.New()
+	if err = s.Verify(secret); err != nil {
+		return
+	}
+	this.replace(s.Data, sock)
+	s.Data.Set(SessionPlayerSocketName, sock, true)
+	sock.Reconnect(s.Data)
 	return
 }
