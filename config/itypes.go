@@ -1,4 +1,4 @@
-package yyds
+package config
 
 import (
 	"fmt"
@@ -7,17 +7,23 @@ import (
 	"strings"
 )
 
-type ITypes map[int32]*configIType
+type IType struct {
+	Name  string
+	IMax  int32
+	IType int32
+}
 
-func (its ITypes) set(k int32, v *configIType) {
+type ITypes map[int32]*IType
+
+func (its ITypes) set(k int32, v *IType) {
 	its[k] = v
 }
-func (its ITypes) get(k int32) *configIType {
+func (its ITypes) get(k int32) *IType {
 	return its[k]
 }
 
 func (its ITypes) Add(k int32, iType int32, iMax int32, name string) {
-	it := &configIType{Name: name, IType: iType, IMax: iMax}
+	it := &IType{Name: name, IType: iType, IMax: iMax}
 	its.set(k, it)
 }
 
@@ -75,7 +81,7 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 			errs = append(errs, fmt.Errorf("道具ID重复,%v[%v]=%v[%v]", name, id, x.Name, id))
 		}
 
-		it := &configIType{Name: name, IType: iType}
+		it := &IType{Name: name, IType: iType}
 
 		its.set(id, it)
 		if it.Name = its.reflectIName(id, i); it.Name == "" {
