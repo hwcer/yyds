@@ -44,6 +44,7 @@ func Try(uid string, handle player.Handle) error {
 }
 
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁
+// 不进行初始化，数据按需模式读写
 func Get(uid string, handle player.Handle) error {
 	return ps.Get(uid, handle)
 }
@@ -73,12 +74,12 @@ func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
 }
 
-// Filter 全局任务条件判断方式
-func Filter(t int32, f emitter.FilterFunc) {
+// SetFilter 全局任务条件判断方式
+func SetFilter(t int32, f emitter.FilterFunc) {
 	emitter.Filters.Register(t, f)
 }
 
-// Emitter 注册全局事件
-func Emitter(f emitter.EventsFunc) {
+// SetEmitter 注册全局事件
+func SetEmitter(f emitter.EventsFunc) {
 	emitter.Events.Register(f)
 }
