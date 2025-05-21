@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/yyds/players/channel"
-	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
 	"sync/atomic"
@@ -72,14 +71,4 @@ func Locker(uid []string, handle player.LockerHandle, done ...func()) (any, erro
 
 func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
-}
-
-// SetFilter 全局任务条件判断方式
-func SetFilter(t int32, f emitter.FilterFunc) {
-	emitter.Filters.Register(t, f)
-}
-
-// SetMonitor 注册事件监控，触发每一个事件
-func SetMonitor(f emitter.MonitorFunc) {
-	emitter.Monitor.Register(f)
 }
