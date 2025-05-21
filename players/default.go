@@ -79,7 +79,7 @@ func SetFilter(t int32, f emitter.FilterFunc) {
 	emitter.Filters.Register(t, f)
 }
 
-// SetEmitter 注册全局事件
-func SetEmitter(f emitter.EventsFunc) {
-	emitter.Events.Register(f)
+// SetMonitor 注册事件监控，触发每一个事件
+func SetMonitor(f emitter.MonitorFunc) {
+	emitter.Monitor.Register(f)
 }

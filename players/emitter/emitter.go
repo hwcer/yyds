@@ -31,7 +31,7 @@ func (e *Emitter) Emit(name int32, v int32, args ...int32) {
 		e.values = map[int32][]emitterValues{}
 	}
 	e.values[name] = append(e.values[name], vs)
-	Events.emit(e.u, name, vs...)
+	Monitor.emit(e.u, name, vs...)
 }
 
 // Listen 监听事件,并比较args 如果成功,则回调handle更新val
@@ -53,6 +53,7 @@ func (e *Emitter) emit(_ *updater.Updater) bool {
 	for et, vs := range e.values {
 		for _, v := range vs {
 			e.doEvents(et, v[0], v[1:])
+			Events.emit(e.u, et, v)
 		}
 	}
 	e.values = nil
