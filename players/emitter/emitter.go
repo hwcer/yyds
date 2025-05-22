@@ -10,6 +10,7 @@ type emitterValues []int32
 func New(u *updater.Updater) *Emitter {
 	i := &Emitter{u: u}
 	u.Events.On(updater.EventTypeSubmit, i.emit)
+	u.Events.On(updater.EventTypeRelease, i.release)
 	return i
 }
 
@@ -56,6 +57,11 @@ func (e *Emitter) emit(_ *updater.Updater) bool {
 			Events.emit(e.u, et, v)
 		}
 	}
+	e.values = nil
+	return true
+}
+
+func (e *Emitter) release(_ *updater.Updater) bool {
 	e.values = nil
 	return true
 }

@@ -247,7 +247,7 @@ func (p *Player) AddWithString(s string, split string) (r []int32) {
 	if s == "" || !strings.Contains(s, split) {
 		return
 	}
-	ai := slice.Split(s, split)
+	ai := slice.SplitInt32(s, split)
 	return p.AddWithSlice(ai)
 }
 
@@ -267,6 +267,6 @@ func (p *Player) SubWithString(s string, split string) (r []int32) {
 	if s == "" || !strings.Contains(s, split) {
 		return
 	}
-	ai := slice.Split(s, split)
+	ai := slice.SplitInt32(s, split)
 	return p.SubWithSlice(ai)
 }

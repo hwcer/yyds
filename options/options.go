@@ -2,6 +2,7 @@ package options
 
 import (
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
@@ -34,6 +35,9 @@ func Initialize() (err error) {
 		cosgo.On(cosgo.EventTypLoaded, rpcStart)
 		cosgo.On(cosgo.EventTypStopped, xserver.Close)
 	}
+	if Options.TimeReset != 0 {
+		times.SetTimeReset(Options.TimeReset)
+	}
 	return nil
 }
 
@@ -56,17 +60,18 @@ func rpcStart() (err error) {
 }
 
 var Options = &struct {
-	Data    string //静态数据地址
-	Debug   bool
-	Appid   string
-	Master  string
-	Secret  string            `json:"secret"`  //秘钥,必须8位
-	Verify  int8              `json:"verify"`  //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
-	Binder  string            `json:"binder"`  //公网请求默认序列化方式，默认JSON
-	Service map[string]string `json:"service"` //
-	Game    *game
-	Gate    *gate
-	Rpcx    *xshare.Rpcx
+	Data      string //静态数据地址
+	Debug     bool
+	Appid     string
+	Master    string
+	Secret    string            `json:"secret"`    //秘钥,必须8位
+	Verify    int8              `json:"verify"`    //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
+	Binder    string            `json:"binder"`    //公网请求默认序列化方式，默认JSON
+	Service   map[string]string `json:"service"`   //
+	TimeReset int64             `json:"TimeReset"` //每日几点重置时间
+	Game      *game
+	Gate      *gate
+	Rpcx      *xshare.Rpcx
 }{
 	Verify:  1,
 	Binder:  "json",
