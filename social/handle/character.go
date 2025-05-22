@@ -92,7 +92,7 @@ func (this *character) Create(c *xshare.Context) interface{} {
 	if tx := db.Create(&v.Character); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
-	ts := times.Timestamp(v.Create)
+	ts := times.Unix(v.Create)
 	sign, _ := ts.Sign(0)
 	Analyse := model.NewAnalyse(v.Sid, sign)
 	up := update.Update{}
@@ -121,11 +121,11 @@ func (this *character) Update(c *xshare.Context) interface{} {
 		return nil
 	}
 
-	ts := times.Timestamp(v.Create)
+	ts := times.Unix(v.Create)
 	sign, _ := ts.Sign(0)
 	Analyse := model.NewAnalyse(v.Sid, sign)
 	create := ts.Daily(0)
-	s := v.Update - create.Unix()
+	s := v.Update - create.Now().Unix()
 	if s <= 0 {
 		return nil
 	}

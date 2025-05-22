@@ -118,7 +118,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	err = players.Try(uid, func(p *player.Player) error {
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
-		if c.Player.Login < times.Daily(0).Unix() && l != options.OAuthTypeRenewal {
+		if c.Player.Login < times.Daily(0).Now().Unix() && l != options.OAuthTypeRenewal {
 			return errors.ErrNeedResetSession
 		}
 		//尝试重新上线

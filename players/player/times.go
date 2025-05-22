@@ -31,22 +31,22 @@ func (this *Times) Start(t int32, v int64) (r int64, err error) {
 	case ExpireTimeNone:
 		return
 	case ExpireTimeDaily:
-		return times.Daily(0).Unix(), nil
+		return times.Daily(0).Now().Unix(), nil
 	case ExpireTimeWeekly:
-		return times.Weekly(0).Unix(), nil
+		return times.Weekly(0).Now().Unix(), nil
 	case ExpireTimeMonthly:
-		return times.Monthly(0).Unix(), nil
+		return times.Monthly(0).Now().Unix(), nil
 	case ExpireTimeTimeStamp:
 		return v, nil
 	case ExpireTimePlayerCreate:
 		role := this.p.Document(ITypeRole)
 		create := role.Get(Fields.Create)
-		dt := times.Timestamp(values.ParseInt64(create)).Daily(int(v - 1))
-		return dt.Unix(), nil
+		dt := times.Unix(values.ParseInt64(create)).Daily(int(v - 1))
+		return dt.Now().Unix(), nil
 	case ExpireTimeServerCreate:
-		dt := times.Timestamp(options.GetServerTime())
+		dt := times.Unix(options.GetServerTime())
 		dt = dt.Daily(int(v - 1))
-		return dt.Unix(), nil
+		return dt.Now().Unix(), nil
 	case ExpireTimeServerAlways:
 		return 1, nil
 	default:
@@ -76,7 +76,7 @@ func (this *Times) Expire(t int32, v int64) (r int64, err error) {
 			v = 1
 		}
 		if ts, err = times.Expire(times.ExpireType(t), int(v)); err == nil {
-			r = ts.Unix()
+			r = ts.Now().Unix()
 		}
 		return
 	case ExpireTimeTimeStamp:
@@ -85,19 +85,19 @@ func (this *Times) Expire(t int32, v int64) (r int64, err error) {
 		if v > 0 {
 			role := this.p.Document(ITypeRole)
 			create := role.Get(Fields.Create)
-			dt := times.Timestamp(values.ParseInt64(create)).Daily(int(v)).Add(-1)
-			r = dt.Unix()
+			dt := times.Unix(values.ParseInt64(create)).Daily(int(v)).Add(-1)
+			r = dt.Now().Unix()
 		}
 		return
 	case ExpireTimeServerCreate:
 		if v > 0 {
-			dt := times.Timestamp(options.GetServerTime())
+			dt := times.Unix(options.GetServerTime())
 			dt = dt.Daily(int(v)).Add(-1)
-			r = dt.Unix()
+			r = dt.Now().Unix()
 		}
 		return
 	case ExpireTimeServerAlways:
-		return times.Unix() + times.DaySecond*365*100, nil
+		return times.Now().Unix() + times.DaySecond*365*100, nil
 	default:
 		err = values.Errorf(0, "time type unknown")
 		return
@@ -107,7 +107,7 @@ func (this *Times) Expire(t int32, v int64) (r int64, err error) {
 // Verify 验证是否在有效期(开始以及过期时间)内，返回开始和结束时间
 func (this *Times) Verify(args []int64) (t [2]int64, err error) {
 	args = append(args, 0, 0, 0)
-	now := times.Unix()
+	now := times.Now().Unix()
 	if t[0], err = this.Start(int32(args[0]), args[1]); err != nil {
 		return
 	} else if t[0] > now {

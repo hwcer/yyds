@@ -148,7 +148,7 @@ func (p *Player) KeepAlive(t int64) {
 		if p.Updater != nil {
 			t = p.Updater.Unix()
 		} else {
-			t = times.Unix()
+			t = times.Now().Unix()
 		}
 	}
 

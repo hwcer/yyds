@@ -64,7 +64,7 @@ func (this *Module) Init() (err error) {
 		if t, err = times.Parse(options.Game.Time); err != nil {
 			return err
 		} else if t != nil {
-			options.Game.Unix = t.Unix()
+			options.Game.Unix = t.Now().Unix()
 		}
 	}
 	if options.Options.Debug {

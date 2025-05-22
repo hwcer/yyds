@@ -54,7 +54,7 @@ func loading() (err error) {
 				p := player.New(uid)
 				if e := p.Loading(true); e == nil {
 					ps.Store(uid, p)
-					p.KeepAlive(times.Unix())
+					p.KeepAlive(times.Now().Unix())
 				}
 			})
 			//不满一页的

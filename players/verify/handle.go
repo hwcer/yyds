@@ -83,8 +83,8 @@ func taskTargetHandleHistory(u *updater.Updater, target Value) (r int64) {
 		ts = i.GetTimes()
 	}
 	k := target.GetKey()
-	st := times.Timestamp(ts[0])
-	et := times.Timestamp(ts[1])
+	st := times.Unix(ts[0])
+	et := times.Unix(ts[1])
 	r, u.Error = Options.Count(u, k, st, et)
 	return
 }
