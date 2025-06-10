@@ -14,8 +14,6 @@ import (
 	"github.com/hwcer/yyds/options"
 	"net"
 	"net/url"
-	"strconv"
-	"time"
 )
 
 func NewTCPServer() *TcpServer {
@@ -50,12 +48,6 @@ func (this *TcpServer) Accept(ln net.Listener) error {
 	return nil
 }
 
-func (this *TcpServer) ping(c *cosnet.Context) interface{} {
-	var s string
-	_ = c.Bind(&s)
-	return []byte(strconv.Itoa(int(time.Now().Unix())))
-}
-
 func (this *TcpServer) proxy(c *cosnet.Context) error {
 	h := &socketProxy{Context: c}
 	b, err := proxy(h)
@@ -68,13 +60,6 @@ func (this *TcpServer) proxy(c *cosnet.Context) error {
 	return nil
 }
 
-//func (this *TcpServer) errorf(c *cosnet.Context, err error) any {
-//	if this.Errorf != nil {
-//		return this.Errorf(c, err)
-//	}
-//	return values.Error(err)
-//}
-
 type socketProxy struct {
 	*cosnet.Context
 }
@@ -84,7 +69,12 @@ func (this *socketProxy) Path() (string, error) {
 	return r, err
 }
 func (this *socketProxy) Data() (*session.Data, error) {
-	return this.Context.Socket.Data(), nil
+	i := this.Context.Socket.Data()
+	if i == nil {
+		return nil, nil
+	}
+	v, _ := i.(*session.Data)
+	return v, nil
 }
 
 func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
@@ -92,7 +82,8 @@ func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	return buff, nil
 }
 func (this *socketProxy) Login(guid string, value values.Values) (err error) {
-	if v := this.Socket.Data(); v != nil {
+	if i := this.Socket.Data(); i != nil {
+		v, _ := i.(*session.Data)
 		if v.UUID() == guid {
 			return nil
 		} else {

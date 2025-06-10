@@ -4,10 +4,18 @@ import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
+	"github.com/hwcer/logger"
 	"sync"
 )
 
 var Players = players{Map: sync.Map{}}
+
+func init() {
+	session.On(func(data *session.Data) {
+		logger.Debug("session delete,id:%s uuid:%s", data.Id(), data.UUID())
+		Delete(data)
+	})
+}
 
 func Socket(p *session.Data) *cosnet.Socket {
 	return Players.Socket(p)
@@ -32,6 +40,9 @@ func Login(guid string, value values.Values, callback loginCallback) (err error)
 // Connect 长连接登陆
 func Connect(socket *cosnet.Socket, guid string, value values.Values) error {
 	return Players.Connect(socket, guid, value)
+}
+func Disconnect(sock *cosnet.Socket) (err error) {
+	return Players.Disconnect(sock)
 }
 
 // Reconnect 长连接断线重连

@@ -1,7 +1,7 @@
 package players
 
 import (
-	"errors"
+	"fmt"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
@@ -74,6 +74,7 @@ func (this *players) Delete(p *session.Data) bool {
 func (this *players) create() any {
 	return nil
 }
+
 func (this *players) Login(guid string, value values.Values, callback loginCallback) (err error) {
 	r := session.NewData(guid, value)
 	r.Lock()
@@ -94,7 +95,6 @@ func (this *players) Login(guid string, value values.Values, callback loginCallb
 	return
 }
 
-// todo
 func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Values) error {
 	err := this.Login(guid, value, func(data *session.Data, loaded bool) error {
 		if loaded {
@@ -107,16 +107,34 @@ func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Valu
 	return err
 }
 
+func (this *players) Disconnect(sock *cosnet.Socket) (err error) {
+	i := sock.Data()
+	if i == nil {
+		return
+	}
+	data, ok := i.(*session.Data)
+	if !ok {
+		return fmt.Errorf("socket data type error:%v", i)
+	}
+
+	data.Lock()
+	defer data.Unlock()
+	if s := this.Socket(data); s != nil && s.Id() == sock.Id() {
+		data.Delete(SessionPlayerSocketName, true)
+	}
+	return
+}
+
 func (this *players) Reconnect(sock *cosnet.Socket, secret string) (err error) {
 	if v := sock.Data(); v != nil {
-		return errors.New("please do not login again")
+		return
 	}
 	s := session.New()
 	if err = s.Verify(secret); err != nil {
 		return
 	}
 	this.replace(s.Data, sock)
-	s.Data.Set(SessionPlayerSocketName, sock, true)
+	s.Data.Set(SessionPlayerSocketName, sock)
 	sock.Reconnect(s.Data)
 	return
 }

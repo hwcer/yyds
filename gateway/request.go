@@ -91,10 +91,6 @@ func proxy(h Request) ([]byte, error) {
 		return reply, nil
 	}
 	if guid, ok := res[options.ServicePlayerOAuth]; ok {
-		//s := session.New()
-		//if _, err = s.Create(guid, CookiesFilter(res)); err == nil {
-		//	err = h.Login(s)
-		//}
 		err = h.Login(guid, CookiesFilter(res))
 	} else if _, ok = res[options.ServicePlayerLogout]; ok {
 		if err = h.Delete(); err == nil && p != nil {

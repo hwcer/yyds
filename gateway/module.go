@@ -6,7 +6,6 @@ import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
-	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"github.com/soheilhy/cmux"
 	"net"
@@ -69,7 +68,6 @@ func (this *Module) Init() (err error) {
 }
 
 func (this *Module) Start() (err error) {
-	players.Start()
 	if options.Gate.Protocol.CMux() {
 		var ln net.Listener
 		if ln, err = net.Listen("tcp", options.Gate.Address); err != nil {

@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const elapsedMillisecond = 200 * time.Millisecond
+
 var Method = []string{"POST", "GET", "OPTIONS"}
 
 func NewHttpServer() *HttpServer {

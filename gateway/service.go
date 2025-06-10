@@ -50,7 +50,7 @@ func send(c *xshare.Context) any {
 	Emitter.emit(EventTypeResponse, p, path, mate)
 	sock := players.Players.Socket(p)
 	if sock == nil {
-		logger.Debug("长链接不在线,消息丢弃,UID:%s GUID:%s PATH:%s BODY：%s", uid, guid, path, string(c.Bytes()))
+		logger.Debug("长链接不在线,消息丢弃,UID:%s GUID:%s PATH:%s ", uid, guid, path)
 		return nil
 	}
 	CookiesUpdate(mate, p)
@@ -62,7 +62,7 @@ func send(c *xshare.Context) any {
 		i, _ := strconv.Atoi(s)
 		rid = int32(i)
 	}
-	logger.Debug("推送消息  GUID:%s RID:%d PATH:%s BODY：%s", guid, rid, path, string(c.Bytes()))
+	logger.Debug("推送消息  GUID:%s RID:%d PATH:%s", guid, rid, path)
 	if err := sock.Send(rid, path, c.Bytes()); err != nil {
 		return err
 	}
