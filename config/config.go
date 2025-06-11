@@ -7,7 +7,6 @@ import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/schema"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/options"
 	"go/ast"
 	"os"
 	"path/filepath"
@@ -31,19 +30,19 @@ func (cs *CS) Register(i ...Handle) {
 	handles = append(handles, i...)
 }
 
-func (cs *CS) Reload(data any) (err error) {
+func (cs *CS) Reload(data any, path string) (err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	c := &CS{ITypes: ITypes{}, Process: Process{}}
-
-	files, err := os.Stat(cosgo.Abs(options.Options.Data))
+	path = cosgo.Abs(path)
+	files, err := os.Stat(path)
 	if err != nil {
 		return
 	}
 	if files.IsDir() {
-		err = c.ReloadFromMultiple(data)
+		err = c.ReloadFromMultiple(data, path)
 	} else {
-		err = c.ReloadFromSingle(data)
+		err = c.ReloadFromSingle(data, path)
 	}
 	if err != nil {
 		return
@@ -63,12 +62,9 @@ func (cs *CS) Reload(data any) (err error) {
 }
 
 // ReloadFromSingle 从单个文件中加载配置
-func (cs *CS) ReloadFromSingle(d any) (err error) {
-	file := cosgo.Abs(options.Options.Data)
+func (cs *CS) ReloadFromSingle(d any, file string) (err error) {
 	var in []byte
-	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
-		in, err = cs.getDataFromUrl(file)
-	} else if file != "" {
+	if file != "" {
 		in, err = os.ReadFile(cosgo.Abs(file))
 	} else {
 		return errors.New("静态数据地址为空")
@@ -89,8 +85,7 @@ func (cs *CS) ReloadFromSingle(d any) (err error) {
 }
 
 // ReloadFromMultiple 从多个文件中加载数据
-func (cs *CS) ReloadFromMultiple(d any) (err error) {
-	dir := cosgo.Abs(options.Options.Data)
+func (cs *CS) ReloadFromMultiple(d any, dir string) (err error) {
 	//vf := reflect.Indirect(reflect.ValueOf(gd.Data))
 	modelType := schema.Kind(d)
 	bytes := strings.Builder{}
@@ -140,25 +135,5 @@ func (cs *CS) verify(data any) (result bool) {
 			}
 		}
 	}
-	return
-}
-
-func (cs *CS) getDataFromUrl(url string) (b []byte, err error) {
-	//if err = request.Get(url, &Version); err != nil {
-	//	return
-	//}
-	//
-	//file := fmt.Sprintf(Version.StaticDataBuffer, Version.StaticDataVersion)
-	//arr := strings.Split(url, "/")
-	//arr[len(arr)-1] = strings.TrimPrefix(file, "/")
-	//
-	////logger.Debug("url:%v", strings.Join(arr, "/"))
-	//address := strings.Join(arr, "/")
-	//b, err = request.OnSend(http.MethodGet, address, nil)
-	//if err != nil {
-	//	logger.Trace("加载远程配置错误：%v", address)
-	//}
-
-	err = errors.New("无法加载远程配置")
 	return
 }

@@ -38,3 +38,7 @@ func GetIType(iid int32) (r int32) {
 	}
 	return
 }
+
+func Reload(data any, path string) (err error) {
+	return Config.Reload(data, path)
+}
