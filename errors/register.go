@@ -5,7 +5,7 @@ import (
 	"github.com/hwcer/logger"
 )
 
-var errorDict = make(map[int]*values.Message)
+var errorDict = make(map[int32]*values.Message)
 
 func Register(msg ...*values.Message) {
 	for _, m := range msg {

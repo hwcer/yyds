@@ -19,7 +19,7 @@ func Error(err interface{}, args ...interface{}) *Message {
 	return msg
 }
 
-func Errorf(code int, err interface{}, args ...interface{}) *Message {
+func Errorf(code int32, err interface{}, args ...interface{}) *Message {
 	msg := &Message{}
 	msg.Message = values.Errorf(code, err, args...)
 	return msg

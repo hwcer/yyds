@@ -85,14 +85,16 @@ func (cs *CS) ReloadFromSingle(d any, file string) (err error) {
 }
 
 // ReloadFromMultiple 从多个文件中加载数据
-func (cs *CS) ReloadFromMultiple(d any, dir string) (err error) {
+func (cs *CS) ReloadFromMultiple(d any, dir string) error {
 	//vf := reflect.Indirect(reflect.ValueOf(gd.Data))
-	modelType := schema.Kind(d)
+	modelType, err := schema.Parse(d)
+	if err != nil {
+		return err
+	}
 	bytes := strings.Builder{}
 	bytes.WriteString("{")
 
-	for i := 0; i < modelType.NumField(); i++ {
-		field := modelType.Field(i)
+	for _, field := range modelType.Fields {
 		if ast.IsExported(field.Name) {
 			file := filepath.Join(dir, field.Name+".json")
 			//logger.Trace("%v", file)
@@ -115,7 +117,7 @@ func (cs *CS) ReloadFromMultiple(d any, dir string) (err error) {
 		return err
 	}
 
-	return
+	return nil
 }
 
 func (cs *CS) verify(data any) (result bool) {

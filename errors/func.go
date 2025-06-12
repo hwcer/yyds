@@ -18,6 +18,6 @@ func Error(err any) error {
 	return values.Error(err)
 }
 
-func Errorf(code int, format any, args ...any) error {
+func Errorf(code int32, format any, args ...any) error {
 	return values.Errorf(code, format, args...)
 }
