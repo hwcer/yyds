@@ -31,7 +31,9 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 		}
 	}()
 	p.Gateway = gateway
-	p.Binder = binder.GetContentType(meta, binder.ContentTypeModRes)
+	if b := binder.GetContentType(meta, binder.ContentTypeModRes); b != nil {
+		p.Binder = b
+	}
 	// 不同端不同协议顶号
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
