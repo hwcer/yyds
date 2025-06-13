@@ -30,7 +30,9 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 			p.Login = p.Unix()
 		}
 	}()
-	//todo 不同端不同协议顶号
+	p.Gateway = gateway
+	p.Binder = binder.GetContentType(meta, binder.ContentTypeModRes)
+	// 不同端不同协议顶号
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
 			updater.Emit(p.Updater, player.EventReconnect)
@@ -46,8 +48,7 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 	} else {
 		return errors.ErrLoginWaiting
 	}
-	p.Gateway = gateway
-	p.Binder = binder.GetContentType(meta, binder.ContentTypeModRes)
+
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}
