@@ -119,22 +119,6 @@ func (this *httpProxy) Binder() binder.Binder {
 	return binder.Get(t)
 }
 
-//func (this *httpProxy) errorf(c *cosweb.Context, err error) error {
-//	if mod.Server.Errorf != nil {
-//		return mod.Server.Errorf(c, err)
-//	}
-//	data := values.Parse(err)
-//	b := this.Binder()
-//	if b == nil {
-//		return err
-//	}
-//	s, err := b.Marshal(data)
-//	if err != nil {
-//		return err
-//	}
-//	return this.Context.Bytes(cosweb.ContentType(b.String()), s)
-//}
-
 func (this *httpProxy) Path() (string, error) {
 	return this.Context.Request.URL.Path, nil
 }
