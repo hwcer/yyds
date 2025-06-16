@@ -69,7 +69,7 @@ func (m *master) Post(api MasterApiType, args interface{}, reply interface{}) (e
 	b.WriteString("/")
 	b.WriteString(Options.Appid)
 	b.WriteString(string(api))
-	msg := values.Parse(nil)
+	msg := &values.Request{}
 
 	if err = m.client.Post(b.String(), args, msg); err != nil {
 		logger.Trace("加载master错误:%v", b.String())

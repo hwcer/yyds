@@ -14,9 +14,7 @@ type Message struct {
 }
 
 func Error(err interface{}, args ...interface{}) *Message {
-	msg := &Message{}
-	msg.Message = values.Errorf(0, err, args...)
-	return msg
+	return Errorf(0, err, args...)
 }
 
 func Errorf(code int32, err interface{}, args ...interface{}) *Message {
