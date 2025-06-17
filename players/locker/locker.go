@@ -9,13 +9,13 @@ var w *await.Await
 
 type Args struct {
 	uid    []string
-	done   []func()
+	args   any
 	handle player.LockerHandle
 }
 
-func NewLocker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
-	msg := &Args{uid: uid, handle: handle, done: done}
-	l := &Locker{}
+func NewLocker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
+	msg := &Args{uid: uid, handle: handle, args: args}
+	l := &Locker{done: done}
 	return w.Call(l.call, msg)
 }
 
@@ -39,6 +39,7 @@ func (this *Locker) loading(uid string) error {
 	if this.dict == nil {
 		this.dict = map[string]*player.Player{}
 	}
+
 	if _, ok := this.dict[uid]; ok {
 		return nil
 	}
@@ -108,14 +109,13 @@ func (this *Locker) Submit() error {
 	return nil
 }
 
-func (this *Locker) call(args any) (reply any, err error) {
-	msg, _ := args.(*Args)
-	bw := &Locker{done: msg.done}
-	for _, v := range msg.uid {
-		if err = bw.loading(v); err != nil {
+func (this *Locker) call(i any) (reply any, err error) {
+	args, _ := i.(*Args)
+	for _, v := range args.uid {
+		if err = this.loading(v); err != nil {
 			return nil, err
 		}
 	}
-	defer bw.release()
-	return msg.handle(bw)
+	defer this.release()
+	return args.handle(this, args.args)
 }

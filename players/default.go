@@ -65,8 +65,8 @@ func Login(uid string, meta map[string]string, handle player.Handle) (err error)
 	return
 }
 
-func Locker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
-	return ps.Locker(uid, handle, done...)
+func Locker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
+	return ps.Locker(uid, handle, args, done...)
 }
 
 func Range(f func(string, *player.Player) bool) {

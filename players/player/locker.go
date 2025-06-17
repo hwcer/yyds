@@ -1,15 +1,15 @@
 package player
 
 type Locker interface {
-	Data() error
 	Get(uid string) *Player
+	Data() error
 	Range(f func(player *Player) bool)
 	Select(keys ...any)
 	Verify() error
 	Submit() error
 }
 
-type LockerHandle func(locker Locker) (any, error)
+type LockerHandle func(locker Locker, args any) (any, error)
 
 func (p *Player) Reset() {
 	p.Updater.Reset()

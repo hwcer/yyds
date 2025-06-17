@@ -84,12 +84,6 @@ var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
 
 var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Context) (reply any, err error) {
 	c := &Context{Context: sc}
-	//defer func() {
-	//	if v := recover(); v != nil {
-	//		reply, err = Serialize(c, Errorf(500, "server error"))
-	//		logger.Trace("server error:%v\n%v", v, string(debug.Stack()))
-	//	}
-	//}()
 	path := c.ServiceMethod()
 
 	if !options.HasServiceMethod(path) {

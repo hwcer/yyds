@@ -93,8 +93,8 @@ func (this *Players) Delete(k string) {
 	this.dict.Delete(k)
 }
 
-func (this *Players) Locker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
-	return NewLocker(uid, handle, done...)
+func (this *Players) Locker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
+	return NewLocker(uid, handle, args, done...)
 }
 
 // LoadWithUnlock 获取无锁状态的Player,无锁,无状态判断,仅仅API入口处使用

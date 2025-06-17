@@ -13,21 +13,21 @@ var w *await.Await
 
 type Args struct {
 	uid    []string
-	done   []func()
+	args   any
 	handle player.LockerHandle
 }
 
 // 已经在控制携程内
-func NewLocker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
-	msg := &Args{uid: uid, handle: handle, done: done}
-	l := &Locker{}
+func NewLocker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
+	msg := &Args{uid: uid, handle: handle, args: args}
+	l := &Locker{done: done}
 	return l.call(msg)
 }
 
 // NewLockerWithLocker 通常在脚本或者不在控制携程之内才使用这个方法先进入防并发携程
-func NewLockerWithLocker(uid []string, handle player.LockerHandle, done ...func()) (any, error) {
-	msg := &Args{uid: uid, handle: handle, done: done}
-	l := &Locker{}
+func NewLockerWithLocker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
+	msg := &Args{uid: uid, handle: handle, args: args}
+	l := &Locker{done: done}
 	return w.Call(l.call, msg)
 }
 
@@ -38,14 +38,13 @@ type Locker struct {
 
 func (this *Locker) call(args any) (reply any, err error) {
 	msg, _ := args.(*Args)
-	bw := &Locker{done: msg.done}
 	for _, v := range msg.uid {
-		if err = bw.loading(v); err != nil {
+		if err = this.loading(v); err != nil {
 			return
 		}
 	}
-	defer bw.release()
-	return msg.handle(bw)
+	defer this.release()
+	return msg.handle(this, msg.args)
 }
 
 func (this *Locker) release() {

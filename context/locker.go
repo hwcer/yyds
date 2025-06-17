@@ -11,7 +11,7 @@ import (
 // handle 获取批量操作权限
 // next   获取操作结束后是否需要回到玩家自身,
 
-func (this *Context) Locker(uids []string, handle player.LockerHandle, next ...func()) (any, error) {
+func (this *Context) Locker(uids []string, handle player.LockerHandle, args any, next ...func()) (any, error) {
 	var p *player.Player
 	var done []func()
 	if this.Player != nil {
@@ -30,5 +30,5 @@ func (this *Context) Locker(uids []string, handle player.LockerHandle, next ...f
 		})
 	}
 	done = append(done, next...)
-	return players.Locker(uids, handle, done...)
+	return players.Locker(uids, handle, args, done...)
 }
