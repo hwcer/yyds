@@ -45,8 +45,6 @@ func (this *Players) call(args any) (reply any, err error) {
 	case 1:
 		err = this.get(uid, handle)
 	case 2:
-		err = this.try(uid, handle)
-	case 3:
 		err = this.load(uid, init, handle)
 	default:
 		err = fmt.Errorf("channel Players.call args caller error:%v", caller)
@@ -69,24 +67,6 @@ func (this *Players) get(uid string, handle player.Handle) error {
 }
 
 // 2
-func (this *Players) try(uid string, handle player.Handle) (err error) {
-	p := player.New(uid)
-	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
-		p = i.(*player.Player)
-		if p.Status == player.StatusRelease {
-			return errors.ErrLoginWaiting
-		}
-	} else if err = p.Loading(true); err != nil {
-		this.dict.Delete(uid)
-		return err
-	}
-
-	p.Reset()
-	defer p.Release()
-	return handle(p)
-}
-
-// 3
 func (this *Players) load(uid string, init bool, handle player.Handle) (err error) {
 	p := player.New(uid)
 	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
@@ -112,21 +92,12 @@ func (this *Players) Get(uid string, handle player.Handle) (err error) {
 	_, err = w.Call(this.call, args)
 	return err
 }
-func (this *Players) Try(uid string, handle player.Handle) (err error) {
-	args := playerAwaitArgs{}
-	args[playerAwaitArgsUid] = uid
-	args[playerAwaitArgsInit] = true
-	args[playerAwaitArgsCaller] = int8(2)
-	args[playerAwaitArgsHandle] = handle
-	_, err = w.Call(this.call, args)
-	return err
-}
 
 func (this *Players) Load(uid string, init bool, handle player.Handle) (err error) {
 	args := playerAwaitArgs{}
 	args[playerAwaitArgsUid] = uid
 	args[playerAwaitArgsInit] = init
-	args[playerAwaitArgsCaller] = int8(3)
+	args[playerAwaitArgsCaller] = int8(2)
 	args[playerAwaitArgsHandle] = handle
 	_, err = w.Call(this.call, args)
 	return err
@@ -151,10 +122,10 @@ func (this *Players) Locker(uid []string, handle player.LockerHandle, args any, 
 }
 
 // LoadWithUnlock 获取无锁状态的Player,无锁,无状态判断,仅仅API入口处使用
-//func (this *Players) LoadWithUnlock(uid uint64) (r *player.Player) {
-//	v, ok := this.dict.Load(uid)
-//	if ok {
-//		r = v.(*player.Player)
-//	}
-//	return
-//}
+func (this *Players) LoadWithUnlock(uid uint64) (r *player.Player) {
+	v, ok := this.dict.Load(uid)
+	if ok {
+		r = v.(*player.Player)
+	}
+	return
+}

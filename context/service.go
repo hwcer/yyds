@@ -109,7 +109,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	if uid == "" {
 		return nil, values.Errorf(0, "not select role")
 	}
-	err = players.Try(uid, func(p *player.Player) error {
+	err = players.Get(uid, func(p *player.Player) error {
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
 		if c.Player.Login < times.Daily(0).Now().Unix() && l != options.OAuthTypeRenewal {

@@ -7,6 +7,7 @@ import (
 	"github.com/hwcer/cosgo/slice"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
@@ -89,6 +90,10 @@ func (p *Player) Send(v any, rp any) {
 // Loading 加载数据
 // init 是否立即加载玩家数据，true:是
 func (p *Player) Loading(init bool) (err error) {
+	//验证UID是否合法
+	if uid := p.Uid(); !uuid.IsValid(uid) {
+		return fmt.Errorf("player uid(%s) is invalid", uid)
+	}
 	status := p.Status
 	if status == StatusLocked || status == StatusRelease {
 		return fmt.Errorf("player status disable")
@@ -97,11 +102,16 @@ func (p *Player) Loading(init bool) (err error) {
 		return fmt.Errorf("player status change")
 	}
 	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("%v", e)
+			logger.Error(e)
+		}
 		if err != nil {
 			p.Status = StatusRelease
 		} else {
 			p.Status = status
 		}
+
 	}()
 	if p.Updater == nil {
 		p.Updater = updater.New(p)

@@ -21,6 +21,7 @@ type Players struct {
 	dict sync.Map
 }
 
+// Get 只获取在线玩家
 func (this *Players) Get(uid string, handle player.Handle) error {
 	var p *player.Player
 	if v, ok := this.dict.Load(uid); ok {
@@ -36,29 +37,6 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	return handle(p)
 }
 
-func (this *Players) Try(uid string, handle player.Handle) error {
-	p := player.New(uid)
-	p.Lock()
-	defer p.Unlock()
-	if v, ok := this.dict.LoadOrStore(uid, p); ok {
-		p = v.(*player.Player)
-		if locked := p.TryLock(); locked {
-			defer p.Unlock()
-		} else {
-			return errors.ErrLoginWaiting
-		}
-		if p.Status == player.StatusRelease {
-			return errors.ErrLoginWaiting
-		}
-	} else if err := p.Loading(true); err != nil {
-		this.dict.Delete(uid)
-		return err
-	}
-	p.Reset()
-	defer p.Release()
-	return handle(p)
-}
-
 func (this *Players) Load(uid string, init bool, handle player.Handle) (err error) {
 	r := player.New(uid)
 	r.Lock()
@@ -68,9 +46,7 @@ func (this *Players) Load(uid string, init bool, handle player.Handle) (err erro
 		r.Lock()
 		defer r.Unlock()
 	}
-	//未初始化
-	err = r.Loading(init)
-	if err != nil {
+	if err = r.Loading(init); err != nil {
 		this.dict.Delete(uid)
 		return
 	}

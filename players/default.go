@@ -38,9 +38,9 @@ func Online() int32 {
 }
 
 // Try 获取在线玩家, 使用TryLock 尝试获得锁
-func Try(uid string, handle player.Handle) error {
-	return ps.Try(uid, handle)
-}
+//func Try(uid string, handle player.Handle) error {
+//	return ps.Try(uid, handle)
+//}
 
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁
 // 不进行初始化，数据按需模式读写
