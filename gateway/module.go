@@ -6,6 +6,7 @@ import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
+	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"github.com/soheilhy/cmux"
 	"net"
@@ -37,11 +38,19 @@ func (this *Module) Init() (err error) {
 	if options.Gate.Address == "" {
 		return errors.New("网关地址没有配置")
 	}
+	session.Options.MaxAge = 3600
+	session.Options.Heartbeat = 10
+	session.Heartbeat.Start()
 	//session
 	if options.Gate.Redis != "" {
+		//TODO players 管理
 		session.Options.Storage, err = session.NewRedis(options.Gate.Redis)
 	} else {
-		session.Options.Storage = session.NewMemory(options.Gate.Capacity)
+		mem := session.NewMemory(options.Gate.Capacity)
+		mem.On(func(data *session.Data) {
+			_ = players.Delete(data)
+		})
+		session.Options.Storage = mem
 	}
 	if err != nil {
 		return err
@@ -54,6 +63,9 @@ func (this *Module) Init() (err error) {
 	}
 	p := options.Gate.Protocol
 	if p.Has(options.ProtocolTypeTCP) || p.Has(options.ProtocolTypeWSS) {
+		//关闭 cosnet 计时器,由session接管
+		cosnet.Options.Heartbeat = 0
+		session.Heartbeat.On(cosnet.Heartbeat)
 		if err = TCP.init(); err != nil {
 			return err
 		}

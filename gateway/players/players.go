@@ -71,10 +71,6 @@ func (this *players) Delete(p *session.Data) bool {
 	return true
 }
 
-func (this *players) create() any {
-	return nil
-}
-
 func (this *players) Login(guid string, value values.Values, callback loginCallback) (err error) {
 	r := session.NewData(guid, value)
 	r.Lock()

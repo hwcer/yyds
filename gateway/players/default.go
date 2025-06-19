@@ -4,18 +4,10 @@ import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
-	"github.com/hwcer/logger"
 	"sync"
 )
 
 var Players = players{Map: sync.Map{}}
-
-func init() {
-	session.On(func(data *session.Data) {
-		logger.Debug("session delete,id:%s uuid:%s", data.Id(), data.UUID())
-		Delete(data)
-	})
-}
 
 func Socket(p *session.Data) *cosnet.Socket {
 	return Players.Socket(p)
