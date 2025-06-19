@@ -3,6 +3,7 @@ package options
 const (
 	ServiceMetadataUID       = "uid"
 	ServiceMetadataGUID      = "guid"
+	ServiceMetadataMaster    = "gmr" //GM身份
 	ServiceMetadataServerId  = "sid"
 	ServiceMetadataRequestId = "rid"
 

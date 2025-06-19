@@ -90,7 +90,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		return c.handle(node) //内网通信不启用玩家数据
 	}
 
-	l, p := MethodGrade(path)
+	l, p, m := MethodGrade(path)
 	if strings.HasPrefix(p, ServiceMethodDebug) && !cosgo.Debug() {
 		return values.Errorf(0, "unauthorized"), nil
 	}
@@ -112,7 +112,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 	err = players.Get(uid, func(p *player.Player) error {
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
-		if c.Player.Login < times.Daily(0).Now().Unix() && l != options.OAuthTypeRenewal {
+		if c.Player.Login < times.Daily(0).Now().Unix() && m != options.OAuthRenewal {
 			return errors.ErrNeedResetSession
 		}
 		//尝试重新上线

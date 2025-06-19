@@ -44,7 +44,6 @@ type Player struct {
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
-
 }
 
 func (p *Player) initialize() {

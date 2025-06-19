@@ -2,15 +2,14 @@ package gateway
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/xclient"
 	"github.com/hwcer/cosrpc/xshare"
-	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
-	"strings"
 )
 
 type Request interface {
@@ -44,49 +43,29 @@ func proxy(h Request) ([]byte, error) {
 	req := h.Metadata()
 	res := make(values.Metadata)
 	var p *session.Data
-
-	if strings.HasPrefix(path, "/") {
-		path = strings.TrimPrefix(path, "/")
-	}
 	servicePath, serviceMethod, err := Router(path, req)
 	if err != nil {
 		return nil, err
 	}
-	path = strings.Join([]string{servicePath, strings.TrimPrefix(serviceMethod, "/")}, "/")
-
-	limit := options.OAuth.Get(path)
-	if limit != options.OAuthTypeNone {
-		if p, err = h.Data(); err != nil {
-			return nil, values.Parse(err)
-		} else if p == nil {
-			return nil, errors.ErrLogin
-		}
-		p.KeepAlive()
-		if limit == options.OAuthTypeOAuth {
-			if uuid := p.UUID(); uuid == "" {
-				return nil, errors.ErrLogin
-			} else {
-				req[options.ServiceMetadataGUID] = p.UUID()
-			}
-		} else {
-			if uid := p.GetString(options.ServiceMetadataUID); uid == "" {
-				return nil, errors.ErrNotSelectRole
-			} else {
-				req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
-			}
-		}
+	l, s := options.OAuth.Get(servicePath, serviceMethod)
+	if f, ok := Authorize.dict[l]; !ok {
+		return nil, fmt.Errorf("unknown authorization type: %d", l)
+	} else if p, err = f(h, req); err != nil {
+		return nil, err
 	}
+
 	req.Set(options.ServicePlayerGateway, xshare.Address().Encode())
+
 	buff, err := h.Buffer()
 	if err != nil {
 		return nil, err
 	}
 	reply := make([]byte, 0)
-	Emitter.emit(EventTypeRequest, p, path, req)
+	Emitter.emit(EventTypeRequest, p, s, req)
 	if err = request(p, servicePath, serviceMethod, buff.Bytes(), req, res, &reply); err != nil {
 		return nil, err
 	}
-	Emitter.emit(EventTypeConfirm, p, path, req)
+	Emitter.emit(EventTypeConfirm, p, s, req)
 	if len(res) == 0 {
 		return reply, nil
 	}
