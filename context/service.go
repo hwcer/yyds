@@ -1,7 +1,6 @@
 package context
 
 import (
-	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
@@ -15,7 +14,6 @@ import (
 	"github.com/hwcer/yyds/players/player"
 	"reflect"
 	"runtime/debug"
-	"strings"
 )
 
 const (
@@ -90,10 +88,7 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		return c.handle(node) //内网通信不启用玩家数据
 	}
 
-	l, p, m := MethodGrade(path)
-	if strings.HasPrefix(p, ServiceMethodDebug) && !cosgo.Debug() {
-		return values.Errorf(0, "unauthorized"), nil
-	}
+	l, _, m := MethodGrade(path)
 
 	if l == options.OAuthTypeNone {
 		return c.handle(node)
@@ -143,9 +138,6 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		reply, err = c.handle(node)
 		return err
 	})
-	if err != nil {
-		return Serialize(c, Parse(err))
-	}
 	return
 }
 
