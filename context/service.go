@@ -33,6 +33,10 @@ type Caller interface {
 	Caller(node *registry.Node, c *Context) interface{}
 }
 
+func NewService(name string) *registry.Service {
+	return xserver.Service(name, handlerCaller, handlerFilter)
+}
+
 func Register(i interface{}, prefix ...string) {
 	var arr []string
 	if options.Gate.Prefix != "" {

@@ -48,10 +48,7 @@ func (this *Module) Init() (err error) {
 	if options.Options.Appid == "" {
 		return errors.New("appid empty")
 	}
-	if options.Options.Secret == "" {
-		return errors.New("secret empty")
-	}
-
+	
 	addr := xshare.Address()
 	if options.Game.Local == "" {
 		options.Game.Local = addr.Local()

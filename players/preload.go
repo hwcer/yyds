@@ -24,6 +24,7 @@ var Preload preload
 func loading() (err error) {
 	if Preload == nil {
 		logger.Alert("未配置预加载接口(players.Preload),用户预加载功能未启用")
+		return
 	}
 	record := Preload.Record()
 	if record == 0 {

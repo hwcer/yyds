@@ -39,7 +39,7 @@ func (this *Module) Init() (err error) {
 		return errors.New("网关地址没有配置")
 	}
 	session.Options.MaxAge = 3600
-	session.Options.Heartbeat = 10
+	session.Options.Heartbeat = 30
 	session.Heartbeat.Start()
 	//session
 	if options.Gate.Redis != "" {
