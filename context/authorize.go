@@ -23,7 +23,7 @@ type Authorize struct {
 func (this *Authorize) Verify() (r *Token, err error) {
 	r = &Token{}
 	//开发者模式,GM指令
-	if this.Guid != "" && (options.Game.Developer || (this.Secret != "" && this.Secret == options.Game.Secret)) {
+	if this.Guid != "" && (options.Game.Developer || this.Secret == options.Game.Secret) {
 		r.Guid = this.Guid
 		return
 	}

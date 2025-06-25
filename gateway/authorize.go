@@ -15,10 +15,9 @@ func init() {
 	Authorize.Register(options.OAuthTypeNone, Authorize.OAuthTypeNone)
 	Authorize.Register(options.OAuthTypeOAuth, Authorize.OAuthTypeOAuth)
 	Authorize.Register(options.OAuthTypeSelect, Authorize.OAuthTypeSelect)
-	Authorize.Register(options.OAuthTypeMaster, Authorize.OAuthTypeMaster)
 }
 
-type authorizeFunc func(r Request, req values.Metadata) (*session.Data, error)
+type authorizeFunc func(r Request, req values.Metadata, isMaster bool) (*session.Data, error)
 
 type authorizeManager struct {
 	dict map[int8]authorizeFunc
@@ -42,12 +41,18 @@ func (this *authorizeManager) oauth(r Request, req values.Metadata) (p *session.
 }
 
 // OAuthTypeNone 普通接口
-func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata) (*session.Data, error) {
-	return nil, nil
+func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+	if isMaster {
+		if p, err = this.oauth(r, req); err != nil {
+			return
+		}
+		err = this.IsMaster(p)
+	}
+	return
 }
 
 // OAuthTypeOAuth 账号登录
-func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata) (p *session.Data, err error) {
+func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -56,11 +61,14 @@ func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata) (p 
 	} else {
 		req[options.ServiceMetadataGUID] = p.UUID()
 	}
+	if isMaster {
+		err = this.IsMaster(p)
+	}
 	return
 }
 
 // OAuthTypeSelect 必须选择角色
-func (this *authorizeManager) OAuthTypeSelect(r Request, req values.Metadata) (p *session.Data, err error) {
+func (this *authorizeManager) OAuthTypeSelect(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -69,14 +77,14 @@ func (this *authorizeManager) OAuthTypeSelect(r Request, req values.Metadata) (p
 	} else {
 		req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
 	}
+	if isMaster {
+		err = this.IsMaster(p)
+	}
 	return
 }
 
-// OAuthTypeMaster 必须是GM身份
-func (this *authorizeManager) OAuthTypeMaster(r Request, req values.Metadata) (p *session.Data, err error) {
-	if p, err = this.OAuthTypeSelect(r, req); err != nil {
-		return nil, err
-	}
+// IsMaster 是GM
+func (this *authorizeManager) IsMaster(p *session.Data) (err error) {
 	if gm := p.GetInt32(options.ServiceMetadataMaster); gm == 0 {
 		err = errors.ErrNeedGameMaster
 	}

@@ -48,9 +48,10 @@ func proxy(h Request) ([]byte, error) {
 		return nil, err
 	}
 	l, s := options.OAuth.Get(servicePath, serviceMethod)
+	isMaster := options.OAuth.IsMaster(s)
 	if f, ok := Authorize.dict[l]; !ok {
 		return nil, fmt.Errorf("unknown authorization type: %d", l)
-	} else if p, err = f(h, req); err != nil {
+	} else if p, err = f(h, req, isMaster); err != nil {
 		return nil, err
 	}
 

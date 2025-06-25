@@ -29,6 +29,10 @@ func (this *TcpServer) init() error {
 	if !cosnet.Start() {
 		return nil
 	}
+	//关闭 cosnet 计时器,由session接管
+	cosnet.Options.Heartbeat = 0
+	session.Heartbeat.On(cosnet.Heartbeat)
+
 	service := cosnet.Service("")
 	_ = service.Register(this.proxy, "/*")
 	return nil

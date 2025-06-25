@@ -16,11 +16,6 @@ import (
 	"runtime/debug"
 )
 
-const (
-	ServiceMethodOAuthName  = "_ServiceMethodOAuth"
-	ServiceMethodOAuthValue = "1"
-)
-
 /*
 所有接口都必须已经登录
 使用updater时必须使用playerHandle.data()来获取updater
@@ -29,7 +24,7 @@ const (
 var Service = xserver.Service(options.ServiceTypeGame, handlerCaller, handlerFilter)
 var Serialize func(c *Context, reply *Message) ([]byte, error) = serializeDefault
 
-type Caller interface {
+type filterCaller interface {
 	Caller(node *registry.Node, c *Context) interface{}
 }
 
@@ -76,7 +71,7 @@ var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
 		}
 		return true
 	} else {
-		if _, ok := node.Binder().(Caller); !ok {
+		if _, ok := node.Binder().(filterCaller); !ok {
 			v := reflect.Indirect(reflect.ValueOf(node.Binder()))
 			logger.Debug("[%v]未正确实现Caller方法,会影响程序性能", v.Type().String())
 		}
@@ -87,12 +82,12 @@ var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
 var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Context) (reply any, err error) {
 	c := &Context{Context: sc}
 	path := c.ServiceMethod()
-
 	if !options.HasServiceMethod(path) {
 		return c.handle(node) //内网通信不启用玩家数据
 	}
+	path = options.TrimServiceMethod(path)
 
-	l, _, m := MethodGrade(path)
+	l, m := options.OAuth.Get(options.ServiceTypeGame, path)
 
 	if l == options.OAuthTypeNone {
 		return c.handle(node)
@@ -109,22 +104,23 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		return nil, values.Errorf(0, "not select role")
 	}
 	err = players.Get(uid, func(p *player.Player) error {
+		if p == nil {
+			return errors.ErrLogin
+		}
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
-		if c.Player.Login < times.Daily(0).Now().Unix() && m != options.OAuthRenewal {
-			return errors.ErrNeedResetSession
-		}
 		//尝试重新上线
 		meta := values.Metadata(c.Metadata())
 		if c.Player.Status != player.StatusConnected {
 			if e := players.Connect(p, meta); e != nil {
 				return e
 			}
-		} else if gate := meta.GetInt64(options.ServicePlayerGateway); uint64(gate) != p.Gateway {
+		} else if gate := meta.GetUint64(options.ServicePlayerGateway); gate != p.Gateway {
 			return errors.ErrReplaced
 		}
-		//不进入用户协议 不执行submit
-		c.SetValue(ServiceMethodOAuthName, ServiceMethodOAuthValue)
+		if c.Player.Login < times.Daily(0).Now().Unix() && m != options.OAuthRenewal {
+			return errors.ErrNeedResetSession
+		}
 		//重发
 		if rid := meta.GetInt32(options.ServiceMetadataRequestId); rid > 0 && c.Player != nil {
 			if c.Player.Message == nil {
@@ -170,7 +166,7 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 	if node.IsFunc() {
 		m := node.Method().(func(*Context) interface{})
 		v = m(c)
-	} else if s, ok := node.Binder().(Caller); ok {
+	} else if s, ok := node.Binder().(filterCaller); ok {
 		v = s.Caller(node, c)
 	} else {
 		vs := node.Call(c)
@@ -191,7 +187,7 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 
 	r = Parse(v)
 	r.Time = c.Now().UnixMilli()
-	if l := c.GetValue(ServiceMethodOAuthName); l == ServiceMethodOAuthValue && r.Code == 0 && c.Player != nil {
+	if r.Code == 0 && c.Player != nil {
 		if r.Cache, err = c.Player.Submit(); err == nil {
 			r.Dirty = c.Player.Dirty.Pull()
 		} else {

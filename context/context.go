@@ -136,18 +136,7 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 
 // Send 推送消息，必须长连接在线
 func (this *Context) Send(path string, v any, req values.Metadata) {
-	if req == nil {
-		req = values.Metadata{}
-	}
-	req[options.ServiceMessagePath] = path
-	if _, ok := req[binder.HeaderContentType]; !ok {
-		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
-	}
-	if _, ok := req[options.ServiceMetadataRequestId]; !ok {
-		if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
-			req.Set(options.ServiceMetadataRequestId, rid)
-		}
-	}
+	req = this.NewSender(path, req)
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return
@@ -165,6 +154,22 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	if err := xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil); err != nil {
 		logger.Error(err)
 	}
+}
+
+func (this *Context) NewSender(path string, req values.Metadata) values.Metadata {
+	if req == nil {
+		req = values.Metadata{}
+	}
+	req[options.ServiceMessagePath] = path
+	if _, ok := req[binder.HeaderContentType]; !ok {
+		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
+	}
+	if _, ok := req[options.ServiceMetadataRequestId]; !ok {
+		if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
+			req.Set(options.ServiceMetadataRequestId, rid)
+		}
+	}
+	return req
 }
 
 // Channel 频道操作器
