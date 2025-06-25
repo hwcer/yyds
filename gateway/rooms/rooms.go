@@ -21,6 +21,7 @@ func Get(name string) (r *Room) {
 
 // All 所有房间
 func All(p *session.Data) (r map[string]struct{}) {
+	r = make(map[string]struct{})
 	if i := p.Get(SessionPlayerRoomsName); i != nil {
 		for k, v := range i.(map[string]struct{}) {
 			r[k] = v

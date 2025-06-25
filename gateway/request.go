@@ -70,13 +70,23 @@ func proxy(h Request) ([]byte, error) {
 	if len(res) == 0 {
 		return reply, nil
 	}
+	//创建登录信息
 	if guid, ok := res[options.ServicePlayerOAuth]; ok {
-		err = h.Login(guid, CookiesFilter(res))
-	} else if _, ok = res[options.ServicePlayerLogout]; ok {
+		if err = h.Login(guid, CookiesFilter(res)); err != nil {
+			return nil, err
+		} else {
+			p = players.Get(guid)
+		}
+	}
+	//退出登录
+	if _, ok := res[options.ServicePlayerLogout]; ok {
 		if err = h.Delete(); err == nil && p != nil {
 			players.Delete(p)
 		}
-	} else if p != nil {
+		p = nil
+	}
+
+	if p != nil {
 		CookiesUpdate(res, p)
 	}
 	if err != nil {
