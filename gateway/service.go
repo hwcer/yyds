@@ -15,6 +15,7 @@ var Service = xserver.Service(options.ServiceTypeGate)
 
 func init() {
 	Register(send)
+	Register(&channel{})
 	Register(broadcast)
 }
 
@@ -72,7 +73,7 @@ func send(c *xshare.Context) any {
 func broadcast(c *xshare.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	logger.Debug("广播消息:%v", path)
-	mate := c.Metadata()
+	//mate := c.Metadata()
 	ignore := c.GetMetadata(options.ServiceMessageIgnore)
 	ignoreMap := make(map[string]struct{})
 	if ignore != "" {
@@ -87,8 +88,8 @@ func broadcast(c *xshare.Context) any {
 		if _, ok := ignoreMap[uid]; ok {
 			return true
 		}
-		CookiesUpdate(mate, p)
-		Emitter.emit(EventTypeResponse, p, path, mate)
+		//CookiesUpdate(mate, p)
+		//Emitter.emit(EventTypeBroadcast, p, path, nil)
 		if sock := players.Socket(p); sock != nil {
 			_ = sock.Send(0, path, c.Bytes())
 		}

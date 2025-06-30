@@ -86,33 +86,6 @@ func Range(name string, f func(*session.Data) bool) {
 	room.Range(f)
 }
 
-//
-//func Broadcast(c *xshare.Context) any {
-//	path := c.GetMetadata(options.ServiceMessagePath)
-//	name := c.GetMetadata(options.ServiceMessageRoom)
-//	room := Get(name)
-//	if room == nil {
-//		return false
-//	}
-//
-//	ignore := c.GetMetadata(options.ServiceMessageIgnore)
-//	ignoreMap := make(map[string]struct{})
-//	if ignore != "" {
-//		arr := strings.Split(ignore, ",")
-//		for _, v := range arr {
-//			ignoreMap[v] = struct{}{}
-//		}
-//	}
-//	body := c.Bytes()
-//
-//	for _, p := range room.ps {
-//		uid := p.GetString(options.ServiceMetadataUID)
-//		if _, ok := ignoreMap[uid]; ok {
-//			socket := players.Socket(p)
-//			if socket != nil {
-//				_, _ = socket.Send(path, c.Metadata(), body)
-//			}
-//		}
-//	}
-//	return true
-//}
+func Delete(name string) {
+	rooms.Delete(name)
+}

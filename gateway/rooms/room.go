@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"github.com/hwcer/cosgo/session"
+	"github.com/hwcer/yyds/gateway/players"
 	"sync"
 )
 
@@ -46,4 +47,13 @@ func (this *Room) Range(f func(*session.Data) bool) {
 			return
 		}
 	}
+}
+
+func (this *Room) Broadcast(path string, data []byte) {
+	this.Range(func(p *session.Data) bool {
+		if sock := players.Socket(p); sock != nil {
+			_ = sock.Send(0, path, data)
+		}
+		return true
+	})
 }
