@@ -48,13 +48,10 @@ func (this *Module) Init() (err error) {
 	if options.Options.Appid == "" {
 		return errors.New("appid empty")
 	}
-	
+
 	addr := xshare.Address()
 	if options.Game.Local == "" {
 		options.Game.Local = addr.Local()
-	}
-	if utils.LocalValid(options.Game.Local) {
-		return errors.New("无法自动获取内网ip或者内网ip配置错误")
 	}
 	if options.Game.Time != "" {
 		var t *times.Times

@@ -16,10 +16,6 @@ func init() {
 
 type character struct {
 }
-type CharacterArgs struct {
-	model.Character
-	First int32 `json:"first"`
-}
 
 func (this *character) Caller(node *registry.Node, handle *xshare.Context) interface{} {
 	f := node.Method().(func(*character, *xshare.Context) interface{})
@@ -69,7 +65,7 @@ func (this *character) Invite(c *xshare.Context) interface{} {
 }
 
 func (this *character) Create(c *xshare.Context) interface{} {
-	v := &CharacterArgs{}
+	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
 		return err
 	}
@@ -82,16 +78,17 @@ func (this *character) Create(c *xshare.Context) interface{} {
 	//邀请人信息
 	if v.Invite != "" {
 		var n int64
-		if tx := db.Model(&v.Character).Count(&n, v.Invite); tx.Error != nil {
+		if tx := db.Model(&v).Count(&n, v.Invite); tx.Error != nil {
 			return tx.Error
 		} else if n == 0 {
 			return c.Error("invite not exist")
 		}
 	}
 
-	if tx := db.Create(&v.Character); tx.Error != nil {
+	if tx := db.Create(v); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
+
 	ts := times.Unix(v.Create)
 	sign, _ := ts.Sign(0)
 	Analyse := model.NewAnalyse(v.Sid, sign)
@@ -106,7 +103,7 @@ func (this *character) Create(c *xshare.Context) interface{} {
 }
 
 func (this *character) Update(c *xshare.Context) interface{} {
-	v := &CharacterArgs{}
+	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
 		return err
 	}
@@ -114,10 +111,11 @@ func (this *character) Update(c *xshare.Context) interface{} {
 		return c.Error("uid or guid required")
 	}
 
-	if tx := db.Omit("_id", "sid", "guid", "create", "invite").Update(&v.Character, v.Uid); tx.Error != nil {
+	today := times.Daily(0).Now().Unix()
+	if tx := db.Omit("_id", "sid", "guid", "create", "invite").Update(v, v.Uid); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
-	if v.First < 1 {
+	if v.Last > 0 && v.Last < today {
 		return nil
 	}
 

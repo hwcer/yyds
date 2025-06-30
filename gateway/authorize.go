@@ -59,7 +59,7 @@ func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata, isM
 	if uuid := p.UUID(); uuid == "" {
 		return nil, errors.ErrLogin
 	} else {
-		req[options.ServiceMetadataGUID] = p.UUID()
+		req[options.ServiceMetadataGUID] = uuid
 	}
 	if isMaster {
 		err = this.IsMaster(p)
