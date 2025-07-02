@@ -80,13 +80,15 @@ func (this *socketProxy) Data() (*session.Data, error) {
 	v, _ := i.(*session.Data)
 	return v, nil
 }
-
+func (this *socketProxy) Socket() *cosnet.Socket {
+	return this.Context.Socket
+}
 func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
 	buff := bytes.NewBuffer(this.Context.Message.Body())
 	return buff, nil
 }
 func (this *socketProxy) Login(guid string, value values.Values) (err error) {
-	if i := this.Socket.Data(); i != nil {
+	if i := this.Context.Socket.Data(); i != nil {
 		v, _ := i.(*session.Data)
 		if v.UUID() == guid {
 			return nil

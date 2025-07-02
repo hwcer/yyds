@@ -5,7 +5,6 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/slice"
-	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosrpc/xclient"
@@ -18,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Message struct {
@@ -157,7 +157,7 @@ func (p *Player) KeepAlive(t int64) {
 		if p.Updater != nil {
 			t = p.Updater.Unix()
 		} else {
-			t = times.Now().Unix()
+			t = time.Now().Unix()
 		}
 	}
 

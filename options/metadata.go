@@ -7,6 +7,7 @@ const (
 	ServiceMetadataServerId  = "sid"
 	ServiceMetadataRequestId = "rid"
 
+	ServiceSocketId      = "_sock_id"
 	ServiceMessagePath   = "_msg_path"
 	ServiceMessageRoom   = "_msg_room"
 	ServiceMessageIgnore = "_msg_ignore"

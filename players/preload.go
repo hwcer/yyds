@@ -2,7 +2,6 @@ package players
 
 import (
 	"fmt"
-	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/players/player"
@@ -55,7 +54,7 @@ func loading() (err error) {
 				p := player.New(uid)
 				if e := p.Loading(true); e == nil {
 					ps.Store(uid, p)
-					p.KeepAlive(times.Now().Unix())
+					p.KeepAlive(time.Now().Unix())
 				}
 			})
 			//不满一页的

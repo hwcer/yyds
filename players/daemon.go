@@ -3,7 +3,6 @@ package players
 import (
 	"context"
 	"github.com/hwcer/cosgo/binder"
-	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
@@ -117,7 +116,7 @@ func worker() {
 		playersRecycling = map[string]*player.Player{}
 	}
 	playersReleaseTime++
-	now := times.Now().Unix()
+	now := time.Now().Unix()
 	offlineTime := now - PlayersDisconnect
 	releaseTime := now - PlayersRelease
 

@@ -5,6 +5,7 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
+	"time"
 )
 
 // 更多参考 times.ExpireType
@@ -24,25 +25,15 @@ func (this *Times) Start(t int64, v int64) (r int64, err error) {
 		v = 1
 	}
 	et := times.ExpireType(t)
-	switch et {
-	case times.ExpireTypeNone:
-		return
-	case times.ExpireTypeDaily:
-		return times.Daily(0).Now().Unix(), nil
-	case times.ExpireTypeWeekly:
-		return times.Weekly(0).Now().Unix(), nil
-	case times.ExpireTypeMonthly:
-		return times.Monthly(0).Now().Unix(), nil
-	case times.ExpireTypeSecond:
-		return v, nil
-	case times.ExpireTypeCustomize:
-		var ttl *times.Times
-		if ttl, err = times.ParseExpireTypeCustomize(int(v)); err == nil {
-			r = ttl.Now().Unix()
+	if et.Has() {
+		var ts *times.Times
+		if ts, err = times.Start(et, int(v)); err == nil {
+			r = ts.Now().Unix()
 		}
 		return
-	case times.ExpireTimeTimeStamp:
-		return v, nil
+	}
+
+	switch et {
 	case ExpireTimePlayerCreate:
 		role := this.p.Document(ITypeRole)
 		create := role.Get(Fields.Create)
@@ -84,7 +75,6 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 		}
 		return
 	}
-
 	switch et {
 	case ExpireTimePlayerCreate:
 		if v > 0 {
@@ -111,7 +101,7 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 func (this *Times) Verify(args []int64) (t [2]int64, err error) {
 	arr := append([]int64{}, args...)
 	arr = append(arr, 0, 0, 0)
-	now := times.Now().Unix()
+	now := time.Now().Unix()
 	if t[0], err = this.Start(arr[0], arr[1]); err != nil {
 		return
 	} else if t[0] > now {

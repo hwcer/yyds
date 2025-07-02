@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"github.com/hwcer/cosgo/session"
+	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosrpc/xserver"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/logger"
@@ -25,12 +26,32 @@ func Register(i any, prefix ...string) {
 		logger.Fatal("%v", err)
 	}
 }
-
+func sendWithSocketId(c *xshare.Context, id string) any {
+	path := c.GetMetadata(options.ServiceMessagePath)
+	i, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		logger.Debug("Socket id error,消息丢弃,Socket:%s PATH:%s ", id, path)
+		return nil
+	}
+	sock := cosnet.Get(i)
+	if sock == nil {
+		logger.Debug("长链接不在线,消息丢弃,Socket:%s PATH:%s ", id, path)
+		return nil
+	}
+	if len(path) == 0 {
+		return nil //仅仅设置信息，不需要发送
+	}
+	return sock.Send(0, path, c.Bytes())
+}
 func send(c *xshare.Context) any {
+	if sockId := c.GetMetadata(options.ServiceSocketId); sockId != "" {
+		return sendWithSocketId(c, sockId)
+	}
+
 	uid := c.GetMetadata(options.ServiceMetadataUID)
 	guid := c.GetMetadata(options.ServiceMetadataGUID)
+
 	p := players.Players.Get(guid)
-	//sock := Sockets.Socket(uid)
 	if p == nil {
 		logger.Debug("用户不在线,消息丢弃,UID:%s GUID:%s", uid, guid)
 		return nil
@@ -63,7 +84,7 @@ func send(c *xshare.Context) any {
 		i, _ := strconv.Atoi(s)
 		rid = int32(i)
 	}
-	logger.Debug("推送消息  GUID:%s RID:%d PATH:%s", guid, rid, path)
+	//logger.Debug("推送消息  GUID:%s RID:%d PATH:%s", guid, rid, path)
 	if err := sock.Send(rid, path, c.Bytes()); err != nil {
 		return err
 	}
@@ -72,7 +93,7 @@ func send(c *xshare.Context) any {
 
 func broadcast(c *xshare.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
-	logger.Debug("广播消息:%v", path)
+	//logger.Debug("广播消息:%v", path)
 	//mate := c.Metadata()
 	ignore := c.GetMetadata(options.ServiceMessageIgnore)
 	ignoreMap := make(map[string]struct{})

@@ -1,8 +1,10 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosnet"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 )
@@ -15,6 +17,10 @@ func init() {
 	Authorize.Register(options.OAuthTypeNone, Authorize.OAuthTypeNone)
 	Authorize.Register(options.OAuthTypeOAuth, Authorize.OAuthTypeOAuth)
 	Authorize.Register(options.OAuthTypeSelect, Authorize.OAuthTypeSelect)
+}
+
+type RequestSocket interface {
+	Socket() *cosnet.Socket
 }
 
 type authorizeFunc func(r Request, req values.Metadata, isMaster bool) (*session.Data, error)
@@ -48,6 +54,10 @@ func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMa
 		}
 		err = this.IsMaster(p)
 	}
+	if f, ok := r.(RequestSocket); ok {
+		req[options.ServiceSocketId] = fmt.Sprintf("%d", f.Socket().Id())
+	}
+
 	return
 }
 
