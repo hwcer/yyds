@@ -7,6 +7,7 @@ import (
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/yyds/gateway/players"
+	"github.com/hwcer/yyds/gateway/rooms"
 	"github.com/hwcer/yyds/options"
 	"github.com/soheilhy/cmux"
 	"net"
@@ -49,6 +50,7 @@ func (this *Module) Init() (err error) {
 		mem := session.NewMemory(options.Gate.Capacity)
 		mem.On(func(data *session.Data) {
 			_ = players.Delete(data)
+			rooms.Release(data)
 		})
 		session.Options.Storage = mem
 	}

@@ -27,7 +27,7 @@ func (this *Times) Start(t int64, v int64) (r int64, err error) {
 	et := times.ExpireType(t)
 	if et.Has() {
 		var ts *times.Times
-		if ts, err = times.Start(et, int(v)); err == nil {
+		if ts, err = times.Start(et, int(v)); err == nil && ts != nil {
 			r = ts.Now().Unix()
 		}
 		return
@@ -70,7 +70,7 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 	et := times.ExpireType(t)
 	if et.Has() {
 		var ts *times.Times
-		if ts, err = times.Expire(et, int(v)); err == nil {
+		if ts, err = times.Expire(et, int(v)); err == nil && ts != nil {
 			r = ts.Now().Unix()
 		}
 		return

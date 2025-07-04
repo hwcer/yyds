@@ -122,10 +122,10 @@ func (this *Players) Locker(uid []string, handle player.LockerHandle, args any, 
 }
 
 // LoadWithUnlock 获取无锁状态的Player,无锁,无状态判断,仅仅API入口处使用
-func (this *Players) LoadWithUnlock(uid uint64) (r *player.Player) {
-	v, ok := this.dict.Load(uid)
-	if ok {
-		r = v.(*player.Player)
-	}
-	return
-}
+//func (this *Players) LoadWithUnlock(uid uint64) (r *player.Player) {
+//	v, ok := this.dict.Load(uid)
+//	if ok {
+//		r = v.(*player.Player)
+//	}
+//	return
+//}
