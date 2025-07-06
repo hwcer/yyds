@@ -138,6 +138,9 @@ var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Co
 		reply, err = c.handle(node)
 		return err
 	})
+	if err != nil {
+		return err, nil
+	}
 	return
 }
 
