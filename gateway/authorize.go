@@ -48,16 +48,16 @@ func (this *authorizeManager) oauth(r Request, req values.Metadata) (p *session.
 
 // OAuthTypeNone 普通接口
 func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+	p, _ = this.oauth(r, req)
 	if isMaster {
-		if p, err = this.oauth(r, req); err != nil {
-			return
-		}
 		err = this.IsMaster(p)
+	}
+	if err != nil {
+		return nil, err
 	}
 	if f, ok := r.(RequestSocket); ok {
 		req[options.ServiceSocketId] = fmt.Sprintf("%d", f.Socket().Id())
 	}
-
 	return
 }
 
