@@ -2,7 +2,6 @@ package rooms
 
 import (
 	"github.com/hwcer/cosgo/session"
-	"strings"
 	"sync"
 )
 
@@ -20,64 +19,46 @@ func Get(name string) (r *Room) {
 }
 
 // All 所有房间
-func All(p *session.Data) (r map[string]struct{}) {
-	r = make(map[string]struct{})
-	if i := p.Get(SessionPlayerRoomsName); i != nil {
-		for k, v := range i.(map[string]struct{}) {
-			r[k] = v
-		}
-	}
-	return
-}
+//func All(p *session.Data) (r map[string]struct{}) {
+//	r = make(map[string]struct{})
+//	if i := p.Get(SessionPlayerRoomsName); i != nil {
+//		for k, v := range i.(map[string]struct{}) {
+//			r[k] = v
+//		}
+//	}
+//	return
+//}
 
-func loadOrCreate(name string) (r *Room, loaded bool) {
-	i, loaded := rooms.LoadOrStore(name, &Room{})
-	r = i.(*Room)
+func loadOrCreate(name string, fixed bool) (r *Room, loaded bool) {
+	room := NewRoom(name, fixed)
+	var i any
+	if i, loaded = rooms.LoadOrStore(name, room); loaded {
+		r = i.(*Room)
+	}
 	return
 }
 
 func Join(name string, p *session.Data) {
-	prs := All(p)
-	var changed bool
-	for _, k := range strings.Split(name, ",") {
-		if room, _ := loadOrCreate(k); room != nil {
-			if room.Join(p) {
-				changed = true
-				prs[k] = struct{}{}
-			}
-		}
-	}
-	if changed {
-		p.Set(SessionPlayerRoomsName, prs)
+	uuid := p.UUID()
+
+	room, _ := loadOrCreate(name, false)
+	room.Join(p)
+
+	pms := Players.Load(uuid)
+	if !pms.Has(name) {
+		pms.Set(name, room)
 	}
 }
 
 func Leave(name string, p *session.Data) {
-	prs := All(p)
-	var changed bool
-	for _, k := range strings.Split(name, ",") {
-		if room := Get(k); room != nil {
-			if room.Leave(p) {
-				changed = true
-				delete(prs, k)
-			}
-		}
+	uuid := p.UUID()
+	if pms := Players.Get(uuid); pms != nil {
+		pms.Delete(name)
 	}
-	if changed {
-		p.Set(SessionPlayerRoomsName, prs)
+	if room := Get(name); room != nil {
+		room.Leave(p)
 	}
 }
-
-func Release(p *session.Data) {
-	prs := All(p)
-	for k, _ := range prs {
-		if room := Get(k); room != nil {
-			room.Leave(p)
-		}
-	}
-	p.Set(SessionPlayerRoomsName, map[string]struct{}{})
-}
-
 func Range(name string, f func(*session.Data) bool) {
 	room := Get(name)
 	if room == nil {
@@ -86,6 +67,24 @@ func Range(name string, f func(*session.Data) bool) {
 	room.Range(f)
 }
 
+// Release 用户掉线时？销毁时清理所在房间信息
+func Release(p *session.Data) {
+	pms := Players.Delete(p.UUID())
+	if pms == nil {
+		return
+	}
+	for _, room := range pms.dict {
+		room.Leave(p)
+	}
+
+}
+
+// Delete 销毁房间
 func Delete(name string) {
-	rooms.Delete(name)
+	i, loaded := rooms.LoadAndDelete(name)
+	if !loaded {
+		return
+	}
+	room := i.(*Room)
+	room.Release()
 }
