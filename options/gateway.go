@@ -23,17 +23,13 @@ func (p protocol) CMux() bool {
 	if p.Has(ProtocolTypeTCP) {
 		v++
 	}
-	if p.Has(ProtocolTypeWSS) {
-		v++
-	}
-	if p.Has(ProtocolTypeHTTP) {
+	if p.Has(ProtocolTypeWSS) || p.Has(ProtocolTypeHTTP) {
 		v++
 	}
 	return v > 1
 }
 
 var Gate = &gate{
-	//Login:     "/game/login",
 	Static:    &Static{},
 	Prefix:    "handle",
 	Address:   "0.0.0.0:80",
@@ -43,7 +39,8 @@ var Gate = &gate{
 }
 
 type gate = struct {
-	//Login     string   `json:"login"`     //登录接口
+	KeyFile   string   `json:"KeyFile"`   //HTTPS 证书KEY
+	CertFile  string   `json:"CertFile"`  //HTTPS 证书Cert
 	Redis     string   `json:"redis"`     //使用redis存储session，开启长连接时，请不要使用redis存储session
 	Static    *Static  `json:"static"`    //静态服务器
 	Prefix    string   `json:"prefix"`    //路由强制前缀

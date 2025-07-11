@@ -3,7 +3,7 @@ package gateway
 import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/yyds/gateway/rooms"
+	"github.com/hwcer/yyds/gateway/channel"
 	"github.com/hwcer/yyds/options"
 	"strings"
 )
@@ -33,9 +33,9 @@ func CookiesUpdate(cookie values.Metadata, p *session.Data) {
 	vs := values.Values{}
 	for k, v := range cookie {
 		if strings.HasPrefix(k, options.ServicePlayerRoomJoin) {
-			rooms.Join(v, p)
+			channel.Join(v, p)
 		} else if strings.HasPrefix(k, options.ServicePlayerRoomLeave) {
-			rooms.Leave(v, p)
+			channel.Leave(v, p)
 		} else if strings.HasPrefix(k, options.ServicePlayerSelector) {
 			vs[k] = v
 		} else if _, ok := cookiesAllowableName[k]; ok {

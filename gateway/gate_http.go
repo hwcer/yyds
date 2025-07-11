@@ -53,13 +53,23 @@ func (this *HttpServer) init() (err error) {
 }
 
 func (this *HttpServer) Listen(address string) (err error) {
-	if err = this.Server.Listen(address); err == nil {
+	if options.Gate.KeyFile != "" && options.Gate.CertFile != "" {
+		err = this.Server.TLS(address, options.Gate.CertFile, options.Gate.KeyFile)
+	} else {
+		err = this.Server.Listen(address)
+	}
+	if err == nil {
 		logger.Trace("网关短连接启动：%v", options.Gate.Address)
 	}
 	return
 }
 func (this *HttpServer) Accept(ln net.Listener) (err error) {
-	if err = this.Server.Accept(ln); err == nil {
+	if options.Gate.KeyFile != "" && options.Gate.CertFile != "" {
+		err = this.Server.TLS(ln, options.Gate.CertFile, options.Gate.KeyFile)
+	} else {
+		err = this.Server.Accept(ln)
+	}
+	if err == nil {
 		logger.Trace("网关短连接启动：%v", options.Gate.Address)
 	}
 	return

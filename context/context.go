@@ -169,6 +169,11 @@ func (this *Context) NewSender(path string, req values.Metadata) values.Metadata
 			req.Set(options.ServiceMetadataRequestId, rid)
 		}
 	}
+	//如果 socket id存在，优先使用SOCKET ID推送消息
+	if sockId := this.GetMetadata(options.ServiceSocketId); sockId != "" {
+		req.Set(options.ServiceSocketId, sockId)
+	}
+
 	return req
 }
 

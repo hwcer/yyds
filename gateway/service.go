@@ -16,7 +16,6 @@ var Service = xserver.Service(options.ServiceTypeGate)
 
 func init() {
 	Register(send)
-	Register(&channel{})
 	Register(broadcast)
 }
 
@@ -43,6 +42,8 @@ func sendWithSocketId(c *xshare.Context, id string) any {
 	}
 	return sock.Send(0, path, c.Bytes())
 }
+
+// send 消息推送
 func send(c *xshare.Context) any {
 	if sockId := c.GetMetadata(options.ServiceSocketId); sockId != "" {
 		return sendWithSocketId(c, sockId)
@@ -91,6 +92,7 @@ func send(c *xshare.Context) any {
 	return nil
 }
 
+// broadcast 全服广播
 func broadcast(c *xshare.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	//logger.Debug("广播消息:%v", path)

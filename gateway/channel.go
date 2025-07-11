@@ -1,18 +1,30 @@
 package gateway
 
 import (
+	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosrpc/xshare"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/gateway/rooms"
+	"github.com/hwcer/yyds/gateway/channel"
+	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
 
-type channel struct{}
+func init() {
+	Register(&channelHandle{}, "channel", "%m")
+	channel.SendMessage = func(p *session.Data, path string, data []byte) {
+		if sock := players.Socket(p); sock != nil {
+			_ = sock.Send(0, path, data)
+		}
+	}
+}
 
-func (this channel) Broadcast(c *xshare.Context) any {
+// 内部接口，游戏服务器广播
+type channelHandle struct{}
+
+func (this channelHandle) Broadcast(c *xshare.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	name := c.GetMetadata(options.ServiceMessageRoom)
-	room := rooms.Get(name)
+	room := channel.Get(name)
 	if room == nil {
 		logger.Debug("房间不存在,room:%s  path:%s", name, path)
 		return nil
@@ -23,9 +35,10 @@ func (this channel) Broadcast(c *xshare.Context) any {
 	return nil
 }
 
-func (this channel) Delete(c *xshare.Context) any {
+// Delete 删除一个频道
+func (this channelHandle) Delete(c *xshare.Context) any {
 	if name := c.GetMetadata(options.ServiceMessageRoom); name != "" {
-		rooms.Delete(name)
+		channel.Delete(name)
 	}
 	return nil
 }
