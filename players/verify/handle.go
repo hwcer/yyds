@@ -25,15 +25,17 @@ func value(u *updater.Updater, target Value) (r int64) {
 
 func verify(u *updater.Updater, target Target) error {
 	var ok bool
+	var val int64
 	switch target.GetCondition() {
 	case ConditionNone:
 		ok = true
 	default:
-		ok = taskTargetCompare(target, value(u, target))
+		val = value(u, target)
+		ok = taskTargetCompare(target, val)
 	}
 	if !ok {
-		if ef, _ := target.(GetErrorf); ef != nil {
-			return ef.GetErrorf()
+		if ef, _ := target.(Errorf); ef != nil {
+			return ef.Errorf(val)
 		} else {
 			return ErrGoalNotAchieved
 		}
