@@ -32,7 +32,11 @@ func verify(u *updater.Updater, target Target) error {
 		ok = taskTargetCompare(target, value(u, target))
 	}
 	if !ok {
-		return ErrGoalNotAchieved
+		if ef, _ := target.(GetErrorf); ef != nil {
+			return ef.GetErrorf()
+		} else {
+			return ErrGoalNotAchieved
+		}
 	} else {
 		return nil
 	}

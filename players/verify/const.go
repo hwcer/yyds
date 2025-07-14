@@ -27,6 +27,10 @@ type GetTimes interface {
 	GetTimes() [2]int64 //[记数开始时间,记数结束时间]
 }
 
+type GetErrorf interface {
+	GetErrorf() error //条件不满足时的提示信息
+}
+
 // GetCompare 记数比较方式，默认 大于等于
 type GetCompare interface {
 	GetCompare() int32
