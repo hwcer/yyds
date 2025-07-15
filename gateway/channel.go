@@ -35,10 +35,24 @@ func (this channelHandle) Broadcast(c *xshare.Context) any {
 	return nil
 }
 
-// Delete 删除一个频道
+// Delete 删除一个频道,如果path不为空，先使用path广播再删除
 func (this channelHandle) Delete(c *xshare.Context) any {
-	if name := c.GetMetadata(options.ServiceMessageRoom); name != "" {
-		channel.Delete(name)
+	name := c.GetMetadata(options.ServiceMessageRoom)
+	if name == "" {
+		logger.Debug("频道名不能为空")
+		return nil
 	}
+	room := channel.Get(name)
+	if room == nil {
+		logger.Debug("房间不存在,room:%s", name)
+		return nil
+	}
+
+	if path := c.GetMetadata(options.ServiceMessagePath); path != "" {
+		room.Broadcast(path, c.Bytes())
+		logger.Debug("频道广播 name:%s  path:%s", name, path)
+	}
+	logger.Debug("删除频道 %s", name)
+	channel.Delete(name)
 	return nil
 }

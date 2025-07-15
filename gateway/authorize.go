@@ -48,15 +48,12 @@ func (this *authorizeManager) oauth(r Request, req values.Metadata) (p *session.
 
 // OAuthTypeNone 普通接口
 func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
-	p, _ = this.oauth(r, req)
-	if isMaster {
-		err = this.IsMaster(p)
-	}
-	if err != nil {
-		return nil, err
+	if p, _ = r.Data(); p != nil {
+		p.KeepAlive()
 	}
 	if f, ok := r.(RequestSocket); ok {
-		req[options.ServiceSocketId] = fmt.Sprintf("%d", f.Socket().Id())
+		sock := f.Socket()
+		req[options.ServiceSocketId] = fmt.Sprintf("%d", sock.Id())
 	}
 	return
 }
@@ -95,6 +92,9 @@ func (this *authorizeManager) OAuthTypeSelect(r Request, req values.Metadata, is
 
 // IsMaster 是GM
 func (this *authorizeManager) IsMaster(p *session.Data) (err error) {
+	if p == nil {
+		return errors.ErrNeedGameMaster
+	}
 	if gm := p.GetInt32(options.ServiceMetadataMaster); gm == 0 {
 		err = errors.ErrNeedGameMaster
 	}
