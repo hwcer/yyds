@@ -17,3 +17,7 @@ func (this *middleware) Emit(u *updater.Updater, t updater.EventType) bool {
 	}
 	return false
 }
+
+func (this *middleware) Release(u *updater.Updater) bool {
+	return false
+}

@@ -107,11 +107,12 @@ func taskTargetCompare(target Target, val int64) bool {
 	if f, ok := target.(GetCompare); ok {
 		compare = f.GetCompare()
 	}
+	goal := int64(target.GetGoal())
 	switch compare {
 	case CompareGte:
-		return val >= int64(target.GetGoal())
+		return val >= goal
 	case CompareLte:
-		return val <= int64(target.GetGoal())
+		return val <= goal
 	default:
 		return false
 	}
