@@ -121,7 +121,7 @@ func (this *players) Disconnect(sock *cosnet.Socket) (err error) {
 	return
 }
 
-func (this *players) Reconnect(sock *cosnet.Socket, secret string) (err error) {
+func (this *players) Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err error) {
 	if v := sock.Data(); v != nil {
 		return
 	}
@@ -129,8 +129,9 @@ func (this *players) Reconnect(sock *cosnet.Socket, secret string) (err error) {
 	if err = s.Verify(secret); err != nil {
 		return
 	}
-	this.replace(s.Data, sock)
-	s.Data.Set(SessionPlayerSocketName, sock)
-	sock.Reconnect(s.Data)
+	data = s.Data
+	this.replace(data, sock)
+	data.Set(SessionPlayerSocketName, sock)
+	sock.Reconnect(data)
 	return
 }

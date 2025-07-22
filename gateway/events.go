@@ -13,8 +13,7 @@ type EventHandle func(player *session.Data, path string, meta values.Metadata)
 
 const (
 	EventTypeRequest  EventType = iota //请求时
-	EventTypeConfirm                   //确认消息
-	EventTypeResponse                  //推送消息时
+	EventTypeResponse                  //推送消息时，仅仅 使用send推送私人数据时触发
 )
 
 type emitter struct {

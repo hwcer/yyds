@@ -66,7 +66,6 @@ func proxy(h Request) ([]byte, error) {
 	if err = request(p, servicePath, serviceMethod, buff.Bytes(), req, res, &reply); err != nil {
 		return nil, err
 	}
-	Emitter.emit(EventTypeConfirm, p, s, req)
 	if len(res) == 0 {
 		return reply, nil
 	}

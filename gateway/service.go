@@ -16,6 +16,7 @@ var Service = xserver.Service(options.ServiceTypeGate)
 
 func init() {
 	Register(send)
+	Register(write)
 	Register(broadcast)
 }
 
@@ -25,7 +26,13 @@ func Register(i any, prefix ...string) {
 		logger.Fatal("%v", err)
 	}
 }
-func sendWithSocketId(c *xshare.Context, id string) any {
+
+// 仅仅 在登录接口本身 需要提前对SOCKET发送信息时使用
+func write(c *xshare.Context) any {
+	id := c.GetMetadata(options.ServiceSocketId)
+	if id == "" {
+		return c.Error("socket id not found")
+	}
 	path := c.GetMetadata(options.ServiceMessagePath)
 	i, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
@@ -45,10 +52,6 @@ func sendWithSocketId(c *xshare.Context, id string) any {
 
 // send 消息推送
 func send(c *xshare.Context) any {
-	if sockId := c.GetMetadata(options.ServiceSocketId); sockId != "" {
-		return sendWithSocketId(c, sockId)
-	}
-
 	uid := c.GetMetadata(options.ServiceMetadataUID)
 	guid := c.GetMetadata(options.ServiceMetadataGUID)
 

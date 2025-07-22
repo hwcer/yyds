@@ -38,6 +38,6 @@ func Disconnect(sock *cosnet.Socket) (err error) {
 }
 
 // Reconnect 长连接断线重连
-func Reconnect(sock *cosnet.Socket, secret string) error {
+func Reconnect(sock *cosnet.Socket, secret string) (*session.Data, error) {
 	return Players.Reconnect(sock, secret)
 }
