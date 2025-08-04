@@ -8,7 +8,6 @@ import (
 )
 
 func init() {
-	logger.SetPathTrim("src")
 	logger.SetCallDepth(4)
 	updater.Config.IMax = config.GetIMax
 	updater.Config.IType = config.GetIType
