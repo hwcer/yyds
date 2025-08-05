@@ -1,14 +1,14 @@
 package handle
 
 import (
-	"github.com/hwcer/cosrpc/xserver"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/social/model"
 )
 
 var db = model.DB()
-var Service = xserver.Service(options.ServiceTypeSocial)
+var Service = server.Service(options.ServiceTypeSocial)
 
 func Register(i interface{}, prefix ...string) {
 	var arr []string

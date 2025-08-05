@@ -5,7 +5,7 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosmo/update"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/yyds/social/model"
 	"time"
 )
@@ -17,12 +17,12 @@ func init() {
 type character struct {
 }
 
-func (this *character) Caller(node *registry.Node, handle *xshare.Context) interface{} {
-	f := node.Method().(func(*character, *xshare.Context) interface{})
+func (this *character) Caller(node *registry.Node, handle *cosrpc.Context) interface{} {
+	f := node.Method().(func(*character, *cosrpc.Context) interface{})
 	return f(this, handle)
 }
 
-func (this *character) Count(c *xshare.Context) interface{} {
+func (this *character) Count(c *cosrpc.Context) interface{} {
 	guid := c.GetString("guid")
 	if guid == "" {
 		return c.Error("guid required")
@@ -34,7 +34,7 @@ func (this *character) Count(c *xshare.Context) interface{} {
 	return n
 }
 
-func (this *character) Find(c *xshare.Context) interface{} {
+func (this *character) Find(c *cosrpc.Context) interface{} {
 	guid := c.GetString("guid")
 	if guid == "" {
 		return c.Error("guid required")
@@ -47,7 +47,7 @@ func (this *character) Find(c *xshare.Context) interface{} {
 }
 
 // Invite 我邀请的人
-func (this *character) Invite(c *xshare.Context) interface{} {
+func (this *character) Invite(c *cosrpc.Context) interface{} {
 	uid := c.GetString("uid")
 	if uid == "" {
 		return c.Error("uid required")
@@ -64,7 +64,7 @@ func (this *character) Invite(c *xshare.Context) interface{} {
 	return rows
 }
 
-func (this *character) Create(c *xshare.Context) interface{} {
+func (this *character) Create(c *cosrpc.Context) interface{} {
 	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
 		return err
@@ -102,7 +102,7 @@ func (this *character) Create(c *xshare.Context) interface{} {
 	return true
 }
 
-func (this *character) Update(c *xshare.Context) interface{} {
+func (this *character) Update(c *cosrpc.Context) interface{} {
 	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
 		return err

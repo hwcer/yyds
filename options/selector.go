@@ -2,7 +2,7 @@ package options
 
 import (
 	"context"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
 	"github.com/smallnest/rpcx/share"
 	"net/url"
 	"strconv"
@@ -50,7 +50,7 @@ func (this *Selector) Select(ctx context.Context, servicePath, serviceMethod str
 	metadata, _ := ctx.Value(share.ReqMetaDataKey).(map[string]string)
 	if metadata != nil {
 		if address, ok := metadata[SelectorAddress]; ok {
-			return xshare.AddressFormat(address)
+			return cosrpc.AddressFormat(address)
 		}
 		if v, ok := metadata[SelectorServerId]; ok {
 			return this.SelectWithServerId(this.services[v])

@@ -3,8 +3,8 @@ package gateway
 import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
-	"github.com/hwcer/cosrpc/xserver"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-var Service = xserver.Service(options.ServiceTypeGate)
+var Service = server.Service(options.ServiceTypeGate)
 
 func init() {
 	Register(send)
@@ -28,7 +28,7 @@ func Register(i any, prefix ...string) {
 }
 
 // 仅仅 在登录接口本身 需要提前对SOCKET发送信息时使用
-func write(c *xshare.Context) any {
+func write(c *cosrpc.Context) any {
 	id := c.GetMetadata(options.ServiceSocketId)
 	if id == "" {
 		return c.Error("socket id not found")
@@ -51,7 +51,7 @@ func write(c *xshare.Context) any {
 }
 
 // send 消息推送
-func send(c *xshare.Context) any {
+func send(c *cosrpc.Context) any {
 	uid := c.GetMetadata(options.ServiceMetadataUID)
 	guid := c.GetMetadata(options.ServiceMetadataGUID)
 
@@ -96,7 +96,7 @@ func send(c *xshare.Context) any {
 }
 
 // broadcast 全服广播
-func broadcast(c *xshare.Context) any {
+func broadcast(c *cosrpc.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	//logger.Debug("广播消息:%v", path)
 	//mate := c.Metadata()

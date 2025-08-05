@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/redis"
-	"github.com/hwcer/cosrpc/xshare"
 	"github.com/rpcxio/libkv/store"
 	"github.com/smallnest/rpcx/client"
 	"net/url"
@@ -30,7 +30,7 @@ func Discovery(servicePath string) (client.ServiceDiscovery, error) {
 		return nil, err
 	}
 	var discovery *redis.Discovery
-	discovery, err = redis.NewDiscovery(xshare.Options.BasePath, servicePath, address, opt)
+	discovery, err = redis.NewDiscovery(cosrpc.Config.BasePath, servicePath, address, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -50,9 +50,9 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 		return nil, err
 	}
 	rpcxRegister := &redis.Register{
-		ServiceAddress: fmt.Sprintf("%v%v:%v", xshare.AddressPrefix(), host, urlRpcxAddr.Port),
+		ServiceAddress: fmt.Sprintf("%v%v:%v", cosrpc.AddressPrefix(), host, urlRpcxAddr.Port),
 		RedisServers:   address,
-		BasePath:       xshare.Options.BasePath,
+		BasePath:       cosrpc.Config.BasePath,
 		Options:        opt,
 		UpdateInterval: time.Second * 10,
 	}

@@ -7,20 +7,19 @@ import (
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xclient"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
-	"github.com/smallnest/rpcx/client"
 	"github.com/smallnest/rpcx/share"
 	"strings"
 	"time"
 )
 
 type Context struct {
-	*xshare.Context
+	*cosrpc.Context
 	Player *player.Player
 }
 
@@ -112,18 +111,18 @@ func (this *Context) Gateway() string {
 }
 
 func (this *Context) Call(ctx context.Context, servicePath, serviceMethod string, args, reply any) (err error) {
-	err = xclient.XCall(ctx, servicePath, serviceMethod, args, reply)
+	err = client.XCall(ctx, servicePath, serviceMethod, args, reply)
 	if err != nil {
 		logger.Debug("send servicePath:%v , serviceMethod:%v , err:%v", servicePath, serviceMethod, err)
 	}
 	return
 }
 
-func (this *Context) Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Call, err error) {
-	return xclient.Async(ctx, servicePath, serviceMethod, args)
+func (this *Context) Async(ctx context.Context, servicePath, serviceMethod string, args any) (call *client.Caller, err error) {
+	return client.Async(ctx, servicePath, serviceMethod, args)
 }
 
-func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any) (call *client.Call, err error) {
+func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any) (call *client.Caller, err error) {
 	u := &uuid.UUID{}
 	if err = u.Parse(uid, uuid.BaseSize); err != nil {
 		return nil, err
@@ -131,7 +130,7 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 	req := map[string]string{}
 	req[options.SelectorServerId] = fmt.Sprintf("%d", u.GetShard())
 	ctx := context.WithValue(context.Background(), share.ReqMetaDataKey, req)
-	return xclient.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
+	return client.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
 }
 
 // Send 推送消息，必须长连接在线
@@ -151,7 +150,7 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		logger.Alert("grpc gateway is nil")
 	}
 
-	if err := xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil); err != nil {
+	if err := client.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil); err != nil {
 		logger.Error(err)
 	}
 }
@@ -211,7 +210,7 @@ func (this *Channel) Broadcast(path string, args any, name ...string) {
 	req[binder.HeaderContentType] = binder.Protobuf.String()
 	req[options.ServiceMessagePath] = path
 	req[options.ServiceMessageRoom] = this.Name(name...)
-	if err := xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "broadcast", args, nil); err != nil {
+	if err := client.CallWithMetadata(req, nil, options.ServiceTypeGate, "broadcast", args, nil); err != nil {
 		logger.Error(err)
 	}
 }

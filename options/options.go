@@ -3,9 +3,9 @@ package options
 import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosrpc/xclient"
-	"github.com/hwcer/cosrpc/xserver"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/client"
+	"github.com/hwcer/cosrpc/server"
 	"sync/atomic"
 )
 
@@ -27,34 +27,27 @@ func Initialize() (err error) {
 	if err = cosgo.Config.Unmarshal(Options); err != nil {
 		return err
 	}
-	xshare.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
-	xshare.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
-	xshare.Options.BasePath = Options.Appid
+	cosrpc.SetBasePath(Options.Appid)
+	cosrpc.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
+	cosrpc.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 
-	if len(xshare.Service) > 0 {
-		cosgo.On(cosgo.EventTypLoaded, rpcStart)
-		cosgo.On(cosgo.EventTypStopped, xserver.Close)
+	if r := server.GetRegistry(); r.Len() > 0 {
+		var addr string
+		var register server.Register
+		if addr, err = rpcxRedisAddress(); err == nil && addr != "" {
+			register, err = Register(cosrpc.Address())
+		}
+		if err != nil {
+			return err
+		}
+		server.SetRegister(register)
 	}
+	if len(cosrpc.Service) > 0 {
+		client.SetDiscovery(Discovery)
+	}
+
 	if Options.TimeReset != 0 {
 		times.SetTimeReset(Options.TimeReset)
-	}
-	return nil
-}
-
-func rpcStart() (err error) {
-	var addr string
-	var register xserver.Register
-	if addr, err = rpcxRedisAddress(); err == nil && addr != "" {
-		register, err = Register(xshare.Address())
-	}
-	if err != nil {
-		return err
-	}
-	if err = xserver.Start(register); err != nil {
-		return err
-	}
-	if err = xclient.Start(Discovery); err != nil {
-		return err
 	}
 	return nil
 }
@@ -69,16 +62,16 @@ var Options = &struct {
 	Binder    string            `json:"binder"`    //公网请求默认序列化方式，默认JSON
 	Service   map[string]string `json:"service"`   //
 	TimeReset int64             `json:"TimeReset"` //每日几点重置时间
-	Game      *game
-	Gate      *gate
-	Rpcx      *xshare.Rpcx
+	Game      *game             `json:"game"`
+	Gate      *gate             `json:"gate"`
+	Rpcx      *cosrpc.Options   `json:"rpcx"`
 }{
 	Verify:  1,
 	Binder:  "json",
-	Service: xshare.Service,
+	Service: cosrpc.Service,
 	Game:    Game,
 	Gate:    Gate,
-	Rpcx:    xshare.Options,
+	Rpcx:    cosrpc.Config,
 }
 
 // Cookies 仅仅 http+json模式下 Cookie模板,网关会将 %CookieKey% %CookieValue% 替换成对应值

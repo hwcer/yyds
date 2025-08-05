@@ -3,7 +3,7 @@ package master
 import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xclient"
+	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/logger"
@@ -59,7 +59,7 @@ func proxy(c *cosweb.Context) error {
 func request(sid, path string, args []byte, req, res values.Metadata, reply any) (err error) {
 	req[options.ServiceMetadataServerId] = sid
 	req[binder.HeaderContentType] = binder.Json.Name()
-	err = xclient.CallWithMetadata(req, res, options.ServiceTypeGame, path, args, reply)
+	err = client.CallWithMetadata(req, res, options.ServiceTypeGame, path, args, reply)
 	return
 }
 
@@ -71,8 +71,8 @@ func Broadcast(path string, v any, req values.Metadata) error {
 	req.Set(binder.HeaderAccept, binder.Json.Name())
 	req.Set(binder.HeaderContentType, options.Options.Binder)
 	req.Set(options.ServiceMessagePath, path)
-	ctx, cancel := xclient.WithTimeout(req, nil)
+	ctx, cancel := client.WithTimeout(req, nil)
 	defer cancel()
 
-	return xclient.Broadcast(ctx, options.ServiceTypeGate, "broadcast", v, nil)
+	return client.Broadcast(ctx, options.ServiceTypeGate, "broadcast", v, nil)
 }

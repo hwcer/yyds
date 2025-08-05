@@ -6,8 +6,8 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xclient"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
@@ -32,7 +32,7 @@ func request(p *session.Data, servicePath, serviceMethod string, args []byte, re
 		}
 	}
 
-	return xclient.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
+	return client.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
 }
 
 func proxy(h Request) ([]byte, error) {
@@ -55,7 +55,7 @@ func proxy(h Request) ([]byte, error) {
 		return nil, err
 	}
 
-	req.Set(options.ServicePlayerGateway, xshare.Address().Encode())
+	req.Set(options.ServicePlayerGateway, cosrpc.Address().Encode())
 
 	buff, err := h.Buffer()
 	if err != nil {

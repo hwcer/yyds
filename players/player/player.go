@@ -7,7 +7,7 @@ import (
 	"github.com/hwcer/cosgo/slice"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
-	"github.com/hwcer/cosrpc/xclient"
+	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/options"
@@ -83,7 +83,7 @@ func (p *Player) Send(v any, rp any) {
 	req.Set(options.SelectorAddress, utils.IPv4Decode(p.Gateway))
 	req.Set(options.ServiceMetadataUID, p.uid)
 	req.Set(options.ServiceMetadataGUID, guid)
-	_ = xclient.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
+	_ = client.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
 }
 
 // Loading 加载数据

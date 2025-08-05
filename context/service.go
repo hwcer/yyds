@@ -5,8 +5,8 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xserver"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
@@ -21,7 +21,7 @@ import (
 使用updater时必须使用playerHandle.data()来获取updater
 */
 
-var Service = xserver.Service(options.ServiceTypeGame, handlerCaller, handlerFilter)
+var Service = server.Service(options.ServiceTypeGame, handlerCaller, handlerFilter)
 var Serialize func(c *Context, reply *Message) ([]byte, error) = serializeDefault
 
 type filterCaller interface {
@@ -29,7 +29,7 @@ type filterCaller interface {
 }
 
 func NewService(name string) *registry.Service {
-	return xserver.Service(name, handlerCaller, handlerFilter)
+	return server.Service(name, handlerCaller, handlerFilter)
 }
 
 func Register(i interface{}, prefix ...string) {
@@ -60,7 +60,7 @@ func RegisterPrivate(i interface{}, prefix ...string) {
 	}
 }
 
-var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
+var handlerFilter server.HandlerFilter = func(node *registry.Node) bool {
 	if node.IsFunc() {
 		_, ok := node.Method().(func(*Context) interface{})
 		return ok
@@ -79,7 +79,7 @@ var handlerFilter xshare.HandlerFilter = func(node *registry.Node) bool {
 	}
 }
 
-var handlerCaller xshare.HandlerCaller = func(node *registry.Node, sc *xshare.Context) (reply any, err error) {
+var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Context) (reply any, err error) {
 	c := &Context{Context: sc}
 	path := c.ServiceMethod()
 	if !options.HasServiceMethod(path) {

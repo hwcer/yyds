@@ -4,7 +4,7 @@ import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/cosrpc/xserver"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"os"
 	"plugin"
@@ -34,7 +34,7 @@ func (this *reload) register(service, handle string, fn any, prefix ...string) {
 	} else {
 		arr = append(arr, "%v")
 	}
-	r := xserver.Registry()
+	r := server.GetRegistry()
 	if !r.Has(service) {
 		logger.Alert("register service %s not exist", service)
 		return
@@ -109,5 +109,5 @@ func (this *reload) Reload(p string) (err error) {
 		return values.Error("reload not found func Range")
 	}
 	apis := getter()
-	return xserver.Reload(apis)
+	return server.Reload(apis)
 }

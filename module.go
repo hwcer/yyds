@@ -5,7 +5,8 @@ import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
@@ -49,7 +50,7 @@ func (this *Module) Init() (err error) {
 		return errors.New("appid empty")
 	}
 
-	addr := xshare.Address()
+	addr := cosrpc.Address()
 	if options.Game.Local == "" {
 		options.Game.Local = addr.Local()
 	}
@@ -96,7 +97,7 @@ func (this *Module) Init() (err error) {
 		}
 	}
 	//设置游戏Metadata
-	xshare.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid))
+	server.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid))
 	cosgo.On(cosgo.EventTypLoaded, players.Start)
 	return nil
 }

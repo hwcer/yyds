@@ -2,7 +2,7 @@ package gateway
 
 import (
 	"github.com/hwcer/cosgo/session"
-	"github.com/hwcer/cosrpc/xshare"
+	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/channel"
 	"github.com/hwcer/yyds/gateway/players"
@@ -21,7 +21,7 @@ func init() {
 // 内部接口，游戏服务器广播
 type channelHandle struct{}
 
-func (this channelHandle) Broadcast(c *xshare.Context) any {
+func (this channelHandle) Broadcast(c *cosrpc.Context) any {
 	path := c.GetMetadata(options.ServiceMessagePath)
 	name := c.GetMetadata(options.ServiceMessageRoom)
 	room := channel.Get(name)
@@ -36,7 +36,7 @@ func (this channelHandle) Broadcast(c *xshare.Context) any {
 }
 
 // Delete 删除一个频道,如果path不为空，先使用path广播再删除
-func (this channelHandle) Delete(c *xshare.Context) any {
+func (this channelHandle) Delete(c *cosrpc.Context) any {
 	name := c.GetMetadata(options.ServiceMessageRoom)
 	if name == "" {
 		logger.Debug("频道名不能为空")
