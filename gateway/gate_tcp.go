@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -12,8 +15,6 @@ import (
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
-	"net"
-	"net/url"
 )
 
 func NewTCPServer() *TcpServer {

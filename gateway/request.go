@@ -3,6 +3,7 @@ package gateway
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
