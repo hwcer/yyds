@@ -6,7 +6,7 @@ toolchain go1.23.4
 
 require (
 	github.com/hwcer/cosgo v0.0.0-20250806062411-ed16882cacff
-	github.com/hwcer/cosmo v0.0.0-20250806062625-fa2f763b75bb
+	github.com/hwcer/cosmo v0.0.0-20250806084251-a7eeb990d045
 	github.com/hwcer/cosnet v0.0.0-20250805112752-728774af19d0
 	github.com/hwcer/cosrpc v0.0.0-20250805112518-3d361f7ee387
 	github.com/hwcer/cosweb v0.0.0-20250805112656-a2c0c884f856

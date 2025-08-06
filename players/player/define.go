@@ -1,9 +1,10 @@
 package player
 
-var ITypeRole int32 = 10
+var RoleIType int32 = 10
+var RoleName string = "role" //role 表名
 
-// Fields 角色字段名，一般情况下不需要设置
-var Fields = &struct {
+// RoleFields 角色字段名，一般情况下不需要设置
+var RoleFields = &struct {
 	Guid   string `json:"guid"`
 	Create string `json:"create"`
 	Update string `json:"update"`

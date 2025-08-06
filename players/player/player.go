@@ -126,8 +126,8 @@ func (p *Player) Uid() string {
 }
 
 func (p *Player) Guid() string {
-	doc := p.Document(ITypeRole)
-	return doc.Get(Fields.Guid).(string)
+	doc := p.Document(RoleIType)
+	return doc.Get(RoleFields.Guid).(string)
 }
 
 func (p *Player) Destroy() error {
