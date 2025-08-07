@@ -6,6 +6,10 @@ import (
 	"unsafe"
 )
 
+type UserMemoryUsage interface {
+	MemoryUsage() uintptr
+}
+
 // PrintMemoryUsage 结构体中添加内存统计方法
 func (sg *Graph) PrintMemoryUsage() {
 	var m runtime.MemStats
