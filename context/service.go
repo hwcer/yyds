@@ -1,6 +1,9 @@
 package context
 
 import (
+	"reflect"
+	"runtime/debug"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
@@ -12,8 +15,6 @@ import (
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
-	"reflect"
-	"runtime/debug"
 )
 
 /*
@@ -94,15 +95,19 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	}
 	if l == options.OAuthTypeOAuth {
 		if guid := c.GetMetadata(options.ServiceMetadataGUID); guid == "" {
-			return nil, values.Errorf(0, "guid empty")
+			return nil, errors.ErrLogin
 		} else {
 			return c.handle(node)
 		}
 	}
 	uid := c.Uid()
 	if uid == "" {
-		return nil, values.Errorf(0, "not select role")
+		return nil, errors.ErrNotSelectRole
 	}
+	if l == options.OAuthTypeSelect {
+		return c.handle(node)
+	}
+
 	err = players.Get(uid, func(p *player.Player) error {
 		if p == nil {
 			return errors.ErrLogin

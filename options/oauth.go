@@ -10,12 +10,13 @@ import (
 const (
 	OAuthTypeNone   int8 = iota //不需要登录
 	OAuthTypeOAuth              //需要认证
-	OAuthTypeSelect             //需要选择角色,默认
+	OAuthTypeSelect             //需要选择角色,但不需要进入用户协程，无法直接操作用户数据
+	OAuthTypePlayer             // 需要选择角色,并进入用户协程 默认
 )
 
 var OAuthRenewal = "/game/role/renewal"
 
-var OAuth = authorizes{dict: map[string]int8{}, prefix: map[string]int8{}, v: OAuthTypeSelect}
+var OAuth = authorizes{dict: map[string]int8{}, prefix: map[string]int8{}, v: OAuthTypePlayer}
 
 type authorizes struct {
 	v      int8 //默认

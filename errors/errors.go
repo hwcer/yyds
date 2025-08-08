@@ -30,7 +30,7 @@ var (
 	ErrConfigEmpty   = values.Errorf(403, "config empty")
 )
 
-func init() {
-	Register(ErrLogin, ErrLocked, ErrNotSelectRole, ErrServerLimit, ErrMasterEmpty, ErrRoleNotExist, ErrLoginWaiting, ErrNeedResetSession)
-	Register(ErrLoginAgain, ErrLoginDisabled, ErrDataNotExists, ErrPlayerMax, ErrDataExists, ErrItemNotEnough, ErrTargetLimit, ErrPreTaskLimit, ErrArgEmpty, ErrActiveDisable, ErrActiveExpired, ErrConfigEmpty)
-}
+//func init() {
+//	Register(ErrLogin, ErrLocked, ErrNotSelectRole, ErrServerLimit, ErrMasterEmpty, ErrRoleNotExist, ErrLoginWaiting, ErrNeedResetSession)
+//	Register(ErrLoginAgain, ErrLoginDisabled, ErrDataNotExists, ErrPlayerMax, ErrDataExists, ErrItemNotEnough, ErrTargetLimit, ErrPreTaskLimit, ErrArgEmpty, ErrActiveDisable, ErrActiveExpired, ErrConfigEmpty)
+//}

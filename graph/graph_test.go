@@ -41,7 +41,9 @@ type _user struct {
 func (this *_user) GetUid() string {
 	return this.Id
 }
+func (this *_user) SendMessage(name, data any) {
 
+}
 func (this *_user) MemoryUsage() uintptr {
 	size := unsafe.Sizeof(*this)    // 结构体基础大小
 	size += uintptr(len(this.Id))   // string 数据

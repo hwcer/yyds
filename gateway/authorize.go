@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"fmt"
+
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
@@ -17,6 +18,7 @@ func init() {
 	Authorize.Register(options.OAuthTypeNone, Authorize.OAuthTypeNone)
 	Authorize.Register(options.OAuthTypeOAuth, Authorize.OAuthTypeOAuth)
 	Authorize.Register(options.OAuthTypeSelect, Authorize.OAuthTypeSelect)
+	Authorize.Register(options.OAuthTypePlayer, Authorize.OAuthTypeSelect)
 }
 
 type RequestSocket interface {

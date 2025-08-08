@@ -1,11 +1,11 @@
 package graph
 
-type Relation int8
+type Friendship int8
 
 const (
-	RelationNone   Relation = 0
-	RelationFollow          = 1 //我的关注，我的女神，我的白月光
-	RelationFriend          = 2 //我的好友
+	FriendshipNone   Friendship = 0
+	FriendshipFans              = 1 //我的粉丝
+	FriendshipFriend            = 2 //我的好友
 )
 
 func NewPlayer(u User) *Player {
@@ -15,6 +15,7 @@ func NewPlayer(u User) *Player {
 // User 定义用户接口
 type User interface {
 	GetUid() string
+	SendMessage(name, data any)
 }
 
 type relation map[string]*Player
@@ -38,14 +39,14 @@ type Player struct {
 	friends relation //好友关系
 }
 
-// Has 0- 无关系，1-关注了我，2-好友关系
-func (p *Player) Has(uid string) Relation {
+// Has 0- 无关系，1-我的粉丝，2-好友关系
+func (p *Player) Has(uid string) Friendship {
 	if p.friends.Has(uid) {
-		return RelationFriend
+		return FriendshipFriend
 	} else if p.fans.Has(uid) {
-		return RelationFollow
+		return FriendshipFans
 	} else {
-		return RelationNone
+		return FriendshipNone
 	}
 }
 
@@ -65,10 +66,10 @@ func (p *Player) Delete(tar *Player) {
 	tar.friends.Delete(p)
 }
 
-// Follow 我关注 tar,成为他的粉丝
-func (p *Player) Follow(tar *Player) {
+func (p *Player) Follow(tar *Player) (friend bool) {
 	if _, exist := p.fans[tar.GetUid()]; exist {
 		//直接成为好友
+		friend = true
 		p.friends.Add(tar)
 		tar.friends.Add(p)
 		p.fans.Delete(p)
@@ -76,5 +77,5 @@ func (p *Player) Follow(tar *Player) {
 		//给对方推送一个粉丝
 		tar.fans.Add(p)
 	}
-
+	return
 }

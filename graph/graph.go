@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/values"
 )
 
@@ -101,7 +102,8 @@ func (sg *Graph) Get(uid, tar string) User {
 
 // Follow 关注好友，如果对方也关注自己，则直接成为好友关系
 // 同意对方的申请好友时，无脑关注对方就行
-func (sg *Graph) Follow(uid, tar string) (err error) {
+// fri 直接成为好友
+func (sg *Graph) Follow(uid, tar string) (fri bool, err error) {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
 	var p, t *Player
@@ -111,7 +113,7 @@ func (sg *Graph) Follow(uid, tar string) (err error) {
 	if t, err = sg.create(tar); err != nil {
 		return
 	}
-	p.Follow(t)
+	fri = p.Follow(t)
 	return
 }
 
@@ -177,8 +179,19 @@ func (sg *Graph) Friends(uid string) []User {
 	return result
 }
 
+// Broadcast 好友广播
+func (sg *Graph) Broadcast(uid string, name, data any) {
+	fs := sg.Friends(uid)
+	for _, u := range fs {
+		u.SendMessage(name, data)
+	}
+}
+
 // Recommend 获取好友推荐（共同好友最多的用户）
-func (sg *Graph) Recommend(uid string, limit int) []User {
+func (sg *Graph) Recommend(uid string, size int) []User {
+	if size == 0 {
+		return nil
+	}
 	sg.mu.RLock()
 	defer sg.mu.RUnlock()
 
@@ -189,14 +202,14 @@ func (sg *Graph) Recommend(uid string, limit int) []User {
 
 	// 统计共同好友数
 	commonCount := make(map[string]int)
-	friendUsers := make(map[string]*Player)
+	friendUsers := make(map[string]User)
 
 	for _, friend := range p.friends {
 		//fmt.Println("推荐：我的好友", friend)
 		for _, potentialFriend := range friend.friends {
-			if potentialID := potentialFriend.GetUid(); potentialID != uid && p.friends[potentialID] == nil {
+			if potentialID := potentialFriend.GetUid(); potentialID != uid && !p.friends.Has(potentialID) {
 				commonCount[potentialID]++
-				friendUsers[potentialID] = potentialFriend
+				friendUsers[potentialID] = potentialFriend.User
 			}
 		}
 	}
@@ -221,14 +234,25 @@ func (sg *Graph) Recommend(uid string, limit int) []User {
 	})
 
 	// 提取用户列表
-	result := make([]User, 0, len(recs))
-	for _, rec := range recs {
-		result = append(result, rec.user)
+	result := make([]User, 0, size)
+	l := utils.Min(size, len(recs))
+	for i := 0; i < l; i++ {
+		result = append(result, recs[i].user)
 	}
 
-	// 限制返回数量
-	if limit > 0 && limit < len(result) {
-		result = result[:limit]
+	n := len(result)
+	if n >= size {
+		return result
+	}
+	//随机推荐
+	for k, v := range sg.nodes {
+		if uid != k && !p.friends.Has(k) && friendUsers[k] == nil {
+			n++
+			result = append(result, v.User)
+			if n >= size {
+				break
+			}
+		}
 	}
 
 	return result
