@@ -8,10 +8,10 @@ require (
 	github.com/hwcer/cosgo v0.0.0-20250806062411-ed16882cacff
 	github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d
 	github.com/hwcer/cosnet v0.0.0-20250805112752-728774af19d0
-	github.com/hwcer/cosrpc v0.0.0-20250805112518-3d361f7ee387
+	github.com/hwcer/cosrpc v1.2.0
 	github.com/hwcer/cosweb v0.0.0-20250805112656-a2c0c884f856
 	github.com/hwcer/coswss v0.0.0-20250805113210-c2ec866584f5
-	github.com/hwcer/logger v0.0.0-20250804090620-c5ed3d300dab
+	github.com/hwcer/logger v0.1.2
 	github.com/hwcer/updater v0.0.0-20250806152228-1066ea197901
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
@@ -89,15 +89,15 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.uber.org/mock v0.5.2 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792 // indirect
-	golang.org/x/mod v0.26.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/exp v0.0.0-20250808145144-a408d31f581a // indirect
+	golang.org/x/mod v0.27.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
