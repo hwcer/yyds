@@ -2,6 +2,12 @@ package player
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/slice"
@@ -13,11 +19,6 @@ import (
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/verify"
-	"reflect"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 type Message struct {

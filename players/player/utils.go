@@ -1,10 +1,11 @@
 package player
 
 import (
+	"reflect"
+
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
-	"reflect"
 )
 
 func GetReqMeta(rp any) (req values.Metadata) {

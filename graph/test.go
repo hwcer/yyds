@@ -59,11 +59,11 @@ func (g *Graph) MemoryUsage() uintptr {
 		total += unsafe.Sizeof(*player)
 
 		// 如果Player中的User实现了MemoryUsage接口，使用更精确的计算
-		if umu, ok := player.User.(UserMemoryUsage); ok {
+		if umu, ok := player.Data.(UserMemoryUsage); ok {
 			total += umu.MemoryUsage()
 		} else {
 			// 否则只计算User接口变量的大小
-			total += unsafe.Sizeof(player.User)
+			total += unsafe.Sizeof(player.Data)
 		}
 
 		// 计算fans和friends关系的内存(只计算map结构和指针大小)

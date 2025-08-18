@@ -1,11 +1,12 @@
 package player
 
 import (
+	"time"
+
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
-	"time"
 )
 
 // 更多参考 times.ExpireType

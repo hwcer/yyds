@@ -8,33 +8,32 @@ const (
 	FriendshipFriend            = 2 //我的好友
 )
 
-func NewPlayer(u User) *Player {
-	return &Player{User: u, friends: relation{}, fans: relation{}}
+type Data interface {
+	GetUid() string
+	SendMessage(name string, data any)
 }
 
-// User 定义用户接口
-type User interface {
-	GetUid() string
-	SendMessage(name, data any)
+func NewPlayer(d Data) *Player {
+	return &Player{Data: d, fans: relation{}, friends: relation{}}
 }
 
 type relation map[string]*Player
 
-func (r relation) Has(uid string) bool {
-	_, ok := r[uid]
+func (r relation) Has(fid string) bool {
+	_, ok := r[fid]
 	return ok
 }
 
-func (r relation) Add(tar *Player) {
-	r[tar.GetUid()] = tar
+func (r relation) Add(p *Player) {
+	r[p.GetUid()] = p
 }
 
-func (r relation) Delete(tar *Player) {
-	delete(r, tar.GetUid())
+func (r relation) Del(fid string) {
+	delete(r, fid)
 }
 
 type Player struct {
-	User
+	Data
 	fans    relation //我的粉丝，等待我批准成为好友
 	friends relation //好友关系
 }
@@ -51,28 +50,30 @@ func (p *Player) Has(uid string) Friendship {
 }
 
 // Get 获取我的好友信息
-func (p *Player) Get(uid string) *Player {
-	return p.friends[uid]
+func (p *Player) Get(fid string) *Player {
+	return p.friends[fid]
 }
 
 // Add 添加好友
 func (p *Player) Add(tar *Player) {
 	p.friends.Add(tar)
+	p.fans.Del(tar.GetUid())
 }
 
-// Delete 删除好友,双向删除
+// Delete 删除好友
 func (p *Player) Delete(tar *Player) {
-	p.friends.Delete(tar)
-	tar.friends.Delete(p)
+	p.friends.Del(tar.GetUid())
+	tar.friends.Del(p.GetUid())
 }
 
 func (p *Player) Follow(tar *Player) (friend bool) {
-	if _, exist := p.fans[tar.GetUid()]; exist {
+	fid := tar.GetUid()
+	if _, exist := p.fans[fid]; exist {
 		//直接成为好友
 		friend = true
 		p.friends.Add(tar)
 		tar.friends.Add(p)
-		p.fans.Delete(p)
+		p.fans.Del(p.GetUid())
 	} else {
 		//给对方推送一个粉丝
 		tar.fans.Add(p)
