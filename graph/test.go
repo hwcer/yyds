@@ -28,7 +28,7 @@ func (r relation) memoryUsage() uintptr {
 		// 键的内存
 		total += uintptr(len(key))
 		// 值的指针内存(不递归)
-		total += unsafe.Sizeof(&Player{})
+		total += unsafe.Sizeof(&node{})
 	}
 
 	return total

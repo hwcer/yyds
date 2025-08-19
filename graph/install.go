@@ -4,19 +4,17 @@ type Install struct {
 	g *Graph
 }
 
-func (i *Install) SetPlayer(user Data) {
-	i.g.nodes[user.GetUid()] = NewPlayer(user)
+func (i *Install) SetPlayer(p Player) {
+	i.g.nodes[p.GetUid()] = newNode(p)
 }
-func (i *Install) SetFriend(u1, u2 string) error {
-	p1, err := i.g.load(u1)
+func (i *Install) SetFriend(uid string, f Friend) error {
+	p, err := i.g.load(uid)
 	if err != nil {
 		return err
 	}
-	p2, err := i.g.load(u2)
-	if err != nil {
+	if _, err = i.g.load(f.GetUid()); err != nil {
 		return err
 	}
-	p1.Add(p2)
-	p2.Add(p1)
+	p.Add(f)
 	return nil
 }
