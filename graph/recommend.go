@@ -1,46 +1,48 @@
 package graph
 
+import (
+	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/logger"
+)
+
 // RecommendFilter 推荐用户过滤器，过滤掉最近推荐过的用户
-type RecommendFilter func(Player) bool
+type RecommendFilter func(uid string) bool
 
 // RecommendHandle 需要在recommendAppend 循环调用 RecommendHandle 直到 返回fasle
-type RecommendHandle func(Player) bool
+type RecommendHandle func(uid string) bool
 
 // RecommendAppend 推荐数量不足时，调用 recommendAppend,
 type RecommendAppend func(RecommendHandle)
 
 // Recommend 获取好友推荐（共同好友最多的用户）
-func (sg *Graph) Recommend(uid string, size int, filter RecommendFilter, done RecommendAppend) map[string]Player {
+func (sg *Graph) Recommend(uid string, size int, filter RecommendFilter, done RecommendAppend) []string {
 	if size == 0 {
 		return nil
 	}
 	sg.mu.RLock()
 	defer sg.mu.RUnlock()
 
-	p := sg.nodes[uid]
-	if p == nil || len(p.friends) == 0 {
+	p, err := sg.load(uid)
+	if err != nil {
+		logger.Trace("Graph Recommend Error:%s", err.Error())
 		return nil
 	}
 	// 统计共同好友数
 	//commonCount := make(map[string]int)
-	friendUsers := make(map[string]Player)
+	friendUsers := make(map[string]struct{})
 
-	var filterDefault = func(t string) Player {
-		if t == uid || p.friends.Has(t) {
-			return nil
+	var verify = func(t string) bool {
+		if t == uid || p.friends.Has(t) || p.follow.Has(t) {
+			return true
 		}
 		if _, ok := friendUsers[t]; ok {
-			return nil
+			return true
 		}
-		n := sg.nodes[t]
-		if n == nil {
-			return nil
+		if filter != nil && !filter(t) {
+			return true
 		}
-		if filter != nil && !filter(n.p) {
-			return nil
-		}
-
-		return n.p
+		friendUsers[t] = struct{}{}
+		return len(friendUsers) < size
 	}
 	//共同好友
 	for k, _ := range p.friends {
@@ -49,25 +51,16 @@ func (sg *Graph) Recommend(uid string, size int, filter RecommendFilter, done Re
 			continue
 		}
 		for potentialFriend, _ := range fd.friends {
-			if ff := filterDefault(potentialFriend); ff != nil {
-				friendUsers[potentialFriend] = ff
-				if len(friendUsers) >= size {
-					return friendUsers
-				}
+			if !verify(potentialFriend) {
+				return utils.MapKeys(friendUsers)
 			}
 		}
 	}
 
 	//自定义推荐
 	if done != nil {
-		done(func(t Player) bool {
-			k := t.GetUid()
-			if f := filterDefault(k); f != nil {
-				friendUsers[k] = t
-			}
-			return len(friendUsers) < size
-		})
+		done(verify)
 	}
 
-	return friendUsers
+	return utils.MapKeys(friendUsers)
 }

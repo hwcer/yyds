@@ -4,6 +4,8 @@ go 1.23.0
 
 toolchain go1.23.4
 
+replace github.com/hwcer/cosgo v0.0.0-20250812075421-a5c9cd174593 => ../modules/cosgo
+
 require (
 	github.com/hwcer/cosgo v0.0.0-20250812075421-a5c9cd174593
 	github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d

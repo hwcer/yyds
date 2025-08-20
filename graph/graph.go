@@ -6,14 +6,14 @@ import (
 
 type Graph struct {
 	mu      sync.RWMutex     // 读写锁保证并发安全
-	nodes   map[string]*node // 用户ID到用户对象的映射
+	nodes   map[string]*Node // 用户ID到用户对象的映射
 	factory Factory          // 用户工厂函数
 }
 
 // New 创建一个新的社交图谱
 func New(userFactory Factory) (g *Graph, i Install) {
 	g = &Graph{
-		nodes:   make(map[string]*node),
+		nodes:   make(map[string]*Node),
 		factory: userFactory,
 	}
 	i = Install{g: g}
@@ -21,7 +21,7 @@ func New(userFactory Factory) (g *Graph, i Install) {
 }
 
 // 获取，或者创建
-func (sg *Graph) load(uid string) (r *node, err error) {
+func (sg *Graph) load(uid string) (r *Node, err error) {
 	if r = sg.nodes[uid]; r == nil {
 		var p Player
 		if p, err = sg.factory.Player(uid); err != nil {
@@ -85,7 +85,7 @@ func (sg *Graph) Player(uid string) Player {
 func (sg *Graph) Follow(uid, tar string) (fri bool, err error) {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
-	var p, t *node
+	var p, t *Node
 	if p, err = sg.load(uid); err != nil {
 		return
 	}
@@ -131,7 +131,7 @@ func (sg *Graph) Delete(uid, tar string) (r Friend) {
 func (sg *Graph) Accept(uid string, tar ...string) (success []string, err error) {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
-	var p *node
+	var p *Node
 	if p, err = sg.load(uid); err != nil {
 		return
 	}
@@ -141,7 +141,7 @@ func (sg *Graph) Accept(uid string, tar ...string) (success []string, err error)
 		}
 	}
 
-	var t *node
+	var t *Node
 	for _, fid := range tar {
 		if _, ok := p.fans[fid]; !ok {
 			continue
@@ -162,7 +162,7 @@ func (sg *Graph) Accept(uid string, tar ...string) (success []string, err error)
 func (sg *Graph) Refuse(uid string, tar ...string) (err error) {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
-	var p *node
+	var p *Node
 	if p, err = sg.load(uid); err != nil {
 		return
 	}
@@ -181,8 +181,8 @@ func (sg *Graph) Refuse(uid string, tar ...string) (err error) {
 	return
 }
 
-// RangeFriend 遍历我的好友
-func (sg *Graph) RangeFriend(uid string, f func(Friend) bool) {
+// Range 遍历我的好友
+func (sg *Graph) Range(uid string, f func(Friend) bool) {
 	sg.mu.RLock()
 	defer sg.mu.RUnlock()
 	p := sg.nodes[uid]
@@ -196,7 +196,8 @@ func (sg *Graph) RangeFriend(uid string, f func(Friend) bool) {
 	}
 }
 
-func (sg *Graph) RangePlayer(uid string, f func(Player) bool) {
+// RangeWithPlayer 遍历好友数据
+func (sg *Graph) RangeWithPlayer(uid string, f func(Player) bool) {
 	sg.mu.RLock()
 	defer sg.mu.RUnlock()
 	p := sg.nodes[uid]
@@ -215,7 +216,7 @@ func (sg *Graph) RangePlayer(uid string, f func(Player) bool) {
 // Apply 我的粉丝 ，关注我的人，等待申请
 //
 //	uid --> 申请时间
-func (sg *Graph) Apply(uid string, t Friendship) Apply {
+func (sg *Graph) Apply(uid string, t Friendship) map[string]int64 {
 	sg.mu.RLock()
 	defer sg.mu.RUnlock()
 	p := sg.nodes[uid]

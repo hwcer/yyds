@@ -140,8 +140,6 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v0.0.0-20250812075421-a5c9cd174593 h1:UlxIqaqB3q2zAv/yz72miq+8yFsvuYen0cOIYfKkkEE=
-github.com/hwcer/cosgo v0.0.0-20250812075421-a5c9cd174593/go.mod h1:yRhf9eemuvxmUOBrLrwzFTEcKJFOliLgTx4A3IAEEBc=
 github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d h1:1dJ8j9SRxUAixABJbz8WR8lOovWr/VAhJMX8OhY6u4w=
 github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d/go.mod h1:BU/7tC6CsnrciK2C7rIzxcluYJQ5OUVTzOO0LXvVx3Q=
 github.com/hwcer/cosnet v0.0.0-20250805112752-728774af19d0 h1:uwORNkifIGgAWV4X933qMzqWErUl2Odr7WlS9PGaN0U=
