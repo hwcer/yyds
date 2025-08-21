@@ -2,11 +2,12 @@ package players
 
 import (
 	"fmt"
+	"sync/atomic"
+
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/yyds/players/channel"
 	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
-	"sync/atomic"
 )
 
 var (
@@ -24,9 +25,9 @@ func Start() error {
 	}
 	//cosgo.On(cosgo.EventTypStarted, loading)
 	if Options.AsyncModel == AsyncModelLocker {
-		ps = locker.Start()
+		ps = locker.New()
 	} else if Options.AsyncModel == AsyncModelChannel {
-		ps = channel.Start()
+		ps = channel.New()
 	} else {
 		return fmt.Errorf("players: invalid options")
 	}

@@ -65,14 +65,14 @@ func (this *Locker) loading(uid string) (err error) {
 		return nil
 	}
 	var r *player.Player
-	if i, ok := instance.dict.Load(uid); ok {
-		r = i.(*player.Player)
+	if i, ok := instance.Manage.Load(uid); ok {
+		r = i
 	} else {
 		r = player.New(uid)
 	}
 	//未初始化
 	if err = r.Loading(false); err != nil {
-		instance.dict.Delete(uid)
+		instance.Manage.Delete(uid)
 		return err
 	}
 	r.Reset()

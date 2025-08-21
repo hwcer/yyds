@@ -140,6 +140,8 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
+github.com/hwcer/cosgo v0.0.0-20250820041601-f33319463687 h1:cW34xmBZBCy7DvQ70+gkUechD7l0frfEYYWRSv8fV1g=
+github.com/hwcer/cosgo v0.0.0-20250820041601-f33319463687/go.mod h1:yRhf9eemuvxmUOBrLrwzFTEcKJFOliLgTx4A3IAEEBc=
 github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d h1:1dJ8j9SRxUAixABJbz8WR8lOovWr/VAhJMX8OhY6u4w=
 github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d/go.mod h1:BU/7tC6CsnrciK2C7rIzxcluYJQ5OUVTzOO0LXvVx3Q=
 github.com/hwcer/cosnet v0.0.0-20250805112752-728774af19d0 h1:uwORNkifIGgAWV4X933qMzqWErUl2Odr7WlS9PGaN0U=
@@ -152,8 +154,8 @@ github.com/hwcer/coswss v0.0.0-20250805113210-c2ec866584f5 h1:Iim3+czscVveA/UvuN
 github.com/hwcer/coswss v0.0.0-20250805113210-c2ec866584f5/go.mod h1:nw5+6QNNOUn+fKqzlkVAeku4gTNE0EM4d3+eOWkfuy0=
 github.com/hwcer/logger v0.1.2 h1:KA6ONGGnleM1Y5e93zH3lUTa9UUyQb/tlJAfb8EGjfU=
 github.com/hwcer/logger v0.1.2/go.mod h1:x6L6wmod8ffnCDjLFHsRHP/4jC7HiKZkYuxZBfA+amg=
-github.com/hwcer/updater v0.0.0-20250806152228-1066ea197901 h1:pSq7QXaRGxrZ0HNARzQ6EWeM8MWKbgS6/sLs9RffyyI=
-github.com/hwcer/updater v0.0.0-20250806152228-1066ea197901/go.mod h1:bq0vyKH2g38n1tvxBotZEaWtVxGMKovekNEQchHpUkk=
+github.com/hwcer/updater v0.0.0-20250818120122-3805b7188333 h1:V+MAnrep8PsU61g8vBRaSIkl15KtLgfvYr/FkFNsJv4=
+github.com/hwcer/updater v0.0.0-20250818120122-3805b7188333/go.mod h1:bq0vyKH2g38n1tvxBotZEaWtVxGMKovekNEQchHpUkk=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/juju/ratelimit v1.0.2 h1:sRxmtRiajbvrcLQT7S+JbqU0ntsb9W2yhSdNN8tWfaI=

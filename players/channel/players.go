@@ -2,20 +2,23 @@ package channel
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/hwcer/cosgo/await"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/player"
-	"sync"
-	"time"
 )
 
 var (
-	instance = Players{dict: sync.Map{}}
+	instance = &Players{}
 )
 
-func Start() *Players {
+func init() {
+	instance.Manage = *player.NewManage()
+}
+func New() *Players {
 	w = await.New(1024, time.Second*5)
-	return &instance
+	return instance
 }
 
 type playerAwaitArgs map[playerAwaitArgsKey]any
@@ -29,7 +32,7 @@ const (
 )
 
 type Players struct {
-	dict sync.Map
+	player.Manage
 }
 
 func (this *Players) call(args any) (reply any, err error) {
@@ -55,8 +58,8 @@ func (this *Players) call(args any) (reply any, err error) {
 // 1
 func (this *Players) get(uid string, handle player.Handle) error {
 	var p *player.Player
-	if i, ok := this.dict.Load(uid); ok {
-		p = i.(*player.Player)
+	if i, ok := this.Manage.Load(uid); ok {
+		p = i
 		if p.Status == player.StatusRelease {
 			return errors.ErrLoginWaiting
 		}
@@ -69,14 +72,14 @@ func (this *Players) get(uid string, handle player.Handle) error {
 // 2
 func (this *Players) load(uid string, init bool, handle player.Handle) (err error) {
 	p := player.New(uid)
-	if i, loaded := this.dict.LoadOrStore(uid, p); loaded {
-		p = i.(*player.Player)
+	if i, loaded := this.Manage.LoadOrStore(uid, p); loaded {
+		p = i
 		if p.Status == player.StatusRelease {
 			return errors.ErrLoginWaiting
 		}
 	}
 	if err = p.Loading(init); err != nil {
-		this.dict.Delete(uid)
+		this.Manage.Delete(uid)
 		return err
 	}
 	p.Reset()
@@ -103,29 +106,6 @@ func (this *Players) Load(uid string, init bool, handle player.Handle) (err erro
 	return err
 }
 
-func (this *Players) Range(f func(string, *player.Player) bool) {
-	this.dict.Range(func(key, value interface{}) bool {
-		return f(key.(string), value.(*player.Player))
-	})
-}
-
-// Store 存储玩家对象，用于初始化
-func (this *Players) Store(k string, v *player.Player) {
-	this.dict.Store(k, v)
-}
-func (this *Players) Delete(k string) {
-	this.dict.Delete(k)
-}
-
 func (this *Players) Locker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
 	return NewLocker(uid, handle, args, done...)
 }
-
-// LoadWithUnlock 获取无锁状态的Player,无锁,无状态判断,仅仅API入口处使用
-//func (this *Players) LoadWithUnlock(uid uint64) (r *player.Player) {
-//	v, ok := this.dict.Load(uid)
-//	if ok {
-//		r = v.(*player.Player)
-//	}
-//	return
-//}

@@ -1,23 +1,25 @@
 package options
 
 import (
+	"sync/atomic"
+
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/cosrpc/server"
-	"sync/atomic"
 )
 
 var initialize int32
 
 const (
-	ServiceTypeGate   = "gate"
-	ServiceTypeGame   = "game"
-	ServiceTypeChat   = "chat" //聊天
-	ServiceTypeBattle = "battle"
-	ServiceTypeRooms  = "rooms"  //游戏大厅
-	ServiceTypeSocial = "social" //社交用户中心
+	ServiceTypeGate    = "gate"
+	ServiceTypeGame    = "game"
+	ServiceTypeWorld   = "world"   //世界服
+	ServiceTypeBattle  = "battle"  //战斗服
+	ServiceTypeRooms   = "rooms"   //游戏大厅
+	ServiceTypeSocial  = "social"  //社交用户中心
+	ServiceTypeLocator = "locator" //角色定位中心
 )
 
 func Initialize() (err error) {
