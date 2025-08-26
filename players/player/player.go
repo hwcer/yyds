@@ -13,6 +13,7 @@ import (
 	"github.com/hwcer/cosgo/slice"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
@@ -41,10 +42,12 @@ type Player struct {
 	Binder    binder.Binder    //当前端使用的序列化方式
 	Status    int32            //在线状态
 	Times     *Times           //时间控制器
+	Values    values.Values    //临时数据，仅仅记录在内存中
 	Verify    *verify.Verify   //全局条件验证
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
+
 }
 
 func (p *Player) initialize() {
@@ -52,6 +55,7 @@ func (p *Player) initialize() {
 		return
 	}
 	p.Times = &Times{p: p}
+	p.Values = values.Values{}
 	p.Verify = verify.New(p.Updater)
 	p.Emitter = emitter.New(p.Updater)
 }
