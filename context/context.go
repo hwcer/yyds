@@ -3,6 +3,9 @@ package context
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
@@ -14,8 +17,6 @@ import (
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 	"github.com/smallnest/rpcx/share"
-	"strings"
-	"time"
 )
 
 type Context struct {
@@ -70,10 +71,11 @@ func (this *Context) Milli() int64 {
 //多用户批量锁操作,不需要交互的情况下直接注释或者删除此文件
 
 // Locker 批量获取玩家锁
-// handle 获取批量操作权限
+// args  参数会传递给handle
+// handle 获取批量操作后回调函数
 // next   获取操作结束后是否需要回到玩家自身,
 
-func (this *Context) Locker(uids []string, handle player.LockerHandle, args any, next ...func()) (any, error) {
+func (this *Context) Locker(uids []string, args any, handle player.LockerHandle, next ...func()) (any, error) {
 	var p *player.Player
 	var done []func()
 	if this.Player != nil {
@@ -92,7 +94,7 @@ func (this *Context) Locker(uids []string, handle player.LockerHandle, args any,
 		})
 	}
 	done = append(done, next...)
-	return players.Locker(uids, handle, args, done...)
+	return players.Locker(uids, args, handle, done...)
 }
 
 // Gateway 网关地址

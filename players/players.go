@@ -8,5 +8,5 @@ type Players interface {
 	Range(func(string, *player.Player) bool)
 	Store(string, *player.Player) //存储玩家对象，用于初始化
 	Delete(string)
-	Locker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error)
+	Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error)
 }

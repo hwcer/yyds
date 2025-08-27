@@ -18,8 +18,8 @@ type Args struct {
 }
 
 // 已经在控制携程内
-func NewLocker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
-	msg := &Args{uid: uid, handle: handle, args: args}
+func NewLocker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+	msg := &Args{uid: uid, args: args, handle: handle}
 	l := &Locker{done: done}
 	return l.call(msg)
 }

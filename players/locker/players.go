@@ -58,6 +58,6 @@ func (this *Players) Load(uid string, init bool, handle player.Handle) (err erro
 	return handle(r)
 }
 
-func (this *Players) Locker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
-	return NewLocker(uid, handle, args, done...)
+func (this *Players) Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+	return NewLocker(uid, args, handle, done...)
 }

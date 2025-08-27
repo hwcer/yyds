@@ -1,10 +1,11 @@
 package yyds
 
 import (
+	"strings"
+
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
-	"strings"
 )
 
 const (
