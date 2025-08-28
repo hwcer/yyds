@@ -7,4 +7,5 @@ const (
 	EventReplace
 	EventReconnect
 	EventDisconnect
+	EventOffline
 )

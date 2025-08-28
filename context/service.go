@@ -117,7 +117,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		//尝试重新上线
 		meta := values.Metadata(c.Metadata())
 		if c.Player.Status != player.StatusConnected {
-			if e := players.Connect(p, meta); e != nil {
+			if e := players.Connected(p, meta); e != nil {
 				return e
 			}
 		} else if gate := meta.GetUint64(options.ServicePlayerGateway); gate != p.Gateway {

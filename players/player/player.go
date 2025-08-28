@@ -99,7 +99,7 @@ func (p *Player) Loading(init bool) (err error) {
 		return fmt.Errorf("player uid(%s) is invalid", uid)
 	}
 	status := p.Status
-	if status == StatusLocked || status == StatusRelease {
+	if status == StatusLocked || status == StatusReleased {
 		return fmt.Errorf("player status disable")
 	}
 	if !atomic.CompareAndSwapInt32(&p.Status, status, StatusLocked) {
@@ -111,7 +111,7 @@ func (p *Player) Loading(init bool) (err error) {
 			logger.Error(e)
 		}
 		if err != nil {
-			p.Status = StatusRelease
+			p.Status = StatusReleased
 		} else {
 			p.Status = status
 		}

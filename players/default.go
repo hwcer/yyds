@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	playersOnline      int32 //在线人数
-	playersStarted     int32
-	playersRecycling   map[string]*player.Player
-	playersReleaseTime int //距离上次内存清理的事件间隔
+	playersOnline    int32 //在线人数
+	playersMemory    int32 //当前缓存总量
+	playersStarted   int32
+	playersRecycling map[string]*player.Player
+	//playersReleaseTime int //距离上次内存清理的事件间隔
 )
 
 var ps Players
@@ -58,7 +59,7 @@ func Load(uid string, init bool, handle player.Handle) (err error) {
 // Login 登录成功,只能在登录时调用
 func Login(uid string, meta map[string]string, handle player.Handle) (err error) {
 	err = ps.Load(uid, true, func(p *player.Player) error {
-		if e := Connect(p, meta); e != nil {
+		if e := Connected(p, meta); e != nil {
 			return e
 		}
 		return handle(p)
@@ -73,3 +74,31 @@ func Locker(uid []string, args any, handle player.LockerHandle, done ...func()) 
 func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
 }
+
+//// Disconnect 下线,心跳超时,断开连接等
+//func Disconnect(p *player.Player) bool {
+//	status := p.Status
+//	if status != player.StatusConnected {
+//		return false
+//	}
+//	if !atomic.CompareAndSwapInt32(&p.Status, player.StatusConnected, player.StatusDisconnect) {
+//		return false
+//	}
+//	p.KeepAlive(0)
+//	atomic.AddInt32(&playersOnline, -1)
+//	updater.Emit(p.Updater, player.EventDisconnect)
+//	return true
+//}
+//
+//// Offline 业务逻辑层面掉线
+//func Offline(p *player.Player) bool {
+//	status := p.Status
+//	if !(status == player.StatusNone || status == player.StatusDisconnect) {
+//		return false
+//	}
+//	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusOffline) {
+//		return false
+//	}
+//	p.KeepAlive(0)
+//	return true
+//}

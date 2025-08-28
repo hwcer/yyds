@@ -60,7 +60,7 @@ func (this *Players) get(uid string, handle player.Handle) error {
 	var p *player.Player
 	if i, ok := this.Manage.Load(uid); ok {
 		p = i
-		if p.Status == player.StatusRelease {
+		if p.Status == player.StatusReleased {
 			return errors.ErrLoginWaiting
 		}
 		p.Reset()
@@ -74,7 +74,7 @@ func (this *Players) load(uid string, init bool, handle player.Handle) (err erro
 	p := player.New(uid)
 	if i, loaded := this.Manage.LoadOrStore(uid, p); loaded {
 		p = i
-		if p.Status == player.StatusRelease {
+		if p.Status == player.StatusReleased {
 			return errors.ErrLoginWaiting
 		}
 	}

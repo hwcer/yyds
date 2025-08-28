@@ -2,6 +2,11 @@ package players
 
 import (
 	"context"
+	"runtime/debug"
+	"sort"
+	"sync/atomic"
+	"time"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
@@ -9,14 +14,10 @@ import (
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
-	"runtime/debug"
-	"sort"
-	"sync/atomic"
-	"time"
 )
 
-// Connect 连线，不包括断线重连等
-func Connect(p *player.Player, meta values.Metadata) (err error) {
+// Connected 连线，不包括断线重连等
+func Connected(p *player.Player, meta values.Metadata) (err error) {
 	status := p.Status
 	gateway := uint64(meta.GetInt64(options.ServicePlayerGateway))
 	if gateway == 0 {
@@ -42,7 +43,7 @@ func Connect(p *player.Player, meta values.Metadata) (err error) {
 			updater.Emit(p.Updater, player.EventReplace)
 			return
 		}
-	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusRecycling {
+	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusOffline {
 		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
 			return errors.ErrLoginWaiting
 		}
@@ -73,26 +74,27 @@ func Disconnect(p *player.Player) bool {
 	return true
 }
 
-// recycling 进入回收站等待回收
-func recycling(p *player.Player) bool {
+// Offline 业务逻辑层面掉线
+func Offline(p *player.Player) bool {
 	status := p.Status
 	if !(status == player.StatusNone || status == player.StatusDisconnect) {
 		return false
 	}
-	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusRecycling) {
+	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusOffline) {
 		return false
 	}
 	p.KeepAlive(0)
+	updater.Emit(p.Updater, player.EventOffline)
 	return true
 }
 
-// release 释放用户实例
-func release(p *player.Player) (ok bool) {
+// Released 释放用户实例
+func Released(p *player.Player) (ok bool) {
 	status := p.Status
-	if status != player.StatusRecycling {
+	if status != player.StatusOffline {
 		return false
 	}
-	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusRelease) {
+	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusReleased) {
 		return false
 	}
 	p.Reset()
@@ -115,46 +117,48 @@ func worker() {
 	if playersRecycling == nil {
 		playersRecycling = map[string]*player.Player{}
 	}
-	playersReleaseTime++
+	//playersReleaseTime++
 	now := time.Now().Unix()
-	offlineTime := now - PlayersDisconnect
-	releaseTime := now - PlayersRelease
+	connectedTime := now - HeartbeatConnectedTime
+	disconnectTime := now - HeartbeatDisconnectTime
+	offlineTime := now - HeartbeatOfflineTime
 
-	var tot int
+	var tot int32
 	ps.Range(func(uid string, p *player.Player) bool {
 		tot += 1
 		//检查掉线情况
 		//logger.Debug("uid:%v   status:%v   heartbeat:%v ", p.Uid(), p.status, p.heartbeat)
-
-		if p.Status == player.StatusConnected {
-			if p.Heartbeat() <= offlineTime {
+		switch p.Status {
+		case player.StatusNone, player.StatusOffline:
+			if p.Heartbeat() < offlineTime {
+				playersRecycling[uid] = p
+			}
+		case player.StatusConnected:
+			if p.Heartbeat() <= connectedTime {
 				Disconnect(p)
 			} else if _, ok := playersRecycling[uid]; ok {
 				delete(playersRecycling, uid)
 			}
-		} else if p.Status == player.StatusNone || p.Status == player.StatusDisconnect {
-			if p.Heartbeat() < releaseTime && recycling(p) {
+		case player.StatusDisconnect:
+			if p.Heartbeat() < disconnectTime && Offline(p) {
 				playersRecycling[uid] = p
 			}
-		} else if p.Status == player.StatusRecycling || p.Status == player.StatusRelease {
-			playersRecycling[uid] = p
+		default:
 		}
 
 		return true
 	})
+	playersMemory = tot
 	//var rm int
 	ct := tot
-	if playersReleaseTime >= Options.ReleaseTime {
-		defer func() {
-			playersReleaseTime = 0
-			if n := tot - ct; n > 0 {
-				logger.Trace("当前在线人数:%v  缓存数量:%v  本次清理:%v", playersOnline, tot, n)
-			}
-		}()
-	}
+	defer func() {
+		if n := tot - ct; n > 0 {
+			logger.Trace("当前在线人数:%v  缓存数量:%v  本次清理:%v", playersOnline, tot, n)
+		}
+	}()
 
 	//清理内存
-	if !(playersReleaseTime >= Options.ReleaseTime && len(playersRecycling) > 0 && tot > Options.MemoryPlayer+Options.MemoryRelease) {
+	if !(len(playersRecycling) > 0 && tot > Options.MemoryPlayer+Options.MemoryRelease) {
 		return
 	}
 	var dict []*player.Player
@@ -167,10 +171,9 @@ func worker() {
 
 	next := map[string]*player.Player{}
 	for _, p := range dict {
-		if ct > Options.MemoryPlayer && release(p) {
+		if ct > Options.MemoryPlayer && Released(p) {
 			ct--
-		}
-		if p.Status == player.StatusRecycling {
+		} else if p.Status == player.StatusOffline {
 			next[p.Uid()] = p
 		}
 	}
@@ -178,7 +181,7 @@ func worker() {
 }
 
 func daemon(ctx context.Context) {
-	t := time.Second * PlayersHeartbeat
+	t := time.Second * Heartbeat
 	timer := time.NewTimer(t)
 	defer timer.Stop()
 	defer shutdown()
@@ -199,7 +202,7 @@ func shutdown() {
 	}
 	//关闭所有用户
 	ps.Range(func(uid string, p *player.Player) bool {
-		_ = release(p)
+		_ = Released(p)
 		return true
 	})
 	return
