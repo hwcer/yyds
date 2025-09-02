@@ -4,6 +4,14 @@ import (
 	"github.com/hwcer/yyds/players/emitter"
 )
 
+const (
+	EventConnect int32 = -iota - 1
+	EventReplace
+	EventReconnect
+	EventDisconnect
+	EventOffline
+)
+
 // 全局事件
 
 func On(t int32, handle emitter.EventsFunc) {

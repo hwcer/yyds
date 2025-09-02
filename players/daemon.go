@@ -10,9 +10,9 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
+	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -37,10 +37,10 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 	// 不同端不同协议顶号
 	if status == player.StatusConnected {
 		if p.Gateway == gateway {
-			updater.Emit(p.Updater, player.EventReconnect)
+			emitter.Events.Emit(p.Updater, EventReconnect)
 			return
 		} else {
-			updater.Emit(p.Updater, player.EventReplace)
+			emitter.Events.Emit(p.Updater, EventReplace)
 			return
 		}
 	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusOffline {
@@ -55,7 +55,7 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 		p.Message = &player.Message{}
 	}
 	atomic.AddInt32(&playersOnline, 1)
-	updater.Emit(p.Updater, player.EventConnect)
+	emitter.Events.Emit(p.Updater, EventConnect)
 	return
 }
 
@@ -70,7 +70,7 @@ func Disconnect(p *player.Player) bool {
 	}
 	p.KeepAlive(0)
 	atomic.AddInt32(&playersOnline, -1)
-	updater.Emit(p.Updater, player.EventDisconnect)
+	emitter.Events.Emit(p.Updater, EventDisconnect)
 	return true
 }
 
@@ -84,7 +84,7 @@ func Offline(p *player.Player) bool {
 		return false
 	}
 	p.KeepAlive(0)
-	updater.Emit(p.Updater, player.EventOffline)
+	emitter.Events.Emit(p.Updater, EventOffline)
 	return true
 }
 

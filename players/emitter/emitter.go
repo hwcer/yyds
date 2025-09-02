@@ -54,7 +54,7 @@ func (e *Emitter) emit(_ *updater.Updater) bool {
 	for et, vs := range e.values {
 		for _, v := range vs {
 			e.doEvents(et, v[0], v[1:])
-			Events.emit(e.u, et, v)
+			Events.Emit(e.u, et, v...)
 		}
 	}
 	e.values = nil

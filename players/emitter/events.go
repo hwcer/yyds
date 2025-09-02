@@ -34,7 +34,7 @@ func (e events) Listen(t int32, handle EventsFunc) {
 	return
 }
 
-func (e events) emit(u *updater.Updater, t int32, args []int32) {
+func (e events) Emit(u *updater.Updater, t int32, args ...int32) {
 	if len(e[t]) == 0 {
 		return
 	}
