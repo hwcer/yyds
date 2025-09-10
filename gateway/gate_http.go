@@ -3,6 +3,12 @@ package gateway
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -11,11 +17,6 @@ import (
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
-	"net"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 const elapsedMillisecond = 200 * time.Millisecond
@@ -185,7 +186,13 @@ func (this *httpProxy) Metadata() values.Metadata {
 	}
 	return this.metadata
 }
-
+func (this *httpProxy) RemoteAddr() string {
+	ip := this.Context.RemoteAddr()
+	if i := strings.Index(ip, ":"); i > 0 {
+		ip = ip[0:i]
+	}
+	return ip
+}
 func (this *httpProxy) ContentType(name string, split string) string {
 	t := this.Context.Request.Header.Get(name)
 	if t == "" {

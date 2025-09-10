@@ -20,6 +20,7 @@ type Request interface {
 	Buffer() (buf *bytes.Buffer, err error)
 	Delete() error
 	Metadata() values.Metadata
+	RemoteAddr() string
 }
 
 // request rpc转发,返回实际转发的servicePath

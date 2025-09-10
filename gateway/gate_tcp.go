@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/session"
@@ -117,4 +118,12 @@ func (this *socketProxy) Metadata() values.Metadata {
 	meta[binder.HeaderContentType] = magic.Binder.Name()
 	meta[options.ServiceMetadataRequestId] = fmt.Sprintf("%d", this.Context.Message.Index())
 	return meta
+}
+
+func (this *socketProxy) RemoteAddr() string {
+	ip := this.Context.RemoteAddr().String()
+	if i := strings.Index(ip, ":"); i > 0 {
+		ip = ip[0:i]
+	}
+	return ip
 }

@@ -7,7 +7,9 @@ const (
 	ServiceMetadataServerId  = "sid"
 	ServiceMetadataRequestId = "rid"
 
-	ServiceSocketId      = "_sock_id"
+	ServiceSocketId = "_sock_id"
+	ServiceClientIp = "_client_ip"
+
 	ServiceMessagePath   = "_msg_path"
 	ServiceMessageRoom   = "_msg_room"
 	ServiceMessageIgnore = "_msg_ignore"
@@ -19,5 +21,5 @@ const (
 	ServicePlayerRoomJoin  = "player.join"      //已经加入的房间
 	ServicePlayerRoomLeave = "player.leave"     //离开房间
 	ServicePlayerSelector  = "service.selector" //服务器重定向
-	
+
 )

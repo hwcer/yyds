@@ -28,12 +28,12 @@ type RequestSocket interface {
 type authorizeFunc func(r Request, req values.Metadata, isMaster bool) (*session.Data, error)
 
 type authorizeManager struct {
-	dict map[int8]authorizeFunc
+	dict map[options.OAuthType]authorizeFunc
 }
 
-func (this *authorizeManager) Register(l int8, f authorizeFunc) {
+func (this *authorizeManager) Register(l options.OAuthType, f authorizeFunc) {
 	if this.dict == nil {
-		this.dict = make(map[int8]authorizeFunc)
+		this.dict = make(map[options.OAuthType]authorizeFunc)
 	}
 	this.dict[l] = f
 }
@@ -57,6 +57,7 @@ func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMa
 		sock := f.Socket()
 		req[options.ServiceSocketId] = fmt.Sprintf("%d", sock.Id())
 	}
+	req[options.ServiceClientIp] = r.RemoteAddr()
 	return
 }
 
@@ -70,6 +71,7 @@ func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata, isM
 	} else {
 		req[options.ServiceMetadataGUID] = uuid
 	}
+	req[options.ServiceClientIp] = r.RemoteAddr()
 	if isMaster {
 		err = this.IsMaster(p)
 	}

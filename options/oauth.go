@@ -7,26 +7,28 @@ import (
 
 // 接口权限设置
 
+type OAuthType int8
+
 const (
-	OAuthTypeNone   int8 = iota //不需要登录
-	OAuthTypeOAuth              //需要认证
-	OAuthTypeSelect             //需要选择角色,但不需要进入用户协程，无法直接操作用户数据
-	OAuthTypePlayer             // 需要选择角色,并进入用户协程 默认
+	OAuthTypeNone   OAuthType = iota //不需要登录
+	OAuthTypeOAuth                   //需要认证
+	OAuthTypeSelect                  //需要选择角色,但不需要进入用户协程，无法直接操作用户数据
+	OAuthTypePlayer                  // 需要选择角色,并进入用户协程 默认
 )
 
 var OAuthRenewal = "/game/role/renewal"
 
-var OAuth = authorizes{dict: map[string]int8{}, prefix: map[string]int8{}, v: OAuthTypePlayer}
+var OAuth = authorizes{dict: map[string]OAuthType{}, prefix: map[string]OAuthType{}, v: OAuthTypePlayer}
 
 type authorizes struct {
-	v      int8 //默认
-	dict   map[string]int8
-	prefix map[string]int8     //按前缀匹配
-	master map[string]struct{} //是否master
+	v      OAuthType //默认
+	dict   map[string]OAuthType
+	prefix map[string]OAuthType //按前缀匹配
+	master map[string]struct{}  //是否master
 }
 
 func init() {
-	s := map[string]int8{
+	s := map[string]OAuthType{
 		"/ping":        OAuthTypeNone,
 		"/login":       OAuthTypeNone,
 		"/roles":       OAuthTypeOAuth,
@@ -58,12 +60,12 @@ func (auth *authorizes) Format(s ...string) string {
 	return r
 }
 
-func (auth *authorizes) Set(servicePath, serviceMethod string, i int8) {
+func (auth *authorizes) Set(servicePath, serviceMethod string, i OAuthType) {
 	r := auth.Format(servicePath, serviceMethod)
 	auth.dict[r] = i
 }
 
-func (auth *authorizes) Get(s ...string) (v int8, path string) {
+func (auth *authorizes) Get(s ...string) (v OAuthType, path string) {
 	path = auth.Format(s...)
 	var ok bool
 	if v, ok = auth.dict[path]; ok {
@@ -79,13 +81,13 @@ func (auth *authorizes) Get(s ...string) (v int8, path string) {
 	return
 }
 
-func (auth *authorizes) Prefix(servicePath, serviceMethod string, i int8) {
+func (auth *authorizes) Prefix(servicePath, serviceMethod string, i OAuthType) {
 	r := auth.Format(servicePath, serviceMethod)
 	auth.prefix[r] = i
 }
 
 // Default 设置,获取默认值
-func (auth *authorizes) Default(l ...int8) int8 {
+func (auth *authorizes) Default(l ...OAuthType) OAuthType {
 	if len(l) > 0 {
 		auth.v = l[0]
 	}

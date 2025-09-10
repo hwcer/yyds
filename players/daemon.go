@@ -30,6 +30,11 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 			p.Login = p.Unix()
 		}
 	}()
+
+	if ip := meta.GetString(options.ServiceClientIp); ip != "" {
+		p.ClientIp = ip
+	}
+
 	p.Gateway = gateway
 	if b := binder.GetContentType(meta, binder.ContentTypeModRes); b != nil {
 		p.Binder = b
