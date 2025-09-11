@@ -1,12 +1,13 @@
 package options
 
 import (
+	"strings"
+
 	"github.com/hwcer/cosgo/await"
 	"github.com/hwcer/cosgo/request"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
-	"strings"
 )
 
 type MasterApiType string
@@ -16,6 +17,7 @@ const (
 	MasterApiTypeGameServerClose = "/server/close"
 	MasterApiTypeOrderCreate     = "/order/create"
 	MasterApiTypeOrderRefresh    = "/order/refresh" //重新拉起之前放弃的订单
+	MasterApiTypeOrderRestore    = "/order/restore"
 	MasterApiTypeOrderSubmit     = "/order/submit"
 	MasterApiTypeConfigInfo      = "/config/info"
 
