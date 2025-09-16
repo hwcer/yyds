@@ -46,12 +46,10 @@ func (this *Locker) loading(uid string) error {
 	r := player.New(uid)
 	r.Lock()
 	if i, loaded := instance.Manage.LoadOrStore(uid, r); loaded {
+		i.Lock()
 		r.Unlock()
 		r = i
-		r.Lock()
-	}
-	//未初始化
-	if err := r.Loading(false); err != nil {
+	} else if err := r.Loading(false); err != nil {
 		r.Unlock()
 		instance.Manage.Delete(uid)
 		return err

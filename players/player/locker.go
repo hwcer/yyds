@@ -9,6 +9,8 @@ type Locker interface {
 	Submit() error
 }
 
+type AsyncHandle func(locker Locker, args any)
+
 type LockerHandle func(locker Locker, args any) (any, error)
 
 func (p *Player) Reset() {

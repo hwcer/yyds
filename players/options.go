@@ -1,5 +1,7 @@
 package players
 
+import "github.com/hwcer/cosmo"
+
 const (
 	Heartbeat = 5 //心跳间隔(S)
 
@@ -16,17 +18,17 @@ const (
 )
 
 var Options = struct {
-	AsyncModel AsyncModel
-	PreloadMax int64 //启动服务器时预加载数量,0:全部
-	PreloadDay int64 //启动服务器时预加载最近N天登录过的,0:全部
-	//ReleaseTime   int   //至少间隔N个playersHeartbeat才会执行清理任务
+	Preload       Preload
+	AsyncModel    AsyncModel
 	MemoryPlayer  int32 //常驻内存的玩家数量
 	MemoryRelease int32 //回收站(release)玩家数量达到N时开始清理内存,缓存数量>=MemoryPlayer + MemoryRelease 开始执行清理计划
 
 }{
-	PreloadMax: 10000,
-	PreloadDay: 7,
-	//ReleaseTime:   10,
 	MemoryPlayer:  10000,
 	MemoryRelease: 1000,
+}
+
+type Preload interface {
+	TX() *cosmo.DB //返回当前数据库操作，设定好排序以及过滤条件
+	Limit() int64  // 最大加载玩家数量
 }

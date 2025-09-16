@@ -3,9 +3,10 @@ package context
 import (
 	"encoding/json"
 	"errors"
+	"time"
+
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/options"
-	"time"
 )
 
 type Token struct {

@@ -12,47 +12,34 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-// Preload
-//
-//	type preload interface {
-//		Record() int //需要预加载的实际条数
-//		Handle(page, size int, callback func(uid string, name string))
-//	}
-var Preload func() *cosmo.DB
-
-type PreloadRole struct {
+type preloadPlayerDecode struct {
 	Id string `bson:"_id"`
 }
 
 // loading 初始加载用户到内存
 func loading() (err error) {
-	if Preload == nil {
-		logger.Alert("未配置预加载接口(players.Preload)或者预加载数量伪空,用户预加载功能未启用")
+	if Options.Preload == nil {
+		logger.Alert("未配置预加载接口(Options.Preload)用户预加载功能未启用")
 		return
 	}
 
 	var record int64
-	tx := Preload()
-	if Options.PreloadDay > 0 {
-		w := fmt.Sprintf("%s >= ?", player.RoleFields.Update)
-		m := time.Now().Unix() - Options.PreloadDay*86400
-		tx = tx.Where(w, m)
-	}
-	tx = tx.Order(player.RoleFields.Update, -1)
+	tx := Options.Preload.TX()
+
 	if err = tx.Count(&record).Error; err != nil {
 		return
 	}
 	if record == 0 {
 		return
 	}
-	if Options.PreloadMax > 0 && record > Options.PreloadMax {
-		record = Options.PreloadMax
+	if limit := Options.Preload.Limit(); limit > 0 && record > limit {
+		record = limit
 	}
 	logger.Trace("开始预加载数据,累计:%d条", record)
 	progress := newProgress(record)
 	tx = tx.Select("_id").Limit(int(record))
 	tx = tx.Range(func(cursor cosmo.Cursor) bool {
-		v := &PreloadRole{}
+		v := &preloadPlayerDecode{}
 		if e := cursor.Decode(v); e == nil {
 			progress.c <- v.Id
 			return true
