@@ -36,7 +36,7 @@ func (this *TcpServer) init() error {
 	session.Heartbeat.On(cosnet.Heartbeat)
 
 	service := cosnet.Service("")
-	_ = service.Register(this.proxy, "/*")
+	_ = service.Register(this.proxy, "*")
 	return nil
 }
 
