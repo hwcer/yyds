@@ -5,14 +5,14 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/hwcer/cosgo v0.0.0-20250820041601-f33319463687
-	github.com/hwcer/cosmo v0.0.0-20250806152118-86faf7702c1d
-	github.com/hwcer/cosnet v0.0.0-20250805112752-728774af19d0
+	github.com/hwcer/cosgo v1.5.3
+	github.com/hwcer/cosmo v1.2.2
+	github.com/hwcer/cosnet v1.2.0
 	github.com/hwcer/cosrpc v1.2.0
-	github.com/hwcer/cosweb v0.0.0-20250805112656-a2c0c884f856
-	github.com/hwcer/coswss v0.0.0-20250805113210-c2ec866584f5
+	github.com/hwcer/cosweb v1.2.0
+	github.com/hwcer/coswss v0.2.0
 	github.com/hwcer/logger v0.1.2
-	github.com/hwcer/updater v0.0.0-20250818120122-3805b7188333
+	github.com/hwcer/updater v1.3.0
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
 	github.com/soheilhy/cmux v0.1.5
