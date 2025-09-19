@@ -39,7 +39,7 @@ func (this *HttpServer) init() (err error) {
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")
 	access.Methods(Method...)
-	headers := []string{session.Options.Name, "Accept", "Content-Type", "Set-Cookie", "X-Forwarded-Key", "X-Forwarded-Val"}
+	headers := []string{session.Options.Name, "Accept", "Content-Type", "Set-Cookie", "x-Forwarded-Key", "x-Forwarded-Val"}
 	access.Headers(strings.Join(headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Register("/*", this.proxy, Method...)
