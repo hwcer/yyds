@@ -65,9 +65,9 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 	if t == 0 {
 		return 0, nil
 	}
-	if v == 0 {
-		v = 1
-	}
+	//if v == 0 {
+	//	v = 1
+	//}
 	et := times.ExpireType(t)
 	if et.Has() {
 		var ts *times.Times
@@ -100,8 +100,8 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 
 // Verify 验证是否在有效期(开始以及过期时间)内，返回开始和结束时间
 func (this *Times) Verify(args []int64) (t [2]int64, err error) {
-	arr := append([]int64{}, args...)
-	arr = append(arr, 0, 0, 0)
+	arr := []int64{0, 0, 0}
+	copy(arr, args)
 	now := time.Now().Unix()
 	if t[0], err = this.Start(arr[0], arr[1]); err != nil {
 		return
