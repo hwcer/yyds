@@ -3,13 +3,13 @@ module github.com/hwcer/yyds
 go 1.24.0
 
 require (
-	github.com/hwcer/cosgo v1.5.3
+	github.com/hwcer/cosgo v1.5.5
 	github.com/hwcer/cosmo v1.2.2
 	github.com/hwcer/cosnet v1.2.0
 	github.com/hwcer/cosrpc v1.2.0
 	github.com/hwcer/cosweb v1.2.0
 	github.com/hwcer/coswss v0.2.0
-	github.com/hwcer/logger v0.2.1
+	github.com/hwcer/logger v0.2.3
 	github.com/hwcer/updater v1.3.0
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
@@ -56,7 +56,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/quic-go/quic-go v0.54.0 // indirect
+	github.com/quic-go/quic-go v0.54.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/rubyist/circuitbreaker v2.2.1+incompatible // indirect
