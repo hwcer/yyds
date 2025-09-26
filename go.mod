@@ -9,7 +9,7 @@ require (
 	github.com/hwcer/cosrpc v1.2.0
 	github.com/hwcer/cosweb v1.2.0
 	github.com/hwcer/coswss v0.2.0
-	github.com/hwcer/logger v0.2.3
+	github.com/hwcer/logger v0.2.4
 	github.com/hwcer/updater v1.3.0
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
