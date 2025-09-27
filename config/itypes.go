@@ -99,7 +99,7 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 		if it.IMax = its.reflectIMax(id, i); it.IMax == 0 {
 			it.IMax = iMax
 		}
-		if iType != 0 {
+		if iType > 0 {
 			if strings.HasPrefix(strconv.Itoa(int(id)), sit) {
 				it.IType = iType
 			} else {
