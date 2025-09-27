@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 type IType struct {
@@ -77,7 +76,7 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 		errs = append(errs, fmt.Errorf("%v 不是有效的map", name))
 		return
 	}
-	sit := strconv.Itoa(int(iType))
+	//sit := strconv.Itoa(int(iType))
 	for _, k := range rv.MapKeys() {
 		id, ok := k.Interface().(int32)
 		if !ok {
@@ -99,17 +98,15 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 		if it.IMax = its.reflectIMax(id, i); it.IMax == 0 {
 			it.IMax = iMax
 		}
-		if iType > 0 {
-			if strings.HasPrefix(strconv.Itoa(int(id)), sit) {
-				it.IType = iType
-			} else {
-				errs = append(errs, fmt.Errorf("%v[%v]必须以itype[%v]开头", name, id, iType))
-			}
+
+		if s := its.reflectIType(id, i); s != 0 {
+			it.IType = s //配置设定类型
+		} else if iType > 0 {
+			it.IType = iType //统一类型
 		} else {
-			if it.IType = its.reflectIType(id, i); it.IType == 0 {
-				errs = append(errs, fmt.Errorf("IType为空:%v[%v]", name, id))
-			}
+			errs = append(errs, fmt.Errorf("IType为空:%v[%v]", name, id))
 		}
+
 	}
 	return
 }
