@@ -1,6 +1,9 @@
 package gateway
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosrpc"
@@ -8,8 +11,6 @@ import (
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
-	"strconv"
-	"strings"
 )
 
 var Service = server.Service(options.ServiceTypeGate)
