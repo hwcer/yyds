@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+
+	"github.com/hwcer/logger"
 )
 
 type IType struct {
@@ -99,7 +101,7 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 			it.IMax = iMax
 		}
 
-		if s := its.reflectIType(id, i); s != 0 {
+		if s := its.reflectIType(name, id, i); s != 0 {
 			it.IType = s //配置设定类型
 		} else if iType > 0 {
 			it.IType = iType //统一类型
@@ -111,9 +113,13 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 	return
 }
 
-func (its ITypes) reflectIType(id int32, i interface{}) int32 {
+func (its ITypes) reflectIType(name string, id int32, i interface{}) int32 {
 	if v, ok := i.(iType); ok {
 		return v.GetIType()
+	}
+	if id < 10 {
+		logger.Alert("reflectIType error,Name:%s,id:%d", name, id)
+		return 0
 	}
 	s := strconv.Itoa(int(id))
 	v, _ := strconv.Atoi(s[0:2])

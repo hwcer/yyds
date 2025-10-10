@@ -50,14 +50,23 @@ func (this *Times) Start(t int64, v int64) (r int64, err error) {
 	}
 
 }
-func (this *Times) ExpireWithArray(expire ...int64) (r int64, err error) {
-	if len(expire) == 0 {
+
+func (this *Times) StartWithArray(args ...int64) (r int64, err error) {
+	if len(args) == 0 {
 		return 0, nil
 	}
-	if len(expire) < 2 {
-		expire = append(expire, 1)
+	v := make([]int64, 2)
+	copy(v, args)
+	return this.Expire(v[0], v[1])
+}
+
+func (this *Times) ExpireWithArray(args ...int64) (r int64, err error) {
+	if len(args) == 0 {
+		return 0, nil
 	}
-	return this.Expire(expire[0], expire[1])
+	v := make([]int64, 2)
+	copy(v, args)
+	return this.Expire(v[0], v[1])
 }
 
 // Expire 过期时间
