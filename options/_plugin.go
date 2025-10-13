@@ -1,14 +1,15 @@
 package options
 
 import (
+	"os"
+	"plugin"
+	"sync"
+
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
-	"os"
-	"plugin"
-	"sync"
 )
 
 var Plugin = &reload{}

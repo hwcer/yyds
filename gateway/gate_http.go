@@ -42,10 +42,10 @@ func (this *HttpServer) init() (err error) {
 	headers := []string{session.Options.Name, "Accept", "Content-Type", "Set-Cookie", "x-Forwarded-Key", "x-Forwarded-Val"}
 	access.Headers(strings.Join(headers, ","))
 	this.Server.Use(access.Handle)
-	this.Server.Register("/*", this.proxy, Method...)
+	this.Server.Register("*", this.proxy, http.MethodPost)
 
 	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
-		static := this.Server.Static(options.Gate.Static.Route, options.Gate.Static.Root)
+		static := this.Server.Static(options.Gate.Static.Route, options.Gate.Static.Root, http.MethodGet)
 		if options.Gate.Static.Index != "" {
 			static.Index(options.Gate.Static.Index)
 		}
