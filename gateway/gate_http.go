@@ -15,13 +15,16 @@ import (
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
 
 const elapsedMillisecond = 200 * time.Millisecond
 
-var Method = []string{"POST", "GET", "OPTIONS"}
+var Method = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+var Headers = []string{session.Options.Name, "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization",
+	"X-CSRF-Token", "X-Requested-With", "X-Unity-Version", "x-Forwarded-Key", "x-Forwarded-Val"}
 
 func NewHttpServer() *HttpServer {
 	s := &HttpServer{}
@@ -39,9 +42,10 @@ func (this *HttpServer) init() (err error) {
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")
 	access.Methods(Method...)
-	headers := []string{session.Options.Name, "Accept", "Content-Type", "Set-Cookie", "x-Forwarded-Key", "x-Forwarded-Val"}
-	access.Headers(strings.Join(headers, ","))
+	access.Headers(strings.Join(Headers, ","))
 	this.Server.Use(access.Handle)
+	this.Server.Use(this.middleware)
+	this.Server.Register("login", this.login)
 	this.Server.Register("*", this.proxy, http.MethodPost)
 
 	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
@@ -51,6 +55,15 @@ func (this *HttpServer) init() (err error) {
 		}
 	}
 	return nil
+}
+
+func (this *HttpServer) middleware(c *cosweb.Context, next cosweb.Next) (err error) {
+	// 针对Unity的特殊头设置
+	h := c.Header()
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("X-Frame-Options", "DENY")
+	h.Set("X-XSS-Protection", "1; mode=block")
+	return next()
 }
 
 func (this *HttpServer) Listen(address string) (err error) {
@@ -74,6 +87,30 @@ func (this *HttpServer) Accept(ln net.Listener) (err error) {
 		logger.Trace("网关短连接启动：%v", options.Gate.Address)
 	}
 	return
+}
+func (this *HttpServer) login(c *cosweb.Context) (err error) {
+	authorize := &context.Authorize{}
+	if err = c.Bind(&authorize); err != nil {
+		return err
+	}
+	token, err := authorize.Verify()
+	if err != nil {
+		return err
+	}
+	h := httpProxy{Context: c}
+	if err = h.Login(token.Guid, nil); err != nil {
+		return err
+	}
+	reply := values.Message{}
+	b := h.Binder()
+	if b == nil {
+		return errors.New("Unknown Accept Content-Type")
+	}
+	var v []byte
+	if v, err = b.Marshal(reply); err != nil {
+		return err
+	}
+	return c.Bytes(cosweb.ContentType(b.String()), v)
 }
 
 func (this *HttpServer) proxy(c *cosweb.Context) (err error) {

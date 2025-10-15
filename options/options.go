@@ -4,7 +4,6 @@ import (
 	"sync/atomic"
 
 	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/cosrpc/server"
@@ -48,9 +47,9 @@ func Initialize() (err error) {
 		client.SetDiscovery(Discovery)
 	}
 
-	if Options.TimeReset != 0 {
-		times.SetTimeReset(Options.TimeReset)
-	}
+	//if Options.TimeReset != 0 {
+	//	times.SetTimeReset(Options.TimeReset)
+	//}
 	return nil
 }
 
@@ -63,10 +62,11 @@ var Options = &struct {
 	Verify    int8              `json:"verify"`    //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
 	Binder    string            `json:"binder"`    //公网请求默认序列化方式，默认JSON
 	Service   map[string]string `json:"service"`   //
-	TimeReset int64             `json:"TimeReset"` //每日几点重置时间
-	Game      *game             `json:"game"`
-	Gate      *gate             `json:"gate"`
-	Rpcx      *cosrpc.Options   `json:"rpcx"`
+	Developer bool              `json:"developer"` //开发者模式，可以使用账号直接登录
+	//TimeReset int64             `json:"TimeReset"` //每日几点重置时间
+	Game *game           `json:"game"`
+	Gate *gate           `json:"gate"`
+	Rpcx *cosrpc.Options `json:"rpcx"`
 }{
 	Verify:  1,
 	Binder:  "json",

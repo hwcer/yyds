@@ -2,6 +2,10 @@ package gateway
 
 import (
 	"errors"
+	"net"
+	"strings"
+	"time"
+
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
@@ -10,9 +14,6 @@ import (
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"github.com/soheilhy/cmux"
-	"net"
-	"strings"
-	"time"
 )
 
 var mod = &Module{}

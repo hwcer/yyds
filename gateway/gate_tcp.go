@@ -14,6 +14,7 @@ import (
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosnet/tcp"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
@@ -34,6 +35,7 @@ func (this *TcpServer) init() error {
 
 	service := cosnet.Service("")
 	_ = service.Register(this.proxy, "*")
+	_ = service.Register(this.login)
 	return nil
 }
 
@@ -50,12 +52,26 @@ func (this *TcpServer) Accept(ln net.Listener) error {
 	logger.Trace("网关长连接启动：%v", options.Gate.Address)
 	return nil
 }
-
+func (this *TcpServer) login(c *cosnet.Context) (err error) {
+	authorize := &context.Authorize{}
+	if err = c.Bind(&authorize); err != nil {
+		return c.Reply(values.Error(err))
+	}
+	token, err := authorize.Verify()
+	if err != nil {
+		return c.Reply(values.Error(err))
+	}
+	h := socketProxy{Context: c}
+	if err = h.Login(token.Guid, nil); err != nil {
+		return c.Reply(values.Error(err))
+	}
+	return c.Reply(values.Message{})
+}
 func (this *TcpServer) proxy(c *cosnet.Context) error {
 	h := &socketProxy{Context: c}
 	b, err := proxy(h)
 	if err != nil {
-		return err
+		return c.Reply(values.Error(err))
 	}
 	if c.Message.Confirm() {
 		return c.Reply(b)
