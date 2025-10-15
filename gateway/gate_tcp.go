@@ -62,15 +62,27 @@ func (this *TcpServer) login(c *cosnet.Context) (err error) {
 		return c.Reply(values.Error(err))
 	}
 	h := socketProxy{Context: c}
-	if err = h.Login(token.Guid, nil); err != nil {
+	vs := values.Values{}
+	if token.Superuser {
+		vs.Set(options.ServiceMetadataSuperuser, "1")
+	}
+	if err = h.Login(token.Guid, vs); err != nil {
 		return c.Reply(values.Error(err))
 	}
-	return c.Reply(values.Message{})
+	var r []byte
+	if r, err = oauth(&h); err != nil {
+		return c.Reply(values.Error(err))
+	}
+	return c.Reply(r)
 }
 func (this *TcpServer) proxy(c *cosnet.Context) error {
 	h := &socketProxy{Context: c}
-	b, err := proxy(h)
+	p, err := h.Path()
 	if err != nil {
+		return c.Reply(values.Error(err))
+	}
+	var b []byte
+	if b, err = caller(h, p); err != nil {
 		return c.Reply(values.Error(err))
 	}
 	if c.Message.Confirm() {
@@ -87,7 +99,7 @@ func (this *socketProxy) Path() (string, error) {
 	r, _, err := this.Context.Path()
 	return r, err
 }
-func (this *socketProxy) Data() (*session.Data, error) {
+func (this *socketProxy) Cookie() (*session.Data, error) {
 	i := this.Context.Socket.Data()
 	if i == nil {
 		return nil, nil
@@ -95,13 +107,7 @@ func (this *socketProxy) Data() (*session.Data, error) {
 	v, _ := i.(*session.Data)
 	return v, nil
 }
-func (this *socketProxy) Socket() *cosnet.Socket {
-	return this.Context.Socket
-}
-func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
-	buff := bytes.NewBuffer(this.Context.Message.Body())
-	return buff, nil
-}
+
 func (this *socketProxy) Login(guid string, value values.Values) (err error) {
 	if i := this.Context.Socket.Data(); i != nil {
 		v, _ := i.(*session.Data)
@@ -114,9 +120,19 @@ func (this *socketProxy) Login(guid string, value values.Values) (err error) {
 	return players.Connect(this.Context.Socket, guid, value)
 }
 
-func (this *socketProxy) Delete() error {
+func (this *socketProxy) Logout() error {
 	this.Context.Socket.Close()
 	return nil
+}
+func (this *socketProxy) Binder() binder.Binder {
+	return this.Context.Message.Binder()
+}
+func (this *socketProxy) Socket() *cosnet.Socket {
+	return this.Context.Socket
+}
+func (this *socketProxy) Buffer() (buf *bytes.Buffer, err error) {
+	buff := bytes.NewBuffer(this.Context.Message.Body())
+	return buff, nil
 }
 
 func (this *socketProxy) Metadata() values.Metadata {

@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -23,8 +22,11 @@ import (
 const elapsedMillisecond = 200 * time.Millisecond
 
 var Method = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-var Headers = []string{session.Options.Name, "Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization",
-	"X-CSRF-Token", "X-Requested-With", "X-Unity-Version", "x-Forwarded-Key", "x-Forwarded-Val"}
+var Headers = []string{
+	session.Options.Name,
+	"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization",
+	"X-CSRF-Token", "X-Requested-With", "X-Unity-Version", "x-Forwarded-Key", "x-Forwarded-Val",
+}
 
 func NewHttpServer() *HttpServer {
 	s := &HttpServer{}
@@ -45,7 +47,7 @@ func (this *HttpServer) init() (err error) {
 	access.Headers(strings.Join(Headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Use(this.middleware)
-	this.Server.Register("login", this.login)
+	this.Server.Register("oauth", this.oauth)
 	this.Server.Register("*", this.proxy, http.MethodPost)
 
 	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
@@ -88,7 +90,7 @@ func (this *HttpServer) Accept(ln net.Listener) (err error) {
 	}
 	return
 }
-func (this *HttpServer) login(c *cosweb.Context) (err error) {
+func (this *HttpServer) oauth(c *cosweb.Context) (err error) {
 	authorize := &context.Authorize{}
 	if err = c.Bind(&authorize); err != nil {
 		return err
@@ -98,19 +100,17 @@ func (this *HttpServer) login(c *cosweb.Context) (err error) {
 		return err
 	}
 	h := httpProxy{Context: c}
-	if err = h.Login(token.Guid, nil); err != nil {
+	vs := values.Values{}
+	if token.Superuser {
+		vs.Set(options.ServiceMetadataSuperuser, "1")
+	}
+	if err = h.Login(token.Guid, vs); err != nil {
 		return err
 	}
-	reply := values.Message{}
-	b := h.Binder()
-	if b == nil {
-		return errors.New("Unknown Accept Content-Type")
-	}
+
 	var v []byte
-	if v, err = b.Marshal(reply); err != nil {
-		return err
-	}
-	return c.Bytes(cosweb.ContentType(b.String()), v)
+	v, err = oauth(&h)
+	return c.Bytes(cosweb.ContentType(h.Binder().String()), v)
 }
 
 func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
@@ -127,24 +127,29 @@ func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
 		}
 	}()
 	h := &httpProxy{Context: c}
-	reply, err := proxy(h)
+	p, err := h.Path()
 	if err != nil {
 		return err
 	}
-	if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
-		s := string(reply)
-		if strings.Contains(s, options.Cookies.Name) {
-			s = strings.Replace(s, options.Cookies.Name, session.Options.Name, -1)
-			s = strings.Replace(s, options.Cookies.Value, v, -1)
-			reply = []byte(s)
-		} else if strings.HasPrefix(s, "{") {
-			sb := strings.Builder{}
-			sb.WriteString("{")
-			sb.WriteString(fmt.Sprintf(`"cookie":{"key":"%v","val":"%v"},`, session.Options.Name, v))
-			sb.WriteString(s[1:])
-			reply = []byte(sb.String())
-		}
+	var reply []byte
+	if reply, err = caller(h, p); err != nil {
+		return err
 	}
+
+	//if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
+	//	s := string(reply)
+	//	if strings.Contains(s, options.Cookies.Name) {
+	//		s = strings.Replace(s, options.Cookies.Name, session.Options.Name, -1)
+	//		s = strings.Replace(s, options.Cookies.Value, v, -1)
+	//		reply = []byte(s)
+	//	} else if strings.HasPrefix(s, "{") {
+	//		sb := strings.Builder{}
+	//		sb.WriteString("{")
+	//		sb.WriteString(fmt.Sprintf(`"cookie":{"key":"%v","val":"%v"},`, session.Options.Name, v))
+	//		sb.WriteString(s[1:])
+	//		reply = []byte(sb.String())
+	//	}
+	//}
 	b := h.Binder()
 	if b == nil {
 		return errors.New("unknown accept content type")
@@ -171,7 +176,29 @@ func (this *httpProxy) Path() (string, error) {
 	return this.Context.Request.URL.Path, nil
 }
 
-func (this *httpProxy) Data() (*session.Data, error) {
+func (this *httpProxy) Login(guid string, value values.Values) (err error) {
+	var p *session.Data
+	err = players.Login(guid, value, func(d *session.Data, _ bool) error {
+		p = d
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: p.Id()}
+	http.SetCookie(this.Context.Response, cookie)
+	header := this.Header()
+	header.Set("X-Forwarded-Key", session.Options.Name)
+	header.Set("X-Forwarded-Val", cookie.Value)
+	this.Context.Set(session.Options.Name, cookie.Value)
+	return
+}
+
+func (this *httpProxy) Logout() error {
+	return this.Context.Session.Delete()
+}
+
+func (this *httpProxy) Cookie() (*session.Data, error) {
 	token := this.Context.GetString(session.Options.Name, cosweb.RequestDataTypeCookie, cosweb.RequestDataTypeQuery, cosweb.RequestDataTypeHeader)
 	if token == "" {
 		return nil, values.Error("token empty")
@@ -180,28 +207,6 @@ func (this *httpProxy) Data() (*session.Data, error) {
 		return nil, err
 	}
 	return this.Context.Session.Data, nil
-}
-
-func (this *httpProxy) Login(guid string, value values.Values) (err error) {
-	var data *session.Data
-	err = players.Login(guid, value, func(d *session.Data, _ bool) error {
-		data = d
-		return nil
-	})
-	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: data.Id()}
-	if err != nil {
-		return err
-	}
-	http.SetCookie(this.Context.Response, cookie)
-	header := this.Header()
-	header.Set("X-Forwarded-Key", session.Options.Name)
-	header.Set("X-Forwarded-Val", cookie.Value)
-	this.Context.Set(session.Options.Name, cookie.Value)
-	return nil
-}
-
-func (this *httpProxy) Delete() error {
-	return this.Context.Session.Delete()
 }
 
 func (this *httpProxy) Metadata() values.Metadata {
@@ -213,12 +218,12 @@ func (this *httpProxy) Metadata() values.Metadata {
 	for k, _ := range q {
 		this.metadata[k] = q.Get(k)
 	}
-	if t := this.ContentType(binder.HeaderContentType, ";"); t != "" {
+	if t := this.getContentType(binder.HeaderContentType, ";"); t != "" {
 		this.metadata.Set(binder.HeaderContentType, t)
 	} else {
 		this.metadata.Set(binder.HeaderContentType, options.Options.Binder)
 	}
-	if t := this.ContentType(binder.HeaderAccept, ","); t != "" {
+	if t := this.getContentType(binder.HeaderAccept, ","); t != "" {
 		this.metadata.Set(binder.HeaderAccept, t)
 	}
 	return this.metadata
@@ -230,7 +235,7 @@ func (this *httpProxy) RemoteAddr() string {
 	}
 	return ip
 }
-func (this *httpProxy) ContentType(name string, split string) string {
+func (this *httpProxy) getContentType(name string, split string) string {
 	t := this.Context.Request.Header.Get(name)
 	if t == "" {
 		return ""

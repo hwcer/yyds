@@ -63,6 +63,7 @@ var Options = &struct {
 	Binder    string            `json:"binder"`    //公网请求默认序列化方式，默认JSON
 	Service   map[string]string `json:"service"`   //
 	Developer bool              `json:"developer"` //开发者模式，可以使用账号直接登录
+	Superuser string            `json:"superuser"` //超级用户秘钥,开启游戏内一些功能
 	//TimeReset int64             `json:"TimeReset"` //每日几点重置时间
 	Game *game           `json:"game"`
 	Gate *gate           `json:"gate"`
@@ -77,10 +78,10 @@ var Options = &struct {
 }
 
 // Cookies 仅仅 http+json模式下 Cookie模板,网关会将 %CookieKey% %CookieValue% 替换成对应值
-var Cookies = &struct {
-	Name  string
-	Value string
-}{
-	Name:  "%CookieKey%",
-	Value: "%CookieValue%",
-}
+//var Cookies = &struct {
+//	Name  string
+//	Value string
+//}{
+//	Name:  "%CookieKey%",
+//	Value: "%CookieValue%",
+//}

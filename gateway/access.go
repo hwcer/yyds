@@ -12,34 +12,34 @@ import (
 
 // 接口权限判定 必须注册所有 options.OAuthType
 
-var Authorize = authorizeManager{}
+var Access = accessManager{}
 
 func init() {
-	Authorize.Register(options.OAuthTypeNone, Authorize.OAuthTypeNone)
-	Authorize.Register(options.OAuthTypeOAuth, Authorize.OAuthTypeOAuth)
-	Authorize.Register(options.OAuthTypeSelect, Authorize.OAuthTypeSelect)
-	Authorize.Register(options.OAuthTypePlayer, Authorize.OAuthTypeSelect)
+	Access.Register(options.OAuthTypeNone, Access.OAuthTypeNone)
+	Access.Register(options.OAuthTypeOAuth, Access.OAuthTypeOAuth)
+	Access.Register(options.OAuthTypeSelect, Access.OAuthTypeSelect)
+	Access.Register(options.OAuthTypePlayer, Access.OAuthTypeSelect)
 }
 
-type RequestSocket interface {
+type accessSocket interface {
 	Socket() *cosnet.Socket
 }
 
-type authorizeFunc func(r Request, req values.Metadata, isMaster bool) (*session.Data, error)
+type accessFunc func(r Request, req values.Metadata, isMaster bool) (*session.Data, error)
 
-type authorizeManager struct {
-	dict map[options.OAuthType]authorizeFunc
+type accessManager struct {
+	dict map[options.OAuthType]accessFunc
 }
 
-func (this *authorizeManager) Register(l options.OAuthType, f authorizeFunc) {
+func (this *accessManager) Register(l options.OAuthType, f accessFunc) {
 	if this.dict == nil {
-		this.dict = make(map[options.OAuthType]authorizeFunc)
+		this.dict = make(map[options.OAuthType]accessFunc)
 	}
 	this.dict[l] = f
 }
 
-func (this *authorizeManager) oauth(r Request, req values.Metadata) (p *session.Data, err error) {
-	if p, err = r.Data(); err != nil {
+func (this *accessManager) oauth(r Request, req values.Metadata) (p *session.Data, err error) {
+	if p, err = r.Cookie(); err != nil {
 		return nil, values.Parse(err)
 	} else if p == nil {
 		return nil, errors.ErrLogin
@@ -49,11 +49,11 @@ func (this *authorizeManager) oauth(r Request, req values.Metadata) (p *session.
 }
 
 // OAuthTypeNone 普通接口
-func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
-	if p, _ = r.Data(); p != nil {
+func (this *accessManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+	if p, _ = r.Cookie(); p != nil {
 		p.KeepAlive()
 	}
-	if f, ok := r.(RequestSocket); ok {
+	if f, ok := r.(accessSocket); ok {
 		sock := f.Socket()
 		req[options.ServiceSocketId] = fmt.Sprintf("%d", sock.Id())
 	}
@@ -62,7 +62,7 @@ func (this *authorizeManager) OAuthTypeNone(r Request, req values.Metadata, isMa
 }
 
 // OAuthTypeOAuth 账号登录
-func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *accessManager) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (this *authorizeManager) OAuthTypeOAuth(r Request, req values.Metadata, isM
 }
 
 // OAuthTypeSelect 必须选择角色
-func (this *authorizeManager) OAuthTypeSelect(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *accessManager) OAuthTypeSelect(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -95,11 +95,11 @@ func (this *authorizeManager) OAuthTypeSelect(r Request, req values.Metadata, is
 }
 
 // IsMaster 是GM
-func (this *authorizeManager) IsMaster(p *session.Data) (err error) {
+func (this *accessManager) IsMaster(p *session.Data) (err error) {
 	if p == nil {
 		return errors.ErrNeedGameMaster
 	}
-	if gm := p.GetInt32(options.ServiceMetadataMaster); gm == 0 {
+	if gm := p.GetInt32(options.ServiceMetadataSuperuser); gm == 0 {
 		err = errors.ErrNeedGameMaster
 	}
 	return

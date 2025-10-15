@@ -1,10 +1,11 @@
 package players
 
 import (
+	"sync"
+
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
-	"sync"
 )
 
 var Players = players{Map: sync.Map{}}

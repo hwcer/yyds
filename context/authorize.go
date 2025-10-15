@@ -16,6 +16,7 @@ type Token struct {
 	Guid      string `json:"openid"`
 	Appid     string `json:"appid"`
 	Expire    int64  `json:"expire"`
+	Superuser bool   `json:"superuser"`
 	Developer bool   `json:"developer"`
 }
 
@@ -27,8 +28,18 @@ type Authorize struct {
 
 func (this *Authorize) Verify() (r *Token, err error) {
 	r = &Token{}
+	//是否开启GM
+	if this.Secret != "" {
+		if options.Options.Superuser == "" {
+			return nil, errors.New("GM commands are disabled")
+		}
+		if this.Secret != options.Options.Superuser {
+			return nil, errors.New("GM commands error")
+		}
+		r.Superuser = true
+	}
 	//开发者模式,GM指令
-	if this.Guid != "" && options.Options.Developer {
+	if this.Guid != "" && (r.Superuser || options.Options.Developer) {
 		if err = this.validateAccountComprehensive(this.Guid); err != nil {
 			return
 		}

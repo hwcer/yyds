@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -15,57 +16,59 @@ import (
 
 type Request interface {
 	Path() (string, error)
-	Data() (*session.Data, error)
-	Login(guid string, value values.Values) error
+	Login(guid string, value values.Values) error //登录
+	Logout() error                                //退出登录
+	Cookie() (*session.Data, error)               //当前登录信息
+	Binder() binder.Binder
 	Buffer() (buf *bytes.Buffer, err error)
-	Delete() error
 	Metadata() values.Metadata
 	RemoteAddr() string
 }
 
-// request rpc转发,返回实际转发的servicePath
-func request(p *session.Data, servicePath, serviceMethod string, args []byte, req, res values.Metadata, reply any) error {
-	if options.Gate.Prefix != "" {
-		serviceMethod = registry.Join(options.Gate.Prefix, serviceMethod)
+func oauth(h Request) ([]byte, error) {
+	if Options.OAuth == "" {
+		b := h.Binder()
+		return b.Marshal(values.Message{})
 	}
-	if p != nil {
-		if serviceAddress := p.GetString(options.GetServiceSelectorAddress(servicePath)); serviceAddress != "" {
-			req.Set(options.SelectorAddress, serviceAddress)
-		}
-	}
-
-	return client.CallWithMetadata(req, res, servicePath, serviceMethod, args, reply)
+	return caller(h, Options.OAuth)
 }
 
-func proxy(h Request) ([]byte, error) {
-	path, err := h.Path()
-	if err != nil {
-		return nil, err
-	}
+func caller(h Request, path string) ([]byte, error) {
 	req := h.Metadata()
 	res := make(values.Metadata)
 	var p *session.Data
-	servicePath, serviceMethod, err := Router(path, req)
+	servicePath, serviceMethod, err := Options.Router(path, req)
 	if err != nil {
 		return nil, err
 	}
+
 	l, s := options.OAuth.Get(servicePath, serviceMethod)
 	isMaster := options.OAuth.IsMaster(s)
-	if f, ok := Authorize.dict[l]; !ok {
+	if f, ok := Access.dict[l]; !ok {
 		return nil, fmt.Errorf("unknown authorization type: %d", l)
 	} else if p, err = f(h, req, isMaster); err != nil {
 		return nil, err
 	}
 
 	req.Set(options.ServicePlayerGateway, cosrpc.Address().Encode())
-
-	buff, err := h.Buffer()
-	if err != nil {
+	//使用用户级别微服务筛选器
+	if p != nil {
+		if serviceAddress := p.GetString(options.GetServiceSelectorAddress(servicePath)); serviceAddress != "" {
+			req.Set(options.SelectorAddress, serviceAddress)
+		}
+	}
+	var buff *bytes.Buffer
+	if buff, err = h.Buffer(); err != nil {
 		return nil, err
 	}
 	reply := make([]byte, 0)
 	Emitter.emit(EventTypeRequest, p, s, req)
-	if err = request(p, servicePath, serviceMethod, buff.Bytes(), req, res, &reply); err != nil {
+
+	if options.Gate.Prefix != "" {
+		serviceMethod = registry.Join(options.Gate.Prefix, serviceMethod)
+	}
+
+	if err = client.CallWithMetadata(req, res, servicePath, serviceMethod, buff.Bytes(), &reply); err != nil {
 		return nil, err
 	}
 	if len(res) == 0 {
@@ -81,7 +84,7 @@ func proxy(h Request) ([]byte, error) {
 	}
 	//退出登录
 	if _, ok := res[options.ServicePlayerLogout]; ok {
-		if err = h.Delete(); err == nil && p != nil {
+		if err = h.Logout(); err == nil && p != nil {
 			players.Delete(p)
 		}
 		p = nil

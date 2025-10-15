@@ -10,7 +10,6 @@ type game = struct {
 	Local   string `json:"local"`   //内网IP
 	Redis   string `json:"redis"`   //排行榜
 	Mongodb string `json:"mongodb"` //数据库
-	Secret  string `json:"secret"`  //GM秘钥
 	Address string `json:"address"` //网关地址
 	//Developer bool   `json:"developer"`
 }

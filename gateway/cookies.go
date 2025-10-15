@@ -1,11 +1,12 @@
 package gateway
 
 import (
+	"strings"
+
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/gateway/channel"
 	"github.com/hwcer/yyds/options"
-	"strings"
 )
 
 var cookiesAllowableName = map[string]struct{}{}
@@ -17,7 +18,7 @@ func SetCookieName(k string) {
 func init() {
 	SetCookieName(options.ServiceMetadataUID)
 	SetCookieName(options.ServiceMetadataServerId)
-	SetCookieName(options.ServiceMetadataMaster)
+	SetCookieName(options.ServiceMetadataSuperuser)
 }
 
 func CookiesFilter(cookie values.Metadata) values.Values {
