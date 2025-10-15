@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
@@ -47,7 +48,7 @@ func (this *HttpServer) init() (err error) {
 	access.Headers(strings.Join(Headers, ","))
 	this.Server.Use(access.Handle)
 	this.Server.Use(this.middleware)
-	this.Server.Register("oauth", this.oauth)
+	this.Server.Register(Options.OAuth, this.oauth)
 	this.Server.Register("*", this.proxy, http.MethodPost)
 
 	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
@@ -136,20 +137,6 @@ func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
 		return err
 	}
 
-	//if v := c.GetString(session.Options.Name, cosweb.RequestDataTypeContext); v != "" {
-	//	s := string(reply)
-	//	if strings.Contains(s, options.Cookies.Name) {
-	//		s = strings.Replace(s, options.Cookies.Name, session.Options.Name, -1)
-	//		s = strings.Replace(s, options.Cookies.Value, v, -1)
-	//		reply = []byte(s)
-	//	} else if strings.HasPrefix(s, "{") {
-	//		sb := strings.Builder{}
-	//		sb.WriteString("{")
-	//		sb.WriteString(fmt.Sprintf(`"cookie":{"key":"%v","val":"%v"},`, session.Options.Name, v))
-	//		sb.WriteString(s[1:])
-	//		reply = []byte(sb.String())
-	//	}
-	//}
 	b := h.Binder()
 	if b == nil {
 		return errors.New("unknown accept content type")
@@ -160,6 +147,7 @@ func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
 type httpProxy struct {
 	*cosweb.Context
 	uri      *url.URL
+	cookie   *http.Cookie
 	metadata values.Metadata
 }
 
@@ -191,6 +179,7 @@ func (this *httpProxy) Login(guid string, value values.Values) (err error) {
 	header.Set("X-Forwarded-Key", session.Options.Name)
 	header.Set("X-Forwarded-Val", cookie.Value)
 	this.Context.Set(session.Options.Name, cookie.Value)
+	this.cookie = cookie
 	return
 }
 
@@ -225,6 +214,11 @@ func (this *httpProxy) Metadata() values.Metadata {
 	}
 	if t := this.getContentType(binder.HeaderAccept, ","); t != "" {
 		this.metadata.Set(binder.HeaderAccept, t)
+	}
+	if this.cookie != nil {
+		cookie := map[string]string{"name": this.cookie.Name, "value": this.cookie.Value}
+		b, _ := json.Marshal(cookie)
+		this.metadata.Set(options.ServiceMetadataCookieValue, string(b))
 	}
 	return this.metadata
 }

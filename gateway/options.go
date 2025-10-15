@@ -14,7 +14,7 @@ func init() {
 		if Options.OAuth == "" {
 			return nil
 		}
-		servicePath, serviceMethod, err := Options.Router(Options.OAuth, nil)
+		servicePath, serviceMethod, err := Options.Router(Options.Login, nil)
 		if err != nil {
 			return err
 		}
@@ -26,10 +26,12 @@ func init() {
 type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)
 
 var Options = struct {
-	OAuth  string //业务服登录
+	OAuth  string //网关登录
+	Login  string //业务服登录
 	Router router //路由处理规则
 }{
-	OAuth:  "game/oauth",
+	OAuth:  "oauth",
+	Login:  "game/oauth",
 	Router: defaultRouter,
 }
 

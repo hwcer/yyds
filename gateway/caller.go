@@ -26,11 +26,11 @@ type Request interface {
 }
 
 func oauth(h Request) ([]byte, error) {
-	if Options.OAuth == "" {
+	if Options.Login == "" {
 		b := h.Binder()
 		return b.Marshal(values.Message{})
 	}
-	return caller(h, Options.OAuth)
+	return caller(h, Options.Login)
 }
 
 func caller(h Request, path string) ([]byte, error) {

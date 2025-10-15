@@ -35,7 +35,7 @@ func (this *TcpServer) init() error {
 
 	service := cosnet.Service("")
 	_ = service.Register(this.proxy, "*")
-	_ = service.Register(this.login)
+	_ = service.Register(this.oauth, Options.OAuth)
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (this *TcpServer) Accept(ln net.Listener) error {
 	logger.Trace("网关长连接启动：%v", options.Gate.Address)
 	return nil
 }
-func (this *TcpServer) login(c *cosnet.Context) (err error) {
+func (this *TcpServer) oauth(c *cosnet.Context) (err error) {
 	authorize := &context.Authorize{}
 	if err = c.Bind(&authorize); err != nil {
 		return c.Reply(values.Error(err))
