@@ -113,8 +113,6 @@ func (this *Module) Start() (err error) {
 
 	// websocket
 	if p.Has(options.ProtocolTypeWSS) {
-		//this.WebSocket.Verify = WSVerify
-		//this.WebSocket.Accept = WSAccept
 		if p.Has(options.ProtocolTypeHTTP) {
 			err = coswss.Binding(HTTP.Server, options.Options.Gate.Websocket)
 		} else {

@@ -7,6 +7,7 @@ replace (
 	github.com/hwcer/cosnet v1.2.5 => ../modules/cosnet
 	github.com/hwcer/cosrpc v1.2.1 => ../modules/cosrpc
 	github.com/hwcer/cosweb v1.2.3 => ../modules/cosweb
+	github.com/hwcer/coswss v0.2.0 => ../modules/coswss
 )
 
 require (

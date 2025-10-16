@@ -141,8 +141,8 @@ func (this *HttpServer) proxy(c *cosweb.Context) any {
 
 type httpProxy struct {
 	*cosweb.Context
-	uri      *url.URL
-	cookie   *http.Cookie
+	uri *url.URL
+	//cookie   *http.Cookie
 	metadata values.Metadata
 }
 
@@ -165,7 +165,8 @@ func (this *httpProxy) Login(guid string, value values.Values) (err error) {
 	header.Set("X-Forwarded-Key", session.Options.Name)
 	header.Set("X-Forwarded-Val", cookie.Value)
 	this.Context.Set(session.Options.Name, cookie.Value)
-	this.cookie = cookie
+	//this.cookie = cookie
+
 	return
 }
 
@@ -174,7 +175,7 @@ func (this *httpProxy) Logout() error {
 }
 
 func (this *httpProxy) Cookie() (*session.Data, error) {
-	token := this.Context.GetString(session.Options.Name, cosweb.RequestDataTypeCookie, cosweb.RequestDataTypeQuery, cosweb.RequestDataTypeHeader)
+	token := this.Context.GetString(session.Options.Name, cosweb.RequestDataTypeContext, cosweb.RequestDataTypeCookie, cosweb.RequestDataTypeQuery, cosweb.RequestDataTypeHeader)
 	if token == "" {
 		return nil, values.Error("token empty")
 	}
@@ -201,8 +202,8 @@ func (this *httpProxy) Metadata() values.Metadata {
 	if t := this.getContentType(binder.HeaderAccept, ","); t != "" {
 		this.metadata.Set(binder.HeaderAccept, t)
 	}
-	if this.cookie != nil {
-		cookie := map[string]string{"name": this.cookie.Name, "value": this.cookie.Value}
+	if value := this.Context.GetString(session.Options.Name, cosweb.RequestDataTypeContext); value != "" {
+		cookie := map[string]string{"name": session.Options.Name, "value": value}
 		b, _ := json.Marshal(cookie)
 		this.metadata.Set(options.ServiceMetadataCookieValue, string(b))
 	}
