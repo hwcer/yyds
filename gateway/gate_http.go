@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
 	"net/http"
 	"net/url"
@@ -47,7 +46,6 @@ func (this *HttpServer) init() (err error) {
 	access.Methods(Method...)
 	access.Headers(strings.Join(Headers, ","))
 	this.Server.Use(access.Handle)
-	this.Server.Use(this.middleware)
 	this.Server.Register(Options.OAuth, this.oauth)
 	this.Server.Register("*", this.proxy, http.MethodPost)
 
@@ -58,15 +56,6 @@ func (this *HttpServer) init() (err error) {
 		}
 	}
 	return nil
-}
-
-func (this *HttpServer) middleware(c *cosweb.Context, next cosweb.Next) (err error) {
-	// 针对Unity的特殊头设置
-	h := c.Header()
-	h.Set("X-Content-Type-Options", "nosniff")
-	h.Set("X-Frame-Options", "DENY")
-	h.Set("X-XSS-Protection", "1; mode=block")
-	return next()
 }
 
 func (this *HttpServer) Listen(address string) (err error) {
@@ -91,9 +80,9 @@ func (this *HttpServer) Accept(ln net.Listener) (err error) {
 	}
 	return
 }
-func (this *HttpServer) oauth(c *cosweb.Context) (err error) {
+func (this *HttpServer) oauth(c *cosweb.Context) any {
 	authorize := &context.Authorize{}
-	if err = c.Bind(&authorize); err != nil {
+	if err := c.Bind(&authorize); err != nil {
 		return err
 	}
 	token, err := authorize.Verify()
@@ -109,15 +98,19 @@ func (this *HttpServer) oauth(c *cosweb.Context) (err error) {
 		return err
 	}
 
-	var v []byte
+	var v any
 	v, err = oauth(&h)
-	return c.Bytes(cosweb.ContentType(h.Binder().String()), v)
+	if err != nil {
+		return err
+	}
+	return v
+	//return c.Bytes(cosweb.ContentType(h.Binder().String()), v)
 }
 
-func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
+func (this *HttpServer) proxy(c *cosweb.Context) any {
 	defer func() {
 		if r := recover(); r != nil {
-			err = values.Errorf(0, r)
+			cosweb.HTTPErrorHandler(c, r)
 		}
 	}()
 	startTime := time.Now()
@@ -136,12 +129,14 @@ func (this *HttpServer) proxy(c *cosweb.Context) (err error) {
 	if reply, err = caller(h, p); err != nil {
 		return err
 	}
-
-	b := h.Binder()
-	if b == nil {
-		return errors.New("unknown accept content type")
-	}
-	return c.Bytes(cosweb.ContentType(b.String()), reply)
+	return reply
+	//
+	//b := h.Binder()
+	//if b == nil {
+	//	return c.Errorf("unknown accept content type")
+	//}
+	//
+	//return c.Bytes(cosweb.ContentType(b.String()), reply)
 }
 
 type httpProxy struct {
@@ -149,15 +144,6 @@ type httpProxy struct {
 	uri      *url.URL
 	cookie   *http.Cookie
 	metadata values.Metadata
-}
-
-func (this *httpProxy) Binder() binder.Binder {
-	var t string
-	meta := this.Metadata()
-	if t = meta[binder.HeaderAccept]; t == "" {
-		t = meta[binder.HeaderContentType]
-	}
-	return binder.Get(t)
 }
 
 func (this *httpProxy) Path() (string, error) {

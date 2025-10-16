@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -19,16 +18,14 @@ type Request interface {
 	Login(guid string, value values.Values) error //登录
 	Logout() error                                //退出登录
 	Cookie() (*session.Data, error)               //当前登录信息
-	Binder() binder.Binder
 	Buffer() (buf *bytes.Buffer, err error)
 	Metadata() values.Metadata
 	RemoteAddr() string
 }
 
-func oauth(h Request) ([]byte, error) {
+func oauth(h Request) (any, error) {
 	if Options.Login == "" {
-		b := h.Binder()
-		return b.Marshal(values.Message{})
+		return true, nil
 	}
 	return caller(h, Options.Login)
 }

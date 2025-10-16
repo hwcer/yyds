@@ -69,7 +69,7 @@ func (this *TcpServer) oauth(c *cosnet.Context) (err error) {
 	if err = h.Login(token.Guid, vs); err != nil {
 		return c.Reply(values.Error(err))
 	}
-	var r []byte
+	var r any
 	if r, err = oauth(&h); err != nil {
 		return c.Reply(values.Error(err))
 	}
@@ -124,9 +124,7 @@ func (this *socketProxy) Logout() error {
 	this.Context.Socket.Close()
 	return nil
 }
-func (this *socketProxy) Binder() binder.Binder {
-	return this.Context.Message.Binder()
-}
+
 func (this *socketProxy) Socket() *cosnet.Socket {
 	return this.Context.Socket
 }

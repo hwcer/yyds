@@ -2,6 +2,13 @@ module github.com/hwcer/yyds
 
 go 1.24.0
 
+replace (
+	github.com/hwcer/cosgo v1.5.10 => ../modules/cosgo
+	github.com/hwcer/cosnet v1.2.5 => ../modules/cosnet
+	github.com/hwcer/cosrpc v1.2.1 => ../modules/cosrpc
+	github.com/hwcer/cosweb v1.2.3 => ../modules/cosweb
+)
+
 require (
 	github.com/hwcer/cosgo v1.5.10
 	github.com/hwcer/cosmo v1.2.2
