@@ -63,8 +63,8 @@ func (this *TcpServer) oauth(c *cosnet.Context) (err error) {
 	}
 	h := socketProxy{Context: c}
 	vs := values.Values{}
-	if token.Superuser {
-		vs.Set(options.ServiceMetadataSuperuser, "1")
+	if token.Developer {
+		vs.Set(options.ServiceMetadataDeveloper, "1")
 	}
 	if err = h.Login(token.Guid, vs); err != nil {
 		return c.Reply(values.Error(err))

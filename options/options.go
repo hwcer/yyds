@@ -62,8 +62,8 @@ var Options = &struct {
 	Verify    int8              `json:"verify"`    //平台验证方式,0-不验证，1-仅仅验证签名，2-严格模式
 	Binder    string            `json:"binder"`    //公网请求默认序列化方式，默认JSON
 	Service   map[string]string `json:"service"`   //
-	Developer bool              `json:"developer"` //开发者模式，可以使用账号直接登录
-	Superuser string            `json:"superuser"` //超级用户秘钥,开启游戏内一些功能
+	Developer string            `json:"developer"` //超级用户秘钥，可以使用账号直接登录,开启游戏内一些功能
+	//Superuser string            `json:"superuser"` //超级用户秘钥,开启游戏内一些功能
 	//TimeReset int64             `json:"TimeReset"` //每日几点重置时间
 	Game *game           `json:"game"`
 	Gate *gate           `json:"gate"`

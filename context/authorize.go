@@ -3,10 +3,9 @@ package context
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 	"time"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/options"
@@ -16,7 +15,6 @@ type Token struct {
 	Guid      string `json:"openid"`
 	Appid     string `json:"appid"`
 	Expire    int64  `json:"expire"`
-	Superuser bool   `json:"superuser"`
 	Developer bool   `json:"developer"`
 }
 
@@ -30,16 +28,16 @@ func (this *Authorize) Verify() (r *Token, err error) {
 	r = &Token{}
 	//是否开启GM
 	if this.Secret != "" {
-		if options.Options.Superuser == "" {
+		if options.Options.Developer == "" {
 			return nil, errors.New("GM commands are disabled")
 		}
-		if this.Secret != options.Options.Superuser {
+		if this.Secret != options.Options.Developer {
 			return nil, errors.New("GM commands error")
 		}
-		r.Superuser = true
+		r.Developer = true
 	}
 	//开发者模式,GM指令
-	if this.Guid != "" && (r.Superuser || options.Options.Developer) {
+	if this.Guid != "" && r.Developer {
 		if err = this.validateAccountComprehensive(this.Guid); err != nil {
 			return
 		}
@@ -75,23 +73,11 @@ func (this *Authorize) Verify() (r *Token, err error) {
 
 // 综合验证函数
 func (this *Authorize) validateAccountComprehensive(account string) error {
-	// 检查长度
-	if utf8.RuneCountInString(account) < 2 || utf8.RuneCountInString(account) > 20 {
-		return errors.New("账号长度必须在2-20个字符之间")
-	}
-
-	// 检查是否包含不可见字符
-	for _, char := range account {
-		if !unicode.IsGraphic(char) || unicode.IsControl(char) {
-			return errors.New("账号不能包含不可见字符或控制字符")
-		}
-	}
-
 	// 检查是否只包含允许的字符（可选）
-	pattern := `^[a-zA-Z0-9_\-\@\.]+$`
+	pattern := `^[a-zA-Z0-9~!@#$%^&*()_+\-=\[\]\\{}|;':",./<>?]{2,64}$`
 	matched, _ := regexp.MatchString(pattern, account)
 	if !matched {
-		return errors.New("账号只能包含字母 数字 @ . - _字符")
+		return fmt.Errorf("账号规则 %s", pattern)
 	}
 
 	return nil

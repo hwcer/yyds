@@ -99,7 +99,7 @@ func (this *accessManager) IsMaster(p *session.Data) (err error) {
 	if p == nil {
 		return errors.ErrNeedGameMaster
 	}
-	if gm := p.GetInt32(options.ServiceMetadataSuperuser); gm == 0 {
+	if gm := p.GetInt32(options.ServiceMetadataDeveloper); gm == 0 {
 		err = errors.ErrNeedGameMaster
 	}
 	return

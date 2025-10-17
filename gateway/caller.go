@@ -24,10 +24,10 @@ type Request interface {
 }
 
 func oauth(h Request) (any, error) {
-	if Options.Login == "" {
+	if Options.Verify == "" {
 		return true, nil
 	}
-	return caller(h, Options.Login)
+	return caller(h, Options.Verify)
 }
 
 func caller(h Request, path string) ([]byte, error) {

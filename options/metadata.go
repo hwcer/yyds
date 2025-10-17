@@ -1,12 +1,12 @@
 package options
 
 const (
-	ServiceMetadataUID         = "uid"
-	ServiceMetadataGUID        = "guid"
-	ServiceMetadataSuperuser   = "gm" //GM身份
-	ServiceMetadataServerId    = "sid"
-	ServiceMetadataRequestId   = "rid"
-	ServiceMetadataCookieValue = "cookie"
+	ServiceMetadataUID       = "uid"
+	ServiceMetadataGUID      = "guid"
+	ServiceMetadataDeveloper = "dev" //开发者身份
+	ServiceMetadataServerId  = "sid"
+	ServiceMetadataRequestId = "rid"
+	ServiceMetadataCookie    = "cookie"
 
 	ServiceSocketId = "_sock_id"
 	ServiceClientIp = "_client_ip"

@@ -18,7 +18,7 @@ func SetCookieName(k string) {
 func init() {
 	SetCookieName(options.ServiceMetadataUID)
 	SetCookieName(options.ServiceMetadataServerId)
-	SetCookieName(options.ServiceMetadataSuperuser)
+	SetCookieName(options.ServiceMetadataDeveloper)
 }
 
 func CookiesFilter(cookie values.Metadata) values.Values {
