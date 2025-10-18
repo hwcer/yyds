@@ -71,7 +71,7 @@ func (this *players) Delete(p *session.Data) bool {
 	return true
 }
 
-func (this *players) Login(guid string, value values.Values, callback loginCallback) (err error) {
+func (this *players) Login(guid string, value values.Values, callback loginCallback) (token string, err error) {
 	r := session.NewData(guid, value)
 	r.Lock()
 	defer r.Unlock()
@@ -82,8 +82,17 @@ func (this *players) Login(guid string, value values.Values, callback loginCallb
 		defer p.Unlock()
 		p.Merge(r, true)
 		r = p
+
+	}
+	ss := session.New(r)
+	if loaded {
+		//刷新TOKEN 强制其他TOKEN失效
+		token, err = ss.Token()
 	} else {
-		err = session.Options.Storage.New(r)
+		token, err = ss.New(r)
+	}
+	if err != nil {
+		return "", err
 	}
 	if callback != nil {
 		err = callback(r, loaded)

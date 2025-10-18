@@ -144,15 +144,16 @@ func (this *httpProxy) Path() (string, error) {
 }
 
 func (this *httpProxy) Login(guid string, value values.Values) (err error) {
-	var p *session.Data
-	err = players.Login(guid, value, func(d *session.Data, _ bool) error {
-		p = d
+	//var p *session.Data
+	var token string
+	token, err = players.Login(guid, value, func(d *session.Data, _ bool) error {
+		//p = d
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: p.Id()}
+	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: token}
 	http.SetCookie(this.Context.Response, cookie)
 	header := this.Header()
 	header.Set("X-Forwarded-Key", session.Options.Name)

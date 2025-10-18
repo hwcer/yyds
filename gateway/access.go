@@ -40,7 +40,7 @@ func (this *accessManager) Register(l options.OAuthType, f accessFunc) {
 
 func (this *accessManager) oauth(r Request, req values.Metadata) (p *session.Data, err error) {
 	if p, err = r.Cookie(); err != nil {
-		return nil, values.Parse(err)
+		return nil, err
 	} else if p == nil {
 		return nil, errors.ErrLogin
 	}
@@ -50,8 +50,10 @@ func (this *accessManager) oauth(r Request, req values.Metadata) (p *session.Dat
 
 // OAuthTypeNone 普通接口
 func (this *accessManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
-	if p, _ = r.Cookie(); p != nil {
+	if p, err = r.Cookie(); err == nil {
 		p.KeepAlive()
+	} else {
+		err = nil //仅仅用来刷新TOKEN
 	}
 	if f, ok := r.(accessSocket); ok {
 		sock := f.Socket()

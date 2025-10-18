@@ -9,7 +9,7 @@ import (
 )
 
 func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Values) error {
-	err := this.Login(guid, value, func(data *session.Data, loaded bool) error {
+	_, err := this.Login(guid, value, func(data *session.Data, loaded bool) error {
 		if loaded {
 			this.replace(data, sock)
 		}

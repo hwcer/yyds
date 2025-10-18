@@ -26,7 +26,7 @@ func Delete(p *session.Data) bool {
 	return Players.Delete(p)
 }
 
-func Login(guid string, value values.Values, callback loginCallback) (err error) {
+func Login(guid string, value values.Values, callback loginCallback) (token string, err error) {
 	return Players.Login(guid, value, callback)
 }
 
