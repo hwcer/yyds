@@ -13,7 +13,7 @@ func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Valu
 		if loaded {
 			this.replace(data, sock)
 		}
-		data.Set(SessionPlayerSocketName, sock, true)
+		data.Set(SessionPlayerSocketName, sock)
 		sock.OAuth(data)
 		return nil
 	})
@@ -47,7 +47,7 @@ func (this *players) Disconnect(sock *cosnet.Socket) (err error) {
 	data.Lock()
 	defer data.Unlock()
 	if s := this.Socket(data); s != nil && s.Id() == sock.Id() {
-		data.Delete(SessionPlayerSocketName, true)
+		data.Delete(SessionPlayerSocketName)
 	}
 	return
 }

@@ -71,25 +71,24 @@ func (this *players) Delete(p *session.Data) bool {
 	return true
 }
 
+// TODO
 func (this *players) Login(guid string, value values.Values, callback loginCallback) (token string, err error) {
 	r := session.NewData(guid, value)
-	r.Lock()
-	defer r.Unlock()
+	//r.Lock()
+	//defer r.Unlock()
 	i, loaded := this.Map.LoadOrStore(guid, r)
 	if loaded {
 		p, _ := i.(*session.Data)
-		p.Lock()
-		defer p.Unlock()
-		p.Merge(r, true)
+		//p.Lock()
+		//defer p.Unlock()
+		p.Update(value)
 		r = p
-
 	}
 	ss := session.New(r)
-	if loaded {
-		//刷新TOKEN 强制其他TOKEN失效
-		token, err = ss.Token()
-	} else {
+	if !loaded {
 		token, err = ss.New(r)
+	} else {
+		token, err = ss.Refresh() //刷新TOKEN 强制其他TOKEN失效
 	}
 	if err != nil {
 		return "", err
