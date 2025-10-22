@@ -1,9 +1,13 @@
 package gateway
 
 import (
+	"encoding/json"
 	"fmt"
+	"regexp"
+	"time"
 
 	"github.com/hwcer/cosgo/session"
+	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/yyds/errors"
@@ -12,7 +16,7 @@ import (
 
 // 接口权限判定 必须注册所有 options.OAuthType
 
-var Access = accessManager{}
+var Access = access{}
 
 func init() {
 	Access.Register(options.OAuthTypeNone, Access.OAuthTypeNone)
@@ -27,18 +31,18 @@ type accessSocket interface {
 
 type accessFunc func(r Request, req values.Metadata, isMaster bool) (*session.Data, error)
 
-type accessManager struct {
+type access struct {
 	dict map[options.OAuthType]accessFunc
 }
 
-func (this *accessManager) Register(l options.OAuthType, f accessFunc) {
+func (this *access) Register(l options.OAuthType, f accessFunc) {
 	if this.dict == nil {
 		this.dict = make(map[options.OAuthType]accessFunc)
 	}
 	this.dict[l] = f
 }
 
-func (this *accessManager) oauth(r Request, req values.Metadata) (p *session.Data, err error) {
+func (this *access) oauth(r Request, req values.Metadata) (p *session.Data, err error) {
 	if p, err = r.Cookie(); err != nil {
 		return nil, err
 	} else if p == nil {
@@ -48,7 +52,7 @@ func (this *accessManager) oauth(r Request, req values.Metadata) (p *session.Dat
 }
 
 // OAuthTypeNone 普通接口
-func (this *accessManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *access) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if f, ok := r.(accessSocket); ok {
 		sock := f.Socket()
 		req[options.ServiceSocketId] = fmt.Sprintf("%d", sock.Id())
@@ -58,7 +62,7 @@ func (this *accessManager) OAuthTypeNone(r Request, req values.Metadata, isMaste
 }
 
 // OAuthTypeOAuth 账号登录
-func (this *accessManager) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *access) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -75,7 +79,7 @@ func (this *accessManager) OAuthTypeOAuth(r Request, req values.Metadata, isMast
 }
 
 // OAuthTypeSelect 必须选择角色
-func (this *accessManager) OAuthTypeSelect(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *access) OAuthTypeSelect(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -91,7 +95,7 @@ func (this *accessManager) OAuthTypeSelect(r Request, req values.Metadata, isMas
 }
 
 // IsMaster 是GM
-func (this *accessManager) IsMaster(p *session.Data) (err error) {
+func (this *access) IsMaster(p *session.Data) (err error) {
 	if p == nil {
 		return errors.ErrNeedGameMaster
 	}
@@ -99,4 +103,76 @@ func (this *accessManager) IsMaster(p *session.Data) (err error) {
 		err = errors.ErrNeedGameMaster
 	}
 	return
+}
+
+type Token struct {
+	Guid      string `json:"openid"`
+	Appid     string `json:"appid"`
+	Expire    int64  `json:"expire"`
+	Developer bool   `json:"developer"`
+}
+
+type Authorize struct {
+	Guid   string `json:"guid"`
+	Access string `json:"access"`
+	Secret string `json:"secret"`
+}
+
+func (this *Authorize) Verify() (r *Token, err error) {
+	r = &Token{}
+	//是否开启GM
+	if this.Secret != "" {
+		if options.Options.Developer == "" {
+			return nil, errors.New("GM commands are disabled")
+		}
+		if this.Secret != options.Options.Developer {
+			return nil, errors.New("GM commands error")
+		}
+		r.Developer = true
+	}
+	//开发者模式,GM指令
+	if this.Guid != "" && r.Developer {
+		if err = this.validateAccountComprehensive(this.Guid); err != nil {
+			return
+		}
+		r.Guid = this.Guid
+		r.Developer = true
+		return
+	}
+	//正常游戏模式
+	if this.Access == "" {
+		return nil, session.ErrorSessionEmpty
+	}
+	if options.Options.Secret == "" {
+		return nil, session.Errorf("Options.Secret is empty")
+	}
+	var s string
+	if s, err = utils.Crypto.GCMDecrypt(this.Access, options.Options.Secret, nil); err != nil {
+		return nil, session.Errorf(err)
+	}
+	if err = json.Unmarshal([]byte(s), r); err != nil {
+		return nil, session.Errorf(err)
+	}
+	if r.Guid == "" {
+		return nil, session.Errorf("access guid empty")
+	}
+	if r.Expire > 0 && r.Expire < time.Now().Unix() {
+		return nil, session.ErrorSessionExpired
+	}
+	if r.Appid != options.Options.Appid {
+		return nil, session.Errorf("access appid error")
+	}
+	return
+}
+
+// 综合验证函数
+func (this *Authorize) validateAccountComprehensive(account string) error {
+	// 检查是否只包含允许的字符（可选）
+	pattern := `^[a-zA-Z0-9~!@#$%^&*()_+\-=\[\]\\{}|;':",./<>?]{2,64}$`
+	matched, _ := regexp.MatchString(pattern, account)
+	if !matched {
+		return fmt.Errorf("账号规则 %s", pattern)
+	}
+
+	return nil
 }

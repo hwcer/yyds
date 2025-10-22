@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/options"
 )
@@ -47,26 +48,26 @@ func (this *Authorize) Verify() (r *Token, err error) {
 	}
 	//正常游戏模式
 	if this.Access == "" {
-		return nil, errors.New("access empty")
+		return nil, session.ErrorSessionEmpty
 	}
 	if options.Options.Secret == "" {
-		return nil, errors.New("未开启平台授权登录方式")
+		return nil, session.Errorf("Options.Secret is empty")
 	}
 	var s string
 	if s, err = utils.Crypto.GCMDecrypt(this.Access, options.Options.Secret, nil); err != nil {
-		return
+		return nil, session.Errorf(err)
 	}
 	if err = json.Unmarshal([]byte(s), r); err != nil {
-		return
+		return nil, session.Errorf(err)
 	}
 	if r.Guid == "" {
-		return nil, errors.New("openid empty")
+		return nil, session.Errorf("access guid empty")
 	}
 	if r.Expire > 0 && r.Expire < time.Now().Unix() {
-		return nil, errors.New("access expire")
+		return nil, session.ErrorSessionExpired
 	}
 	if r.Appid != options.Options.Appid {
-		return nil, errors.New("access error")
+		return nil, session.Errorf("access appid error")
 	}
 	return
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
@@ -81,7 +80,7 @@ func (this *HttpServer) Accept(ln net.Listener) (err error) {
 	return
 }
 func (this *HttpServer) oauth(c *cosweb.Context) any {
-	authorize := &context.Authorize{}
+	authorize := &Authorize{}
 	if err := c.Bind(&authorize); err != nil {
 		return err
 	}

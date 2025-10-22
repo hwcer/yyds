@@ -14,7 +14,6 @@ import (
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosnet/tcp"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
@@ -54,7 +53,7 @@ func (this *TcpServer) Accept(ln net.Listener) error {
 }
 func (this *TcpServer) oauth(c *cosnet.Context) any {
 	var err error
-	authorize := &context.Authorize{}
+	authorize := &Authorize{}
 	if err = c.Bind(&authorize); err != nil {
 		return err
 	}
