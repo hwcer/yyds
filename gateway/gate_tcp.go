@@ -33,7 +33,7 @@ func (this *TcpServer) init() error {
 	cosnet.Options.Heartbeat = 0
 	session.Heartbeat.On(cosnet.Heartbeat)
 
-	service := cosnet.Service("")
+	service := cosnet.Service()
 	_ = service.Register(this.proxy, "*")
 	_ = service.Register(this.oauth, Options.OAuth)
 	return nil
@@ -52,14 +52,15 @@ func (this *TcpServer) Accept(ln net.Listener) error {
 	logger.Trace("网关长连接启动：%v", options.Gate.Address)
 	return nil
 }
-func (this *TcpServer) oauth(c *cosnet.Context) (err error) {
+func (this *TcpServer) oauth(c *cosnet.Context) any {
+	var err error
 	authorize := &context.Authorize{}
 	if err = c.Bind(&authorize); err != nil {
-		return c.Reply(values.Error(err))
+		return err
 	}
 	token, err := authorize.Verify()
 	if err != nil {
-		return c.Reply(values.Error(err))
+		return err
 	}
 	h := socketProxy{Context: c}
 	vs := values.Values{}
@@ -67,28 +68,26 @@ func (this *TcpServer) oauth(c *cosnet.Context) (err error) {
 		vs.Set(options.ServiceMetadataDeveloper, "1")
 	}
 	if err = h.Login(token.Guid, vs); err != nil {
-		return c.Reply(values.Error(err))
+		return err
 	}
 	var r any
 	if r, err = oauth(&h); err != nil {
-		return c.Reply(values.Error(err))
+		return err
 	}
-	return c.Reply(r)
+	return r
 }
-func (this *TcpServer) proxy(c *cosnet.Context) error {
+func (this *TcpServer) proxy(c *cosnet.Context) any {
 	h := &socketProxy{Context: c}
 	p, err := h.Path()
 	if err != nil {
-		return c.Reply(values.Error(err))
+		return err
 	}
 	var b []byte
 	if b, err = caller(h, p); err != nil {
-		return c.Reply(values.Error(err))
+		return err
+	} else {
+		return b
 	}
-	if c.Message.Confirm() {
-		return c.Reply(b)
-	}
-	return nil
 }
 
 type socketProxy struct {
@@ -100,17 +99,15 @@ func (this *socketProxy) Path() (string, error) {
 	return r, err
 }
 func (this *socketProxy) Cookie() (*session.Data, error) {
-	i := this.Context.Socket.Data()
-	if i == nil {
-		return nil, nil
+	data := this.Context.Socket.Data()
+	if data == nil {
+		return nil, session.ErrorSessionNotExist
 	}
-	v, _ := i.(*session.Data)
-	return v, nil
+	return data, nil
 }
 
 func (this *socketProxy) Login(guid string, value values.Values) (err error) {
-	if i := this.Context.Socket.Data(); i != nil {
-		v, _ := i.(*session.Data)
+	if v := this.Context.Socket.Data(); v != nil {
 		if v.UUID() == guid {
 			return nil
 		} else {

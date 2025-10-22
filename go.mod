@@ -4,6 +4,7 @@ go 1.24.0
 
 replace (
 	github.com/hwcer/cosgo v1.5.12 => ../modules/cosgo
+	github.com/hwcer/cosnet v1.2.7 => ../modules/cosnet
 	github.com/hwcer/cosweb v1.2.5 => ../modules/cosweb
 )
 

@@ -10,8 +10,6 @@ import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
-	"github.com/hwcer/yyds/gateway/channel"
-	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 	"github.com/soheilhy/cmux"
 )
@@ -43,15 +41,9 @@ func (this *Module) Init() (err error) {
 	session.Heartbeat.Start()
 	//session
 	if options.Gate.Redis != "" {
-		//TODO players 管理
 		session.Options.Storage, err = session.NewRedis(options.Gate.Redis)
 	} else {
-		mem := session.NewMemory(options.Gate.Capacity)
-		mem.On(func(data *session.Data) {
-			_ = players.Delete(data)
-			channel.Release(data)
-		})
-		session.Options.Storage = mem
+		session.Options.Storage = session.NewMemory(options.Gate.Capacity)
 	}
 	if err != nil {
 		return err

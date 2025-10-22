@@ -13,7 +13,7 @@ func init() {
 	Register(&channelHandle{}, "channel", "%m")
 	channel.SendMessage = func(p *session.Data, path string, data []byte) {
 		if sock := players.Socket(p); sock != nil {
-			_ = sock.Send(0, path, data)
+			sock.Send(0, path, data)
 		}
 	}
 }

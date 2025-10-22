@@ -5,20 +5,29 @@ import (
 
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/registry"
+	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/yyds/gateway/channel"
+	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
 
 func init() {
 	cosgo.On(cosgo.EventTypStarted, func() error {
-		if Options.Verify == "" {
-			return nil
+		//设置登录权限
+		if Options.Verify != "" {
+			servicePath, serviceMethod, err := Options.Router(Options.Verify, nil)
+			if err != nil {
+				return err
+			}
+			options.OAuth.Set(servicePath, serviceMethod, options.OAuthTypeOAuth)
 		}
-		servicePath, serviceMethod, err := Options.Router(Options.Verify, nil)
-		if err != nil {
-			return err
-		}
-		options.OAuth.Set(servicePath, serviceMethod, options.OAuthTypeOAuth)
+		//监控登录信息
+		session.OnRelease(func(data *session.Data) {
+			_ = players.Delete(data)
+			channel.Release(data)
+		})
+
 		return nil
 	})
 }

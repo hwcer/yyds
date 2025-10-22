@@ -1,25 +1,49 @@
 package players
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosnet"
 )
 
-func (this *players) Connect(sock *cosnet.Socket, guid string, value values.Values) error {
-	_, err := this.Login(guid, value, func(data *session.Data, loaded bool) error {
-		if loaded {
-			this.replace(data, sock)
-		}
-		data.Set(SessionPlayerSocketName, sock)
-		sock.OAuth(data)
+func Socket(p *session.Data) *cosnet.Socket {
+	i := p.Get(SessionPlayerSocketName)
+	if i == nil {
 		return nil
-	})
-	return err
+	}
+	r, _ := i.(*cosnet.Socket)
+	return r
 }
-func (this *players) Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err error) {
+
+// Replace  长连接顶号,也可能是被短连接顶掉线（sock==nil）
+func Replace(p *session.Data, sock *cosnet.Socket, ip string) {
+	os := Socket(p)
+	p.Mutex(func(setter session.Setter) {
+		if os != nil && (sock == nil || os.Id() != sock.Id()) {
+			if i := strings.Index(ip, ":"); i > 0 {
+				ip = ip[:i]
+			}
+			os.Replaced(ip)
+		}
+		if sock != nil {
+			setter.Set(SessionPlayerSocketName, sock)
+			sock.OAuth(p)
+		}
+	})
+	return
+}
+
+func Connect(sock *cosnet.Socket, guid string, value values.Values) error {
+	_, data, err := Login(guid, value)
+	if err != nil {
+		return err
+	}
+	Replace(data, sock, sock.RemoteAddr().String())
+	return nil
+}
+func Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err error) {
 	if v := sock.Data(); v != nil {
 		return
 	}
@@ -28,26 +52,22 @@ func (this *players) Reconnect(sock *cosnet.Socket, secret string) (data *sessio
 		return
 	}
 	data = s.Data
-	this.replace(data, sock)
-	data.Set(SessionPlayerSocketName, sock)
-	sock.Reconnect(data)
+	Replace(data, sock, sock.RemoteAddr().String())
+	sock.Reconnect()     //触发Reconnect
+	_, err = s.Refresh() //刷线TOKEN
 	return
 }
 
-func (this *players) Disconnect(sock *cosnet.Socket) (err error) {
-	i := sock.Data()
-	if i == nil {
+func Disconnect(sock *cosnet.Socket) (err error) {
+	data := sock.Data()
+	if data == nil {
 		return
 	}
-	data, ok := i.(*session.Data)
-	if !ok {
-		return fmt.Errorf("socket data type error:%v", i)
-	}
-
-	data.Lock()
-	defer data.Unlock()
-	if s := this.Socket(data); s != nil && s.Id() == sock.Id() {
-		data.Delete(SessionPlayerSocketName)
-	}
+	os := Socket(data)
+	data.Mutex(func(setter session.Setter) {
+		if os != nil && os.Id() == sock.Id() {
+			data.Delete(SessionPlayerSocketName)
+		}
+	})
 	return
 }

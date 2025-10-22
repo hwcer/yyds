@@ -44,17 +44,11 @@ func (this *accessManager) oauth(r Request, req values.Metadata) (p *session.Dat
 	} else if p == nil {
 		return nil, errors.ErrLogin
 	}
-	p.KeepAlive()
 	return
 }
 
 // OAuthTypeNone 普通接口
 func (this *accessManager) OAuthTypeNone(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
-	if p, err = r.Cookie(); err == nil {
-		p.KeepAlive()
-	} else {
-		err = nil //仅仅用来刷新TOKEN
-	}
 	if f, ok := r.(accessSocket); ok {
 		sock := f.Socket()
 		req[options.ServiceSocketId] = fmt.Sprintf("%d", sock.Id())

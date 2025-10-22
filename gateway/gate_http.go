@@ -145,14 +145,13 @@ func (this *httpProxy) Path() (string, error) {
 
 func (this *httpProxy) Login(guid string, value values.Values) (err error) {
 	//var p *session.Data
-	var token string
-	token, err = players.Login(guid, value, func(d *session.Data, _ bool) error {
-		//p = d
-		return nil
-	})
+	token, data, err := players.Login(guid, value)
 	if err != nil {
 		return
 	}
+	//长连接顶号
+	players.Replace(data, nil, this.Context.RemoteAddr())
+
 	cookie := &http.Cookie{Name: session.Options.Name, Path: "/", Value: token}
 	http.SetCookie(this.Context.Response, cookie)
 	header := this.Header()

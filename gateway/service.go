@@ -48,7 +48,8 @@ func write(c *cosrpc.Context) any {
 	if len(path) == 0 {
 		return nil //仅仅设置信息，不需要发送
 	}
-	return sock.Send(0, path, c.Bytes())
+	sock.Send(0, path, c.Bytes())
+	return nil
 }
 
 // send 消息推送
@@ -56,7 +57,7 @@ func send(c *cosrpc.Context) any {
 	uid := c.GetMetadata(options.ServiceMetadataUID)
 	guid := c.GetMetadata(options.ServiceMetadataGUID)
 
-	p := players.Players.Get(guid)
+	p := players.Get(guid)
 	if p == nil {
 		logger.Debug("用户不在线,消息丢弃,UID:%s GUID:%s", uid, guid)
 		return nil
@@ -75,7 +76,7 @@ func send(c *cosrpc.Context) any {
 	}
 	path := c.GetMetadata(options.ServiceMessagePath)
 	Emitter.emit(EventTypeResponse, p, path, mate)
-	sock := players.Players.Socket(p)
+	sock := players.Socket(p)
 	if sock == nil {
 		logger.Debug("长链接不在线,消息丢弃,UID:%s GUID:%s PATH:%s ", uid, guid, path)
 		return nil
@@ -90,9 +91,7 @@ func send(c *cosrpc.Context) any {
 		rid = int32(i)
 	}
 	//logger.Debug("推送消息  GUID:%s RID:%d PATH:%s", guid, rid, path)
-	if err := sock.Send(rid, path, c.Bytes()); err != nil {
-		return err
-	}
+	sock.Send(rid, path, c.Bytes())
 	return nil
 }
 
@@ -118,7 +117,7 @@ func broadcast(c *cosrpc.Context) any {
 		//CookiesUpdate(mate, p)
 		//Emitter.emit(EventTypeBroadcast, p, path, nil)
 		if sock := players.Socket(p); sock != nil {
-			_ = sock.Send(0, path, c.Bytes())
+			sock.Send(0, path, c.Bytes())
 		}
 		return true
 	})
