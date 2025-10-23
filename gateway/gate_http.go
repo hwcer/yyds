@@ -40,11 +40,11 @@ type HttpServer struct {
 func (this *HttpServer) init() (err error) {
 	this.Server = cosweb.New()
 	//跨域
-	access := middleware.NewAccessControlAllow()
-	access.Origin("*")
-	access.Methods(Method...)
-	access.Headers(strings.Join(Headers, ","))
-	this.Server.Use(access.Handle)
+	allow := middleware.NewAccessControlAllow()
+	allow.Origin("*")
+	allow.Methods(Method...)
+	allow.Headers(strings.Join(Headers, ","))
+	this.Server.Use(allow.Handle)
 	this.Server.Register(Options.OAuth, this.oauth)
 	this.Server.Register("*", this.proxy, http.MethodPost)
 
@@ -103,15 +103,9 @@ func (this *HttpServer) oauth(c *cosweb.Context) any {
 		return err
 	}
 	return v
-	//return c.Bytes(cosweb.ContentType(h.Binder().String()), v)
 }
 
-func (this *HttpServer) proxy(c *cosweb.Context) any {
-	defer func() {
-		if r := recover(); r != nil {
-			cosweb.HTTPErrorHandler(c, r)
-		}
-	}()
+func (this *HttpServer) proxy(c *cosweb.Context) (r any) {
 	startTime := time.Now()
 	defer func() {
 		if elapsed := time.Since(startTime); elapsed > elapsedMillisecond {
