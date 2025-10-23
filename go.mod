@@ -7,7 +7,7 @@ require (
 	github.com/hwcer/cosmo v1.2.2
 	github.com/hwcer/cosnet v1.3.0
 	github.com/hwcer/cosrpc v1.2.2
-	github.com/hwcer/cosweb v1.3.1
+	github.com/hwcer/cosweb v1.3.2
 	github.com/hwcer/coswss v0.2.1
 	github.com/hwcer/logger v0.2.6
 	github.com/hwcer/updater v1.3.1
