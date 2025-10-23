@@ -2,21 +2,15 @@ module github.com/hwcer/yyds
 
 go 1.24.0
 
-replace (
-	github.com/hwcer/cosgo v1.5.12 => ../modules/cosgo
-	github.com/hwcer/cosnet v1.2.7 => ../modules/cosnet
-	github.com/hwcer/cosweb v1.2.5 => ../modules/cosweb
-)
-
 require (
-	github.com/hwcer/cosgo v1.5.12
+	github.com/hwcer/cosgo v1.6.0
 	github.com/hwcer/cosmo v1.2.2
-	github.com/hwcer/cosnet v1.2.7
+	github.com/hwcer/cosnet v1.3.0
 	github.com/hwcer/cosrpc v1.2.2
-	github.com/hwcer/cosweb v1.2.5
+	github.com/hwcer/cosweb v1.3.0
 	github.com/hwcer/coswss v0.2.1
 	github.com/hwcer/logger v0.2.6
-	github.com/hwcer/updater v1.3.0
+	github.com/hwcer/updater v1.3.1
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
 	github.com/soheilhy/cmux v0.1.5
@@ -51,7 +45,7 @@ require (
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/reedsolomon v1.12.5 // indirect
 	github.com/libp2p/go-sockaddr v0.2.0 // indirect
@@ -93,7 +87,7 @@ require (
 	go.mongodb.org/mongo-driver v1.17.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/exp v0.0.0-20251009144603-d2f985daa21b // indirect
+	golang.org/x/exp v0.0.0-20251017212417-90e834f514db // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
