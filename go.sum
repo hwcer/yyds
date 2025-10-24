@@ -140,12 +140,12 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v1.6.0 h1:J+/WZb5sL0odg4Brbi977A2M7hu2JnRz2vrrKON5WoQ=
-github.com/hwcer/cosgo v1.6.0/go.mod h1:lDDGR+omPkAcfWbeYEtrsP0+mOfHu504znmSBUobAKI=
+github.com/hwcer/cosgo v1.6.1 h1:1l1MH+ejA964k796g94Vsqk1ayp5pmn1BOEzkfGVWpA=
+github.com/hwcer/cosgo v1.6.1/go.mod h1:lDDGR+omPkAcfWbeYEtrsP0+mOfHu504znmSBUobAKI=
 github.com/hwcer/cosmo v1.2.2 h1:+npFj84gVgzcqNY5dMmOF5mbRHdTzMVcGgRXi4UyLD0=
 github.com/hwcer/cosmo v1.2.2/go.mod h1:BU/7tC6CsnrciK2C7rIzxcluYJQ5OUVTzOO0LXvVx3Q=
-github.com/hwcer/cosnet v1.3.1 h1:tspjnTElj1JZKLafUe7XvDoUPnRNVq9nqlH6tCWA+P8=
-github.com/hwcer/cosnet v1.3.1/go.mod h1:SugHOkLFiap+ZUuEDMOXOYzyJ+OKD+InX9r1sz1Z7kI=
+github.com/hwcer/cosnet v1.3.2 h1:S+2H2yDla9VCTJmiRZditZWlGbhomhAIhjRuxyl1O/s=
+github.com/hwcer/cosnet v1.3.2/go.mod h1:SugHOkLFiap+ZUuEDMOXOYzyJ+OKD+InX9r1sz1Z7kI=
 github.com/hwcer/cosrpc v1.2.2 h1:2yuP10m+mfhYJ5O6IWDeeU91ik+4YhvhEAj25XWAhsg=
 github.com/hwcer/cosrpc v1.2.2/go.mod h1:QErv60B4lBSNfcLLyvAlHLOKIqbtv6v0aCrnyp7W1hw=
 github.com/hwcer/cosweb v1.3.3 h1:32h2x78O1ElapRouT1v5ho9diKnGh1rWwgwHoi2P/mo=

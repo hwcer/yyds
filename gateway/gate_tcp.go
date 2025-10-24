@@ -35,13 +35,14 @@ func (this *TcpServer) init() error {
 	session.Heartbeat.On(cosnet.Heartbeat)
 
 	cosnet.On(cosnet.EventTypeReplaced, this.S2CReplaced)
+	cosnet.On(cosnet.EventTypeDisconnect, this.Disconnect)
 	cosnet.On(cosnet.EventTypeAuthentication, this.S2CSecret)
 
 	service := cosnet.Service()
 	_ = service.Register(this.proxy, "*")
 	_ = service.Register(this.C2SPing, "ping")
 	_ = service.Register(this.C2SOAuth, Options.C2SOAuth)
-	_ = service.Register(this.C2SSecret, Options.C2SSecret)
+	_ = service.Register(this.C2SReconnect, Options.C2SReconnect)
 
 	h := service.Handler().(*cosnet.Handler)
 	h.SetSerialize(func(c *cosnet.Context, reply any) ([]byte, error) {
@@ -95,7 +96,7 @@ func (this *TcpServer) C2SOAuth(c *cosnet.Context) any {
 	return r
 }
 
-func (this *TcpServer) C2SSecret(c *cosnet.Context) any {
+func (this *TcpServer) C2SReconnect(c *cosnet.Context) any {
 	secret := string(c.Message.Body())
 	if secret == "" {
 		return errors.ErrArgEmpty
@@ -132,6 +133,12 @@ func (this *TcpServer) S2CReplaced(sock *cosnet.Socket, i any) {
 	}
 	if ip, ok := i.(string); ok {
 		sock.Send(0, Options.S2CReplaced, []byte(ip))
+	}
+}
+
+func (this *TcpServer) Disconnect(sock *cosnet.Socket, _ any) {
+	if err := players.Disconnect(sock); err != nil {
+		logger.Alert("Disconnect error:%v", err)
 	}
 }
 

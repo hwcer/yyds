@@ -34,24 +34,24 @@ func init() {
 }
 
 var Options = struct {
-	Router      router                                                        //路由处理规则
-	C2SOAuth    string                                                        //网关登录
-	G2SOAuth    string                                                        //游戏服登录验证,留空不进行验证
-	C2SSecret   string                                                        //重登陆验证秘钥
-	S2CSecret   string                                                        //登录成功时给客户端发送秘钥,空值不处理
-	S2CReplaced string                                                        //被顶号时给客户端发送的顶号提示,空值不处理
-	Request     func(player *session.Data, path string, meta values.Metadata) //转发消息时
-	Response    func(player *session.Data, path string, meta values.Metadata) //推送数据时，不包括广播
-	Serialize   func(c Context, reply any) ([]byte, error)
+	Router       router                                                        //路由处理规则
+	C2SOAuth     string                                                        //网关登录
+	G2SOAuth     string                                                        //游戏服登录验证,留空不进行验证
+	S2CSecret    string                                                        //登录成功时给客户端发送秘钥,空值不处理
+	S2CReplaced  string                                                        //被顶号时给客户端发送的顶号提示,空值不处理
+	C2SReconnect string                                                        //重登陆验证秘钥
+	Request      func(player *session.Data, path string, meta values.Metadata) //转发消息时
+	Response     func(player *session.Data, path string, meta values.Metadata) //推送数据时，不包括广播
+	Serialize    func(c Context, reply any) ([]byte, error)
 }{
-	Router:      defaultRouter,
-	C2SOAuth:    "oauth",
-	G2SOAuth:    "game/oauth",
-	C2SSecret:   "C2SSecret",
-	S2CSecret:   "S2CSecret",
-	S2CReplaced: "S2CReplaced",
-	Response:    defaultResponse,
-	Serialize:   defaultSerialize,
+	Router:       defaultRouter,
+	C2SOAuth:     "oauth",
+	G2SOAuth:     "game/oauth",
+	S2CSecret:    "S2CSecret",
+	S2CReplaced:  "S2CReplaced",
+	C2SReconnect: "C2SReconnect",
+	Response:     defaultResponse,
+	Serialize:    defaultSerialize,
 }
 
 type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)

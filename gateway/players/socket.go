@@ -66,7 +66,7 @@ func Disconnect(sock *cosnet.Socket) (err error) {
 	os := Socket(data)
 	data.Mutex(func(setter session.Setter) {
 		if os != nil && os.Id() == sock.Id() {
-			data.Delete(SessionPlayerSocketName)
+			setter.Delete(SessionPlayerSocketName)
 		}
 	})
 	return
