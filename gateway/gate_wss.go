@@ -34,7 +34,7 @@ func WSVerify(w http.ResponseWriter, r *http.Request) (meta map[string]string, e
 	//}
 
 	//sess := session.New()
-	//if err = sess.Verify(token); err != nil {
+	//if err = sess.G2SOAuth(token); err != nil {
 	//	return "", values.Parse(err)
 	//}
 	//uuid = res[options.ServiceMetadataGUID]

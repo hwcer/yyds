@@ -45,7 +45,7 @@ func (this *HttpServer) init() (err error) {
 	allow.Methods(Method...)
 	allow.Headers(strings.Join(Headers, ","))
 	this.Server.Use(allow.Handle)
-	this.Server.Register(Options.OAuth, this.oauth)
+	this.Server.Register(Options.C2SOAuth, this.oauth)
 	this.Server.Register("*", this.proxy, http.MethodPost)
 	service := this.Server.Service()
 	h := service.Handler().(*cosweb.Handler)

@@ -2,11 +2,12 @@ package gateway
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/session"
@@ -14,6 +15,7 @@ import (
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/cosnet/tcp"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
@@ -32,9 +34,15 @@ func (this *TcpServer) init() error {
 	cosnet.Options.Heartbeat = 0
 	session.Heartbeat.On(cosnet.Heartbeat)
 
+	cosnet.On(cosnet.EventTypeReplaced, this.S2CReplaced)
+	cosnet.On(cosnet.EventTypeAuthentication, this.S2CSecret)
+
 	service := cosnet.Service()
 	_ = service.Register(this.proxy, "*")
-	_ = service.Register(this.oauth, Options.OAuth)
+	_ = service.Register(this.C2SPing, "ping")
+	_ = service.Register(this.C2SOAuth, Options.C2SOAuth)
+	_ = service.Register(this.C2SSecret, Options.C2SSecret)
+
 	h := service.Handler().(*cosnet.Handler)
 	h.SetSerialize(func(c *cosnet.Context, reply any) ([]byte, error) {
 		return Options.Serialize(c, reply)
@@ -55,7 +63,14 @@ func (this *TcpServer) Accept(ln net.Listener) error {
 	logger.Trace("网关长连接启动：%v", options.Gate.Address)
 	return nil
 }
-func (this *TcpServer) oauth(c *cosnet.Context) any {
+
+func (this *TcpServer) C2SPing(c *cosnet.Context) any {
+	ms := time.Now().UnixMilli()
+	s := strconv.Itoa(int(ms))
+	return []byte(s)
+}
+
+func (this *TcpServer) C2SOAuth(c *cosnet.Context) any {
 	var err error
 	authorize := &Authorize{}
 	if err = c.Bind(&authorize); err != nil {
@@ -79,6 +94,47 @@ func (this *TcpServer) oauth(c *cosnet.Context) any {
 	}
 	return r
 }
+
+func (this *TcpServer) C2SSecret(c *cosnet.Context) any {
+	secret := string(c.Message.Body())
+	if secret == "" {
+		return errors.ErrArgEmpty
+	}
+	if _, err := players.Reconnect(c.Socket, secret); err != nil {
+		return err
+	}
+	return true
+}
+
+// S2CSecret  默认的发送断线重连密钥
+// cosnet.On(cosnet.EventTypeAuthentication, S2CSecret)
+func (this *TcpServer) S2CSecret(sock *cosnet.Socket, _ any) {
+	if Options.S2CSecret == "" {
+		return
+	}
+	data := sock.Data()
+	if data == nil {
+		return
+	}
+	ss := session.New(data)
+	if token, err := ss.Token(); err != nil {
+		sock.Errorf(err)
+	} else {
+		sock.Send(0, Options.S2CSecret, []byte(token))
+	}
+	return
+}
+
+// S2CReplaced  默认的顶号提示
+func (this *TcpServer) S2CReplaced(sock *cosnet.Socket, i any) {
+	if sock == nil || Options.S2CReplaced == "" {
+		return
+	}
+	if ip, ok := i.(string); ok {
+		sock.Send(0, Options.S2CReplaced, []byte(ip))
+	}
+}
+
 func (this *TcpServer) proxy(c *cosnet.Context) any {
 	h := &socketProxy{Context: c}
 	p, err := h.Path()

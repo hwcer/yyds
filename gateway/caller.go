@@ -24,10 +24,10 @@ type Request interface {
 }
 
 func oauth(h Request) (any, error) {
-	if Options.Verify == "" {
+	if Options.G2SOAuth == "" {
 		return true, nil
 	}
-	return caller(h, Options.Verify)
+	return caller(h, Options.G2SOAuth)
 }
 
 func caller(h Request, path string) ([]byte, error) {
@@ -59,7 +59,7 @@ func caller(h Request, path string) ([]byte, error) {
 		return nil, err
 	}
 	reply := make([]byte, 0)
-	
+
 	if Options.Request != nil {
 		Options.Request(p, s, req)
 	}
