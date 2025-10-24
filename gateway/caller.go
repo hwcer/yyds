@@ -59,7 +59,10 @@ func caller(h Request, path string) ([]byte, error) {
 		return nil, err
 	}
 	reply := make([]byte, 0)
-	Emitter.emit(EventTypeRequest, p, s, req)
+	
+	if Options.Request != nil {
+		Options.Request(p, s, req)
+	}
 
 	if options.Gate.Prefix != "" {
 		serviceMethod = registry.Join(options.Gate.Prefix, serviceMethod)

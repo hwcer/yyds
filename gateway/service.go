@@ -75,7 +75,9 @@ func send(c *cosrpc.Context) any {
 		return nil
 	}
 	path := c.GetMetadata(options.ServiceMessagePath)
-	Emitter.emit(EventTypeResponse, p, path, mate)
+	if Options.Response != nil {
+		Options.Response(p, path, mate)
+	}
 	sock := players.Socket(p)
 	if sock == nil {
 		logger.Debug("长链接不在线,消息丢弃,UID:%s GUID:%s PATH:%s ", uid, guid, path)

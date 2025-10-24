@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hwcer/cosgo"
@@ -33,14 +34,17 @@ func init() {
 }
 
 var Options = struct {
-	OAuth     string //网关登录
-	Verify    string //游戏服登录验证,留空不进行验证
-	Router    router //路由处理规则
+	OAuth     string                                                        //网关登录
+	Verify    string                                                        //游戏服登录验证,留空不进行验证
+	Router    router                                                        //路由处理规则
+	Request   func(player *session.Data, path string, meta values.Metadata) //转发消息时
+	Response  func(player *session.Data, path string, meta values.Metadata) //推送数据时，不包括广播
 	Serialize func(c Context, reply any) ([]byte, error)
 }{
 	OAuth:     "oauth",
 	Verify:    "game/oauth",
 	Router:    defaultRouter,
+	Response:  defaultResponse,
 	Serialize: defaultSerialize,
 }
 
@@ -67,4 +71,11 @@ func defaultSerialize(c Context, reply any) ([]byte, error) {
 	b := c.Accept()
 	v := values.Parse(reply)
 	return b.Marshal(v)
+}
+
+func defaultResponse(player *session.Data, path string, meta values.Metadata) {
+	if _, ok := meta[options.ServiceMetadataRequestId]; !ok {
+		i := player.Atomic()
+		meta[options.ServiceMetadataRequestId] = fmt.Sprintf("%d", -i)
+	}
 }
