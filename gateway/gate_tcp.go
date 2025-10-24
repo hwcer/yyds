@@ -35,6 +35,10 @@ func (this *TcpServer) init() error {
 	service := cosnet.Service()
 	_ = service.Register(this.proxy, "*")
 	_ = service.Register(this.oauth, Options.OAuth)
+	h := service.Handler().(*cosnet.Handler)
+	h.SetSerialize(func(c *cosnet.Context, reply any) ([]byte, error) {
+		return Options.Serialize(c, reply)
+	})
 	return nil
 }
 

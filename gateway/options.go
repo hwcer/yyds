@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
@@ -27,19 +28,20 @@ func init() {
 			_ = players.Delete(data)
 			channel.Release(data)
 		})
-
 		return nil
 	})
 }
 
 var Options = struct {
-	OAuth  string //网关登录
-	Verify string //游戏服登录验证,留空不进行验证
-	Router router //路由处理规则
+	OAuth     string //网关登录
+	Verify    string //游戏服登录验证,留空不进行验证
+	Router    router //路由处理规则
+	Serialize func(c Context, reply any) ([]byte, error)
 }{
-	OAuth:  "oauth",
-	Verify: "game/oauth",
-	Router: defaultRouter,
+	OAuth:     "oauth",
+	Verify:    "game/oauth",
+	Router:    defaultRouter,
+	Serialize: defaultSerialize,
 }
 
 type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)
@@ -55,4 +57,14 @@ var defaultRouter router = func(path string, req values.Metadata) (servicePath, 
 	servicePath = registry.Formatter(path[0:i])
 	serviceMethod = registry.Formatter(path[i:])
 	return
+}
+
+type Context interface {
+	Accept() binder.Binder
+}
+
+func defaultSerialize(c Context, reply any) ([]byte, error) {
+	b := c.Accept()
+	v := values.Parse(reply)
+	return b.Marshal(v)
 }

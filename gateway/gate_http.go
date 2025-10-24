@@ -47,6 +47,11 @@ func (this *HttpServer) init() (err error) {
 	this.Server.Use(allow.Handle)
 	this.Server.Register(Options.OAuth, this.oauth)
 	this.Server.Register("*", this.proxy, http.MethodPost)
+	service := this.Server.Service()
+	h := service.Handler().(*cosweb.Handler)
+	h.SetSerialize(func(c *cosweb.Context, reply interface{}) ([]byte, error) {
+		return Options.Serialize(c, reply)
+	})
 
 	if options.Gate.Static != nil && options.Gate.Static.Root != "" {
 		static := this.Server.Static(options.Gate.Static.Route, options.Gate.Static.Root, http.MethodGet)
