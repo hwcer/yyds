@@ -3,13 +3,13 @@ module github.com/hwcer/yyds
 go 1.24.0
 
 require (
-	github.com/hwcer/cosgo v1.6.1
+	github.com/hwcer/cosgo v1.6.2
 	github.com/hwcer/cosmo v1.2.2
 	github.com/hwcer/cosnet v1.3.2
 	github.com/hwcer/cosrpc v1.2.2
 	github.com/hwcer/cosweb v1.3.4
 	github.com/hwcer/coswss v0.2.1
-	github.com/hwcer/logger v0.2.7
+	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.3.1
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
@@ -71,7 +71,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/templexxx/cpufeat v0.0.0-20180724012125-cef66df7f161 // indirect
 	github.com/templexxx/xor v0.0.0-20191217153810-f85b25db303b // indirect
-	github.com/tinylib/msgp v1.4.0 // indirect
+	github.com/tinylib/msgp v1.5.0 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
@@ -84,7 +84,7 @@ require (
 	github.com/xtaci/kcp-go v5.4.20+incompatible // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.mongodb.org/mongo-driver v1.17.4 // indirect
+	go.mongodb.org/mongo-driver v1.17.6 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
