@@ -42,7 +42,7 @@ func (this *TcpServer) init() error {
 	_ = service.Register(this.proxy, "*")
 	_ = service.Register(this.C2SPing, "ping")
 	_ = service.Register(this.C2SOAuth, Options.C2SOAuth)
-	_ = service.Register(this.C2SReconnect, Options.C2SReconnect)
+	_ = service.Register(this.C2SReconnect, "C2SReconnect")
 
 	h := service.Handler().(*cosnet.Handler)
 	h.SetSerialize(func(c *cosnet.Context, reply any) ([]byte, error) {
@@ -96,6 +96,39 @@ func (this *TcpServer) C2SOAuth(c *cosnet.Context) any {
 	return r
 }
 
+// S2CSecret  默认的发送断线重连密钥
+// cosnet.On(cosnet.EventTypeAuthentication, S2CSecret)
+func (this *TcpServer) S2CSecret(sock *cosnet.Socket, _ any) {
+	data := sock.Data()
+	if data == nil {
+		return
+	}
+	ss := session.New(data)
+	if token, err := ss.Token(); err != nil {
+		sock.Errorf(err)
+	} else if Options.S2CSecret != nil {
+		Options.S2CSecret(sock, token)
+	} else {
+		sock.Send(0, "S2CSecret", []byte(token))
+	}
+	return
+}
+
+// S2CReplaced  默认的顶号提示
+func (this *TcpServer) S2CReplaced(sock *cosnet.Socket, i any) {
+	if sock == nil {
+		return
+	}
+	ip, ok := i.(string)
+	if !ok {
+		return
+	}
+	if Options.S2CReplaced != nil {
+		Options.S2CReplaced(sock, ip)
+	} else {
+		sock.Send(0, "S2CReplaced", []byte(ip))
+	}
+}
 func (this *TcpServer) C2SReconnect(c *cosnet.Context) any {
 	secret := string(c.Message.Body())
 	if secret == "" {
@@ -106,36 +139,6 @@ func (this *TcpServer) C2SReconnect(c *cosnet.Context) any {
 	}
 	return true
 }
-
-// S2CSecret  默认的发送断线重连密钥
-// cosnet.On(cosnet.EventTypeAuthentication, S2CSecret)
-func (this *TcpServer) S2CSecret(sock *cosnet.Socket, _ any) {
-	if Options.S2CSecret == "" {
-		return
-	}
-	data := sock.Data()
-	if data == nil {
-		return
-	}
-	ss := session.New(data)
-	if token, err := ss.Token(); err != nil {
-		sock.Errorf(err)
-	} else {
-		sock.Send(0, Options.S2CSecret, []byte(token))
-	}
-	return
-}
-
-// S2CReplaced  默认的顶号提示
-func (this *TcpServer) S2CReplaced(sock *cosnet.Socket, i any) {
-	if sock == nil || Options.S2CReplaced == "" {
-		return
-	}
-	if ip, ok := i.(string); ok {
-		sock.Send(0, Options.S2CReplaced, []byte(ip))
-	}
-}
-
 func (this *TcpServer) Disconnect(sock *cosnet.Socket, _ any) {
 	if err := players.Disconnect(sock); err != nil {
 		logger.Alert("Disconnect error:%v", err)

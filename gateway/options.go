@@ -9,6 +9,7 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosnet"
 	"github.com/hwcer/yyds/gateway/channel"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
@@ -34,24 +35,19 @@ func init() {
 }
 
 var Options = struct {
-	Router       router                                                        //路由处理规则
-	C2SOAuth     string                                                        //网关登录
-	G2SOAuth     string                                                        //游戏服登录验证,留空不进行验证
-	S2CSecret    string                                                        //登录成功时给客户端发送秘钥,空值不处理
-	S2CReplaced  string                                                        //被顶号时给客户端发送的顶号提示,空值不处理
-	C2SReconnect string                                                        //重登陆验证秘钥
-	Request      func(player *session.Data, path string, meta values.Metadata) //转发消息时
-	Response     func(player *session.Data, path string, meta values.Metadata) //推送数据时，不包括广播
-	Serialize    func(c Context, reply any) ([]byte, error)
+	Router      router                                                        //路由处理规则
+	C2SOAuth    string                                                        //网关登录
+	G2SOAuth    string                                                        //游戏服登录验证,网关登录登录成功后继续使用GUID去游戏服验证,留空不进行验证
+	S2CSecret   func(sock *cosnet.Socket, secret string)                      //登录成功时给客户端发送秘钥,空值不处理
+	S2CReplaced func(sock *cosnet.Socket, address string)                     //被顶号时给客户端发送的顶号提示,空值不处理
+	Request     func(player *session.Data, path string, meta values.Metadata) //网关转发消息时
+	Response    func(player *session.Data, path string, meta values.Metadata) //推送数据时，不包括广播
+	Serialize   func(c Context, reply any) ([]byte, error)
 }{
-	Router:       defaultRouter,
-	C2SOAuth:     "oauth",
-	G2SOAuth:     "game/oauth",
-	S2CSecret:    "S2CSecret",
-	S2CReplaced:  "S2CReplaced",
-	C2SReconnect: "C2SReconnect",
-	Response:     defaultResponse,
-	Serialize:    defaultSerialize,
+	Router:    defaultRouter,
+	C2SOAuth:  "oauth",
+	Response:  defaultResponse,
+	Serialize: defaultSerialize,
 }
 
 type router func(path string, req values.Metadata) (servicePath, serviceMethod string, err error)
@@ -73,15 +69,15 @@ type Context interface {
 	Accept() binder.Binder
 }
 
-func defaultSerialize(c Context, reply any) ([]byte, error) {
-	b := c.Accept()
-	v := values.Parse(reply)
-	return b.Marshal(v)
-}
-
 func defaultResponse(player *session.Data, path string, meta values.Metadata) {
 	if _, ok := meta[options.ServiceMetadataRequestId]; !ok {
 		i := player.Atomic()
 		meta[options.ServiceMetadataRequestId] = fmt.Sprintf("%d", -i)
 	}
+}
+
+func defaultSerialize(c Context, reply any) ([]byte, error) {
+	b := c.Accept()
+	v := values.Parse(reply)
+	return b.Marshal(v)
 }
