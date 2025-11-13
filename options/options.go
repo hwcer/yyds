@@ -28,32 +28,20 @@ func Initialize() (err error) {
 	if err = cosgo.Config.Unmarshal(Options); err != nil {
 		return err
 	}
-	cosrpc.SetBasePath(Options.Appid)
 	cosrpc.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
 	cosrpc.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 
 	if Options.Rpcx.Redis != "" {
-		var addr string
-		var register server.Register
-		if addr, err = rpcxRedisAddress(); err == nil && addr != "" {
-			register, err = Register(cosrpc.Address())
-		}
-		if err != nil {
-			return err
-		}
-		server.SetRegister(register)
+		server.SetRegister(Register)
 		client.SetDiscovery(Discovery)
 	}
 
-	//if Options.TimeReset != 0 {
-	//	times.SetTimeReset(Options.TimeReset)
-	//}
 	return nil
 }
 
 type Rpcx struct {
-	*cosrpc.Options
-	Redis string `json:"redis"`
+	*cosrpc.Options `json:",inline" mapstructure:",squash"`
+	Redis           string `json:"redis" mapstructure:"redis"`
 }
 
 var Options = &struct {

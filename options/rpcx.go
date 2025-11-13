@@ -9,6 +9,7 @@ import (
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/redis"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/rpcxio/libkv/store"
 	"github.com/smallnest/rpcx/client"
 )
@@ -30,19 +31,20 @@ func Discovery(servicePath string) (client.ServiceDiscovery, error) {
 		return nil, err
 	}
 	var discovery *redis.Discovery
-	discovery, err = redis.NewDiscovery(cosrpc.Config.BasePath, servicePath, address, opt)
+	discovery, err = redis.NewDiscovery(Options.Appid, servicePath, address, opt)
 	if err != nil {
 		return nil, err
 	}
 	return discovery, nil
 }
 
-func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
+func Register() (server.Register, error) {
+	rpcxAddr := cosrpc.Address()
 	address, opt, err := rpcxRedisParse()
 	if err != nil {
 		return nil, err
 	}
-	host := urlRpcxAddr.Host
+	host := rpcxAddr.Host
 	if utils.LocalValid(host) {
 		host, err = utils.LocalIPv4()
 	}
@@ -50,11 +52,11 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 		return nil, err
 	}
 	rpcxRegister := &redis.Register{
-		ServiceAddress: fmt.Sprintf("%v%v:%v", cosrpc.AddressPrefix(), host, urlRpcxAddr.Port),
+		ServiceAddress: fmt.Sprintf("%v%v:%v", cosrpc.AddressPrefix(), host, rpcxAddr.Port),
 		RedisServers:   address,
-		BasePath:       cosrpc.Config.BasePath,
+		BasePath:       Options.Appid,
 		Options:        opt,
-		UpdateInterval: time.Second * 10,
+		UpdateInterval: time.Second,
 	}
 	return rpcxRegister, nil
 }
