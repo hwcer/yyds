@@ -3,14 +3,14 @@ package options
 import (
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo"
+	"net/url"
+	"time"
+
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/redis"
 	"github.com/rpcxio/libkv/store"
 	"github.com/smallnest/rpcx/client"
-	"net/url"
-	"time"
 )
 
 //var Rpcx = &rpcx{
@@ -60,8 +60,10 @@ func Register(urlRpcxAddr *utils.Address) (*redis.Register, error) {
 }
 
 func rpcxRedisAddress() (addr string, err error) {
-	err = cosgo.Config.UnmarshalKey("rpcx.redis", &addr)
-	return
+	if Options.Rpcx.Redis == "" {
+		return "", fmt.Errorf("rpcx redis address is empty")
+	}
+	return Options.Rpcx.Redis, nil
 }
 
 func rpcxRedisParse() (address []string, opts *store.Config, err error) {

@@ -32,7 +32,7 @@ func Initialize() (err error) {
 	cosrpc.Selector.Set(ServiceTypeGate, NewSelector(ServiceTypeGate))
 	cosrpc.Selector.Set(ServiceTypeGame, NewSelector(ServiceTypeGame))
 
-	if r := server.GetRegistry(); r.Len() > 0 {
+	if Options.Rpcx.Redis != "" {
 		var addr string
 		var register server.Register
 		if addr, err = rpcxRedisAddress(); err == nil && addr != "" {
@@ -42,8 +42,6 @@ func Initialize() (err error) {
 			return err
 		}
 		server.SetRegister(register)
-	}
-	if len(cosrpc.Service) > 0 {
 		client.SetDiscovery(Discovery)
 	}
 
@@ -51,6 +49,11 @@ func Initialize() (err error) {
 	//	times.SetTimeReset(Options.TimeReset)
 	//}
 	return nil
+}
+
+type Rpcx struct {
+	*cosrpc.Options
+	Redis string `json:"redis"`
 }
 
 var Options = &struct {
@@ -65,16 +68,16 @@ var Options = &struct {
 	Developer string            `json:"developer"` //超级用户秘钥，可以使用账号直接登录,开启游戏内一些功能
 	//Superuser string            `json:"superuser"` //超级用户秘钥,开启游戏内一些功能
 	//TimeReset int64             `json:"TimeReset"` //每日几点重置时间
-	Game *game           `json:"game"`
-	Gate *gate           `json:"gate"`
-	Rpcx *cosrpc.Options `json:"rpcx"`
+	Game *game `json:"game"`
+	Gate *gate `json:"gate"`
+	Rpcx *Rpcx `json:"rpcx"`
 }{
 	Verify:  1,
 	Binder:  "json",
 	Service: cosrpc.Service,
 	Game:    Game,
 	Gate:    Gate,
-	Rpcx:    cosrpc.Config,
+	Rpcx:    &Rpcx{Options: cosrpc.Config},
 }
 
 // Cookies 仅仅 http+json模式下 Cookie模板,网关会将 %CookieKey% %CookieValue% 替换成对应值
