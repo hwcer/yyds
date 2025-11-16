@@ -98,7 +98,7 @@ func (this *HttpServer) oauth(c *cosweb.Context) any {
 	if token.Developer {
 		vs.Set(options.ServiceMetadataDeveloper, "1")
 	}
-	if err = h.Login(token.Guid, vs); err != nil {
+	if _, err = h.Login(token.Guid, vs); err != nil {
 		return err
 	}
 
@@ -141,9 +141,9 @@ func (this *httpProxy) Path() (string, error) {
 	return this.Context.Request.URL.Path, nil
 }
 
-func (this *httpProxy) Login(guid string, value values.Values) (err error) {
-	//var p *session.Data
-	token, data, err := players.Login(guid, value)
+func (this *httpProxy) Login(guid string, value values.Values) (token string, err error) {
+	var data *session.Data
+	token, data, err = players.Login(guid, value)
 	if err != nil {
 		return
 	}

@@ -1,12 +1,13 @@
 package gateway
 
 import (
+	"net/http"
+
 	"github.com/hwcer/cosnet"
 	"github.com/hwcer/coswss"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/gateway/players"
 	"github.com/hwcer/yyds/options"
-	"net/http"
 )
 
 func init() {
@@ -49,7 +50,7 @@ func WSAccept(sock *cosnet.Socket, meta map[string]string) {
 		return
 	}
 	value := CookiesFilter(meta)
-	if err := players.Connect(sock, uuid, value); err != nil {
+	if _, err := players.Connect(sock, uuid, value); err != nil {
 		logger.Alert("wss session create fail:%v", err)
 	}
 

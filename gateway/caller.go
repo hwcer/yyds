@@ -15,9 +15,9 @@ import (
 
 type Request interface {
 	Path() (string, error)
-	Login(guid string, value values.Values) error //登录
-	Logout() error                                //退出登录
-	Cookie() (*session.Data, error)               //当前登录信息
+	Login(guid string, value values.Values) (string, error) //登录
+	Logout() error                                          //退出登录
+	Cookie() (*session.Data, error)                         //当前登录信息
 	Buffer() (buf *bytes.Buffer, err error)
 	Metadata() values.Metadata
 	RemoteAddr() string
@@ -76,10 +76,13 @@ func caller(h Request, path string) ([]byte, error) {
 	}
 	//创建登录信息
 	if guid, ok := res[options.ServicePlayerOAuth]; ok {
-		if err = h.Login(guid, CookiesFilter(res)); err != nil {
+		var token string
+		if token, err = h.Login(guid, CookiesFilter(res)); err != nil {
 			return nil, err
-		} else {
-			p = players.Get(guid)
+		}
+		p = players.Get(guid)
+		if Options.Access != nil {
+			reply = Options.Access(p, token, reply)
 		}
 	}
 	//退出登录

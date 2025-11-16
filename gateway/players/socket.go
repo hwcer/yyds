@@ -35,13 +35,11 @@ func Replace(p *session.Data, sock *cosnet.Socket, ip string) {
 	return
 }
 
-func Connect(sock *cosnet.Socket, guid string, value values.Values) error {
-	_, data, err := Login(guid, value)
-	if err != nil {
-		return err
+func Connect(sock *cosnet.Socket, guid string, value values.Values) (data *session.Data, err error) {
+	if _, data, err = Login(guid, value); err == nil {
+		Replace(data, sock, sock.RemoteAddr().String())
 	}
-	Replace(data, sock, sock.RemoteAddr().String())
-	return nil
+	return
 }
 func Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err error) {
 	if v := sock.Data(); v != nil {

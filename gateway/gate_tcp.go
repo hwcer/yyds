@@ -86,7 +86,7 @@ func (this *TcpServer) C2SOAuth(c *cosnet.Context) any {
 	if token.Developer {
 		vs.Set(options.ServiceMetadataDeveloper, "1")
 	}
-	if err = h.Login(token.Guid, vs); err != nil {
+	if _, err = h.Login(token.Guid, vs); err != nil {
 		return err
 	}
 	var r any
@@ -175,15 +175,17 @@ func (this *socketProxy) Cookie() (*session.Data, error) {
 	return data, nil
 }
 
-func (this *socketProxy) Login(guid string, value values.Values) (err error) {
-	if v := this.Context.Socket.Data(); v != nil {
-		if v.UUID() == guid {
-			return nil
-		} else {
-			return errors.New("please do not login again")
+func (this *socketProxy) Login(guid string, value values.Values) (token string, err error) {
+	data := this.Context.Socket.Data()
+	if data != nil {
+		if data.UUID() != guid {
+			return "", errors.New("please do not login again")
 		}
+	} else if data, err = players.Connect(this.Context.Socket, guid, value); err != nil {
+		return
 	}
-	return players.Connect(this.Context.Socket, guid, value)
+	ss := session.New(data)
+	return ss.Token()
 }
 
 func (this *socketProxy) Logout() error {
