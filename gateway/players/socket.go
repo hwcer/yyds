@@ -21,15 +21,17 @@ func Socket(p *session.Data) *cosnet.Socket {
 func Replace(p *session.Data, sock *cosnet.Socket, ip string) {
 	os := Socket(p)
 	p.Mutex(func(setter session.Setter) {
+		var reconnect bool
 		if os != nil && (sock == nil || os.Id() != sock.Id()) {
 			if i := strings.Index(ip, ":"); i > 0 {
 				ip = ip[:i]
 			}
+			reconnect = true
 			os.Replaced(ip)
 		}
 		if sock != nil {
 			setter.Set(SessionPlayerSocketName, sock)
-			sock.OAuth(p)
+			sock.Authentication(p, reconnect)
 		}
 	})
 	return
@@ -43,7 +45,7 @@ func Connect(sock *cosnet.Socket, guid string, value values.Values) (data *sessi
 }
 func Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err error) {
 	if v := sock.Data(); v != nil {
-		//return
+		return
 	}
 	s := session.New()
 	if err = s.Verify(secret); err != nil {
@@ -52,7 +54,6 @@ func Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err erro
 	_, err = s.Refresh() //刷线TOKEN
 	data = s.Data
 	Replace(data, sock, sock.RemoteAddr().String())
-	sock.Reconnect() //触发Reconnect
 	return
 }
 
