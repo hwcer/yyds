@@ -3,7 +3,7 @@ module github.com/hwcer/yyds
 go 1.24.0
 
 require (
-	github.com/hwcer/cosgo v1.6.2
+	github.com/hwcer/cosgo v1.6.3
 	github.com/hwcer/cosmo v1.2.2
 	github.com/hwcer/cosnet v1.3.3
 	github.com/hwcer/cosrpc v1.2.3
