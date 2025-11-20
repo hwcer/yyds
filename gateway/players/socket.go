@@ -43,16 +43,16 @@ func Connect(sock *cosnet.Socket, guid string, value values.Values) (data *sessi
 }
 func Reconnect(sock *cosnet.Socket, secret string) (data *session.Data, err error) {
 	if v := sock.Data(); v != nil {
-		return
+		//return
 	}
 	s := session.New()
 	if err = s.Verify(secret); err != nil {
 		return
 	}
+	_, err = s.Refresh() //刷线TOKEN
 	data = s.Data
 	Replace(data, sock, sock.RemoteAddr().String())
-	sock.Reconnect()     //触发Reconnect
-	_, err = s.Refresh() //刷线TOKEN
+	sock.Reconnect() //触发Reconnect
 	return
 }
 
