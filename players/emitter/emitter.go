@@ -63,6 +63,7 @@ func (e *Emitter) emit(_ *updater.Updater) bool {
 
 func (e *Emitter) release(_ *updater.Updater) bool {
 	e.values = nil
+	e.events = nil
 	return true
 }
 

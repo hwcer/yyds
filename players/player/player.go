@@ -140,6 +140,10 @@ func (p *Player) Destroy() error {
 		return err
 	}
 	p.Updater = nil
+	// 清理所有可能导致内存泄漏的字段
+	p.Values = nil
+	p.Dirty = Dirty{}
+	p.Emitter = nil
 	return nil
 }
 func (p *Player) On(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
