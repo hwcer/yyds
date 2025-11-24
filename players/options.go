@@ -5,8 +5,8 @@ import "github.com/hwcer/cosmo"
 const (
 	Heartbeat = 5 //心跳间隔(S)
 
-	HeartbeatConnectedTime  = 30 //N秒无心跳,假死,视为断开连接
-	HeartbeatDisconnectTime = 30 //断开连接N秒触发掉线状态
+	HeartbeatConnectedTime  = 60 //N秒无心跳,假死,视为断开连接
+	HeartbeatDisconnectTime = 60 //断开连接N秒触发掉线状态
 	HeartbeatOfflineTime    = 60 //掉线状态等待N秒 开始清理
 )
 
