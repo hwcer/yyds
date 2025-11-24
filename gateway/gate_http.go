@@ -18,7 +18,7 @@ import (
 	"github.com/hwcer/yyds/options"
 )
 
-const elapsedMillisecond = 200 * time.Millisecond
+var ElapsedMillisecond = 200 * time.Millisecond
 
 var Method = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 var Headers = []string{
@@ -113,7 +113,7 @@ func (this *HttpServer) oauth(c *cosweb.Context) any {
 func (this *HttpServer) proxy(c *cosweb.Context) (r any) {
 	startTime := time.Now()
 	defer func() {
-		if elapsed := time.Since(startTime); elapsed > elapsedMillisecond {
+		if elapsed := time.Since(startTime); elapsed > ElapsedMillisecond {
 			buff, _ := c.Buffer()
 			logger.Alert("发现高延时请求,TIME:%v,PATH:%v,BODY:%v", elapsed, c.Request.URL.Path, string(buff.Bytes()))
 		}

@@ -24,8 +24,8 @@ var Options = struct {
 	MemoryRelease int32 //回收站(release)玩家数量达到N时开始清理内存,缓存数量>=MemoryPlayer + MemoryRelease 开始执行清理计划
 
 }{
-	MemoryPlayer:  5000,
-	MemoryRelease: 500,
+	MemoryPlayer:  2000,
+	MemoryRelease: 100,
 }
 
 type Preload interface {

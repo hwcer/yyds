@@ -154,14 +154,13 @@ func worker() {
 	playersMemory = tot
 	//var rm int
 	ct := tot
+	recycling := len(playersRecycling)
 	defer func() {
-		if n := tot - ct; n > 0 {
-			logger.Trace("当前在线人数:%v  缓存数量:%v  本次清理:%v", playersOnline, tot, n)
-		}
+		logger.Trace("当前在线人数:%d  缓存数量:%d  回收站人数:%d  本次清理:%d", playersOnline, tot, recycling, tot-ct)
 	}()
 
 	//清理内存
-	if len(playersRecycling) == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
+	if recycling == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
 		return
 	}
 	var dict []*player.Player
