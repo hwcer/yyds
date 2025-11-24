@@ -152,6 +152,7 @@ func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitte
 	return p.Emitter.Listen(t, args, handle)
 }
 
+// Heartbeat 获取最后心跳时间
 func (p *Player) Heartbeat() int64 {
 	return p.heartbeat
 }

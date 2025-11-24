@@ -5,9 +5,9 @@ import "github.com/hwcer/cosmo"
 const (
 	Heartbeat = 5 //心跳间隔(S)
 
-	HeartbeatConnectedTime  = 300 //N秒无心跳,假死,视为断开连接
-	HeartbeatDisconnectTime = 300 //断开连接N秒触发掉线状态
-	HeartbeatOfflineTime    = 600 //掉线状态等待N秒 开始清理
+	HeartbeatConnectedTime  = 30 //N秒无心跳,假死,视为断开连接
+	HeartbeatDisconnectTime = 30 //断开连接N秒触发掉线状态
+	HeartbeatOfflineTime    = 60 //掉线状态等待N秒 开始清理
 )
 
 type AsyncModel int8
@@ -24,7 +24,7 @@ var Options = struct {
 	MemoryRelease int32 //回收站(release)玩家数量达到N时开始清理内存,缓存数量>=MemoryPlayer + MemoryRelease 开始执行清理计划
 
 }{
-	MemoryPlayer:  10000,
+	MemoryPlayer:  5000,
 	MemoryRelease: 1000,
 }
 

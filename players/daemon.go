@@ -141,8 +141,6 @@ func worker() {
 		case player.StatusConnected:
 			if p.Heartbeat() <= connectedTime {
 				Disconnect(p)
-			} else if _, ok := playersRecycling[uid]; ok {
-				delete(playersRecycling, uid)
 			}
 		case player.StatusDisconnect:
 			if p.Heartbeat() < disconnectTime && Offline(p) {
@@ -163,7 +161,7 @@ func worker() {
 	}()
 
 	//清理内存
-	if !(len(playersRecycling) > 0 && tot > Options.MemoryPlayer+Options.MemoryRelease) {
+	if len(playersRecycling) == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
 		return
 	}
 	var dict []*player.Player
