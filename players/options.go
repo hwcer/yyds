@@ -25,7 +25,7 @@ var Options = struct {
 
 }{
 	MemoryPlayer:  5000,
-	MemoryRelease: 1000,
+	MemoryRelease: 500,
 }
 
 type Preload interface {

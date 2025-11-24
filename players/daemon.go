@@ -143,8 +143,8 @@ func worker() {
 				Disconnect(p)
 			}
 		case player.StatusDisconnect:
-			if p.Heartbeat() < disconnectTime && Offline(p) {
-				playersRecycling[uid] = p
+			if p.Heartbeat() < disconnectTime {
+				Offline(p)
 			}
 		default:
 		}
