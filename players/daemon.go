@@ -175,7 +175,7 @@ func worker() {
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && Released(p) {
 			ct--
-		} else if p.Status == player.StatusOffline {
+		} else if p.Status == player.StatusOffline || p.Status == player.StatusNone {
 			next[p.Uid()] = p
 		}
 	}
