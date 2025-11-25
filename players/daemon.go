@@ -156,7 +156,7 @@ func worker() {
 	ct := tot
 	recycling := len(playersRecycling)
 	defer func() {
-		logger.Trace("当前在线人数:%d  缓存数量:%d  回收站人数:%d  本次清理:%d", playersOnline, tot, recycling, tot-ct)
+		logger.Debug("当前在线人数:%d  缓存数量:%d  回收站人数:%d  本次清理:%d", playersOnline, tot, recycling, tot-ct)
 	}()
 
 	//清理内存

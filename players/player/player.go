@@ -48,6 +48,7 @@ type Player struct {
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
 	ClientIp  string           //客户端IP
+	Ban       bool             //封号
 }
 
 func (p *Player) initialize() {

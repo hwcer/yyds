@@ -28,6 +28,8 @@ var (
 	ErrActiveDisable = values.Errorf(401, "active disable")     //活动未开始
 	ErrActiveExpired = values.Errorf(402, "active expired")     //活动已经结束
 	ErrConfigEmpty   = values.Errorf(403, "config empty")
+
+	ErrRoleIsBan = values.Errorf(500, "user is ban")
 )
 
 //func init() {
