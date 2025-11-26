@@ -35,7 +35,7 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 		defer p.Release()
 	}
 	if p != nil && p.Status == player.StatusReleased {
-		return errors.ErrLoginWaiting
+		return errors.ErrNotOnline
 	}
 	return handle(p)
 }
