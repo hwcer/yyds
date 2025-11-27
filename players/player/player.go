@@ -12,6 +12,7 @@ import (
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/slice"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/logger"
@@ -96,9 +97,9 @@ func (p *Player) Send(v any, rp any) {
 // init 是否立即加载玩家数据，true:是
 func (p *Player) Loading(init bool) (err error) {
 	//验证UID是否合法
-	//if uid := p.Uid(); !uuid.IsValid(uid) {
-	//	return fmt.Errorf("player uid(%s) is invalid", uid)
-	//}
+	if uid := p.Uid(); !uuid.IsValid(uid) {
+		return fmt.Errorf("player uid(%s) is invalid", uid)
+	}
 
 	status := p.Status
 	if status == StatusLocked || status == StatusReleased {
