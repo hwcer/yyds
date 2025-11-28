@@ -127,7 +127,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		} else if gate := meta.GetUint64(options.ServicePlayerGateway); gate != p.Gateway {
 			return errors.ErrReplaced
 		}
-		if c.Player.Login < times.Daily(0).Now().Unix() && m != options.OAuthRenewal {
+		if options.Setting.Renewal && c.Player.Login < times.Daily(0).Now().Unix() && m != options.OAuthRenewal {
 			return errors.ErrNeedResetSession
 		}
 		//重发
