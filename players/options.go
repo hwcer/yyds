@@ -2,12 +2,12 @@ package players
 
 import "github.com/hwcer/cosmo"
 
-const (
+var (
 	Heartbeat = 5 //心跳间隔(S)
 
-	HeartbeatConnectedTime  = 60 //N秒无心跳,假死,视为断开连接
-	HeartbeatDisconnectTime = 60 //断开连接N秒触发掉线状态
-	HeartbeatOfflineTime    = 60 //掉线状态等待N秒 开始清理
+	HeartbeatConnectedTime  int64 = 120 //N秒无心跳,假死,视为断开连接
+	HeartbeatDisconnectTime int64 = 120 //断开连接N秒触发掉线状态
+	HeartbeatOfflineTime    int64 = 60  //掉线状态等待N秒 开始清理
 )
 
 type AsyncModel int8

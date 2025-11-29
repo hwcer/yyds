@@ -155,9 +155,9 @@ func worker() {
 	//var rm int
 	ct := tot
 	recycling := len(playersRecycling)
-	defer func() {
-		logger.Debug("当前在线人数:%d  缓存数量:%d  回收站人数:%d  本次清理:%d", playersOnline, tot, recycling, tot-ct)
-	}()
+	//defer func() {
+	//	//logger.Debug("当前在线人数:%d  缓存数量:%d  回收站人数:%d  本次清理:%d", playersOnline, tot, recycling, tot-ct)
+	//}()
 
 	//清理内存
 	if recycling == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
@@ -183,7 +183,7 @@ func worker() {
 }
 
 func daemon(ctx context.Context) {
-	t := time.Second * Heartbeat
+	t := time.Second * time.Duration(Heartbeat)
 	timer := time.NewTimer(t)
 	defer timer.Stop()
 	defer shutdown()
