@@ -17,6 +17,9 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
+// Security  签名等安全验证
+var Security func(ctx *Context) error
+
 /*
 所有接口都必须已经登录
 使用updater时必须使用playerHandle.data()来获取updater
@@ -85,6 +88,11 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	path := c.ServiceMethod()
 	if !options.HasServiceMethod(path) {
 		return c.handle(node) //内网通信不启用玩家数据
+	}
+	if Security != nil {
+		if err = Security(c); err != nil {
+			return err, nil
+		}
 	}
 	path = options.TrimServiceMethod(path)
 
