@@ -216,8 +216,8 @@ func shutdown() {
 	ps.Range(func(uid string, p *player.Player) bool {
 		if p.Status == player.StatusConnected {
 			disconnect(p)
-			offline(p)
-		} else if p.Status == player.StatusDisconnect {
+		}
+		if p.Status == player.StatusDisconnect {
 			offline(p)
 		}
 		_ = released(p)
