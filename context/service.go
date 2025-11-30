@@ -18,7 +18,7 @@ import (
 )
 
 // Security  签名等安全验证
-var Security func(ctx *Context) error
+var Security func(ctx *Context, path string, auth options.OAuthType) error
 
 /*
 所有接口都必须已经登录
@@ -89,11 +89,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	if !options.HasServiceMethod(path) {
 		return c.handle(node) //内网通信不启用玩家数据
 	}
-	if Security != nil {
-		if err = Security(c); err != nil {
-			return err, nil
-		}
-	}
+
 	path = options.TrimServiceMethod(path)
 
 	l, m := options.OAuth.Get(options.ServiceTypeGame, path)
@@ -108,6 +104,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 			return c.handle(node)
 		}
 	}
+
 	uid := c.Uid()
 	if uid == "" {
 		return nil, errors.ErrNotSelectRole
@@ -126,6 +123,12 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		p.Path = path
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
+		//验证签名
+		if Security != nil {
+			if err = Security(c, path, l); err != nil {
+				return err
+			}
+		}
 		//尝试重新上线
 		meta := values.Metadata(c.Metadata())
 		if c.Player.Status != player.StatusConnected {
