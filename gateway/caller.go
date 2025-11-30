@@ -30,11 +30,21 @@ func oauth(h Request) (any, error) {
 	return caller(h, Options.G2SOAuth)
 }
 
-func caller(h Request, path string) ([]byte, error) {
+func caller(h Request, path string) (reply []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("%v", e)
+		}
+		if err != nil && Options.Errorf != nil {
+			reply = Options.Errorf(err)
+			err = nil
+		}
+	}()
 	req := h.Metadata()
 	res := make(values.Metadata)
 	var p *session.Data
-	servicePath, serviceMethod, err := Options.Router(path, req)
+	var servicePath, serviceMethod string
+	servicePath, serviceMethod, err = Options.Router(path, req)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +68,7 @@ func caller(h Request, path string) ([]byte, error) {
 	if buff, err = h.Buffer(); err != nil {
 		return nil, err
 	}
-	reply := make([]byte, 0)
+	reply = make([]byte, 0)
 
 	if Options.Request != nil {
 		Options.Request(p, s, req)

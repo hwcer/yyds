@@ -2,13 +2,7 @@ package players
 
 import "github.com/hwcer/cosmo"
 
-var (
-	Heartbeat = 5 //心跳间隔(S)
-
-	HeartbeatConnectedTime  int64 = 120 //N秒无心跳,假死,视为断开连接
-	HeartbeatDisconnectTime int64 = 120 //断开连接N秒触发掉线状态
-	HeartbeatOfflineTime    int64 = 60  //掉线状态等待N秒 开始清理
-)
+var ()
 
 type AsyncModel int8
 
@@ -18,14 +12,22 @@ const (
 )
 
 var Options = struct {
-	Preload       Preload
-	AsyncModel    AsyncModel
-	MemoryPlayer  int32 //常驻内存的玩家数量
-	MemoryRelease int32 //回收站(release)玩家数量达到N时开始清理内存,缓存数量>=MemoryPlayer + MemoryRelease 开始执行清理计划
-
+	Preload        Preload
+	AsyncModel     AsyncModel
+	MemoryPlayer   int32 //常驻内存的玩家数量
+	MemoryRelease  int32 //回收站(release)玩家数量达到N时开始清理内存,缓存数量>=MemoryPlayer + MemoryRelease 开始执行清理计划
+	Heartbeat      int64
+	ConnectedTime  int64
+	DisconnectTime int64
+	OfflineTime    int64
 }{
 	MemoryPlayer:  2000,
 	MemoryRelease: 100,
+
+	Heartbeat:      5,   //心跳间隔(S)
+	ConnectedTime:  120, //N秒无心跳,假死,视为断开连接
+	DisconnectTime: 120, //断开连接N秒触发掉线状态
+	OfflineTime:    60,  //掉线状态等待N秒 开始清理
 }
 
 type Preload interface {

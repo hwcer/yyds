@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/channel"
 	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
@@ -47,17 +48,26 @@ func Online() int32 {
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁
 // 不进行初始化，数据按需模式读写
 func Get(uid string, handle player.Handle) error {
+	if playersStarted == 0 {
+		return errors.ErrServerClosed
+	}
 	return ps.Get(uid, handle)
 }
 
 // Load 加载玩家数据,如果不在线则实时读写数据库
 // init 是否立即初始化所有数据
 func Load(uid string, init bool, handle player.Handle) (err error) {
+	if playersStarted == 0 {
+		return errors.ErrServerClosed
+	}
 	return ps.Load(uid, init, handle)
 }
 
 // Login 登录成功,只能在登录时调用
 func Login(uid string, meta map[string]string, handle player.Handle) (err error) {
+	if playersStarted == 0 {
+		return errors.ErrServerClosed
+	}
 	err = ps.Load(uid, true, func(p *player.Player) error {
 		if e := Connected(p, meta); e != nil {
 			return e
@@ -68,6 +78,9 @@ func Login(uid string, meta map[string]string, handle player.Handle) (err error)
 }
 
 func Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+	if playersStarted == 0 {
+		return nil, errors.ErrServerClosed
+	}
 	return ps.Locker(uid, args, handle, done...)
 }
 

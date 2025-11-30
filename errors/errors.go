@@ -16,6 +16,7 @@ var (
 	ErrNeedResetSession = values.Errorf(12, "need reset session")        //跨天需要特殊处理
 	ErrNeedGameMaster   = values.Errorf(13, "GM permission is required") //需要GM权限
 	ErrNotOnline        = values.Errorf(14, "user not online")           //不在线
+	ErrServerClosed     = values.Errorf(15, "server closed")
 
 	ErrLoginAgain    = values.Errorf(101, "please login again") //需要重新登录
 	ErrLoginDisabled = values.Errorf(102, "disabled")           //账号禁用

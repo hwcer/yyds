@@ -65,7 +65,7 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 }
 
 // Disconnect 下线,心跳超时,断开连接等
-func Disconnect(p *player.Player) bool {
+func disconnect(p *player.Player) bool {
 	status := p.Status
 	if status != player.StatusConnected {
 		return false
@@ -75,12 +75,14 @@ func Disconnect(p *player.Player) bool {
 	}
 	p.KeepAlive(0)
 	atomic.AddInt32(&playersOnline, -1)
+	p.Lock()
+	defer p.Unlock()
 	emitter.Events.Emit(p.Updater, EventDisconnect)
 	return true
 }
 
 // Offline 业务逻辑层面掉线
-func Offline(p *player.Player) bool {
+func offline(p *player.Player) bool {
 	status := p.Status
 	if !(status == player.StatusNone || status == player.StatusDisconnect) {
 		return false
@@ -89,12 +91,14 @@ func Offline(p *player.Player) bool {
 		return false
 	}
 	p.KeepAlive(0)
+	p.Lock()
+	defer p.Unlock()
 	emitter.Events.Emit(p.Updater, EventOffline)
 	return true
 }
 
-// Released 释放用户实例
-func Released(p *player.Player) (ok bool) {
+// released 释放用户实例
+func released(p *player.Player) (ok bool) {
 	status := p.Status
 	if status != player.StatusOffline {
 		return false
@@ -124,9 +128,9 @@ func worker() {
 	}
 	//playersReleaseTime++
 	now := time.Now().Unix()
-	connectedTime := now - HeartbeatConnectedTime
-	disconnectTime := now - HeartbeatDisconnectTime
-	offlineTime := now - HeartbeatOfflineTime
+	connectedTime := now - Options.ConnectedTime
+	disconnectTime := now - Options.DisconnectTime
+	offlineTime := now - Options.OfflineTime
 
 	var tot int32
 	ps.Range(func(uid string, p *player.Player) bool {
@@ -136,15 +140,20 @@ func worker() {
 		switch p.Status {
 		case player.StatusNone, player.StatusOffline:
 			if p.Heartbeat() < offlineTime {
-				playersRecycling[uid] = p
+				if _, ok := playersRecycling[uid]; !ok {
+					playersRecycling[uid] = p
+					logger.Debug("Players.Recycling uid:%v", uid)
+				}
 			}
 		case player.StatusConnected:
 			if p.Heartbeat() <= connectedTime {
-				Disconnect(p)
+				disconnect(p)
+				logger.Debug("Players.Disconnect uid:%v", uid)
 			}
 		case player.StatusDisconnect:
 			if p.Heartbeat() < disconnectTime {
-				Offline(p)
+				offline(p)
+				logger.Debug("Players.Offline uid:%v", uid)
 			}
 		default:
 		}
@@ -173,7 +182,7 @@ func worker() {
 
 	next := map[string]*player.Player{}
 	for _, p := range dict {
-		if ct > Options.MemoryPlayer && Released(p) {
+		if ct > Options.MemoryPlayer && released(p) {
 			ct--
 		} else if p.Status == player.StatusOffline || p.Status == player.StatusNone {
 			next[p.Uid()] = p
@@ -183,7 +192,7 @@ func worker() {
 }
 
 func daemon(ctx context.Context) {
-	t := time.Second * time.Duration(Heartbeat)
+	t := time.Second * time.Duration(Options.Heartbeat)
 	timer := time.NewTimer(t)
 	defer timer.Stop()
 	defer shutdown()
@@ -202,9 +211,16 @@ func shutdown() {
 	if !atomic.CompareAndSwapInt32(&playersStarted, 1, 0) {
 		return
 	}
+	logger.Alert("收到退出信号，正在保存所有玩家数据")
 	//关闭所有用户
 	ps.Range(func(uid string, p *player.Player) bool {
-		_ = Released(p)
+		if p.Status == player.StatusConnected {
+			disconnect(p)
+			offline(p)
+		} else if p.Status == player.StatusDisconnect {
+			offline(p)
+		}
+		_ = released(p)
 		return true
 	})
 	return
