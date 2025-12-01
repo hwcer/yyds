@@ -85,6 +85,8 @@ func (this *TcpServer) C2SOAuth(c *cosnet.Context) any {
 	vs := values.Values{}
 	if token.Developer {
 		vs.Set(options.ServiceMetadataDeveloper, "1")
+	} else {
+		vs.Set(options.ServiceMetadataDeveloper, "")
 	}
 	if _, err = h.Login(token.Guid, vs); err != nil {
 		return err
