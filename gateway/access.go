@@ -62,7 +62,7 @@ func (this *access) OAuthTypeNone(r Request, req values.Metadata, isMaster bool)
 }
 
 // OAuthTypeOAuth 账号登录
-func (this *access) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *access) OAuthTypeOAuth(r Request, req values.Metadata, needMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -72,14 +72,14 @@ func (this *access) OAuthTypeOAuth(r Request, req values.Metadata, isMaster bool
 		req[options.ServiceMetadataGUID] = uuid
 	}
 	req[options.ServiceClientIp] = r.RemoteAddr()
-	if isMaster {
-		err = this.IsMaster(p)
+	if needMaster && !this.HasMaster(p) {
+		err = errors.ErrNeedGameMaster
 	}
 	return
 }
 
 // OAuthTypeSelect 必须选择角色
-func (this *access) OAuthTypeSelect(r Request, req values.Metadata, isMaster bool) (p *session.Data, err error) {
+func (this *access) OAuthTypeSelect(r Request, req values.Metadata, needMaster bool) (p *session.Data, err error) {
 	if p, err = this.oauth(r, req); err != nil {
 		return nil, err
 	}
@@ -88,21 +88,21 @@ func (this *access) OAuthTypeSelect(r Request, req values.Metadata, isMaster boo
 	} else {
 		req[options.ServiceMetadataUID] = p.GetString(options.ServiceMetadataUID)
 	}
-	if isMaster {
-		err = this.IsMaster(p)
+	if needMaster && !this.HasMaster(p) {
+		err = errors.ErrNeedGameMaster
 	}
 	return
 }
 
-// IsMaster 是GM
-func (this *access) IsMaster(p *session.Data) (err error) {
+// HasMaster 是GM
+func (this *access) HasMaster(p *session.Data) bool {
 	if p == nil {
-		return errors.ErrNeedGameMaster
+		return false
 	}
-	if gm := p.GetInt32(options.ServiceMetadataDeveloper); gm == 0 {
-		err = errors.ErrNeedGameMaster
+	if gm := p.GetInt32(options.ServiceMetadataDeveloper); gm == 1 {
+		return true
 	}
-	return
+	return false
 }
 
 type Token struct {
@@ -132,11 +132,11 @@ func (this *Authorize) Verify() (r *Token, err error) {
 	}
 	//开发者模式,GM指令
 	if this.Guid != "" && r.Developer {
+		//if this.Guid != "" {
 		if err = this.validateAccountComprehensive(this.Guid); err != nil {
 			return
 		}
 		r.Guid = this.Guid
-		r.Developer = true
 		return
 	}
 	//正常游戏模式

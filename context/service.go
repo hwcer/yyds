@@ -17,9 +17,6 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-// Security  签名等安全验证
-var Security func(ctx *Context, path string, auth options.OAuthType) error
-
 /*
 所有接口都必须已经登录
 使用updater时必须使用playerHandle.data()来获取updater
@@ -123,12 +120,6 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		p.Path = path
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
-		//验证签名
-		if Security != nil {
-			if err = Security(c, path, l); err != nil {
-				return err
-			}
-		}
 		//尝试重新上线
 		meta := values.Metadata(c.Metadata())
 		if c.Player.Status != player.StatusConnected {

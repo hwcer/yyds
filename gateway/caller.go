@@ -56,7 +56,6 @@ func caller(h Request, path string) (reply []byte, err error) {
 	} else if p, err = f(h, req, isMaster); err != nil {
 		return nil, err
 	}
-
 	req.Set(options.ServicePlayerGateway, cosrpc.Address().Encode())
 	//使用用户级别微服务筛选器
 	if p != nil {
@@ -67,6 +66,12 @@ func caller(h Request, path string) (reply []byte, err error) {
 	var buff *bytes.Buffer
 	if buff, err = h.Buffer(); err != nil {
 		return nil, err
+	}
+	//验证BODY有效性
+	if Options.Validate != nil {
+		if err = Options.Validate(p, l, s, req, buff.Bytes()); err != nil {
+			return nil, err
+		}
 	}
 	reply = make([]byte, 0)
 

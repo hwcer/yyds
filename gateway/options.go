@@ -43,8 +43,9 @@ var Options = struct {
 	Request     func(player *session.Data, path string, meta values.Metadata) //网关转发消息时
 	Response    func(player *session.Data, path string, meta values.Metadata) //推送数据时，不包括广播
 	Serialize   func(c Context, reply any) ([]byte, error)
-	Access      func(player *session.Data, token string, reply []byte) []byte //游戏端触发登录时用于处理登录信息
-	Errorf      func(err error) []byte                                        //格式化输出网关错误
+	Access      func(player *session.Data, token string, reply []byte) []byte                                        //游戏端触发登录时用于处理登录信息
+	Errorf      func(err error) []byte                                                                               //格式化输出网关错误
+	Validate    func(p *session.Data, oath options.OAuthType, path string, query values.Metadata, body []byte) error //负责验证BODY有效性，注意，未登录状态下p为nil
 }{
 	Router:    defaultRouter,
 	C2SOAuth:  "oauth",
