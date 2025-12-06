@@ -4,9 +4,39 @@ import (
 	"context"
 
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 )
+
+// GetPlayer 操作其他玩家
+func (this *Context) GetPlayer(c *Context, uid string, handle player.Handle) error {
+	if c.Player != nil && c.Player.Uid() == uid {
+		return handle(c.Player)
+	}
+
+	if c.Player != nil {
+		p := c.Player
+		cs, _ := p.Submit()
+		p.Updater.Dirty(cs...)
+		p.Release()
+		p.Unlock()
+		c.Player = nil
+		defer func() {
+			p.Lock()
+			p.Reset()
+			c.Player = p
+		}()
+	}
+
+	err := players.Get(uid, handle)
+	if err == nil || !errors.Is(err, errors.ErrNotOnline) {
+		return err
+	}
+	//强制登录
+	return players.Load(uid, true, handle)
+
+}
 
 // Mutex 玩家互斥锁，需要同时获得多个用户锁时使用
 // 可以防止死锁，不需要手动解锁
@@ -33,7 +63,7 @@ func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, nex
 			break
 		}
 	}
-	
+
 	if p := this.ctx.Player; p != nil && includingOneself {
 		this.ctx.Player = nil
 		p.Release()
