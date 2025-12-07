@@ -152,6 +152,11 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	if err != nil {
 		return err, nil
 	}
+	c.Player = nil
+	if c.Next != nil {
+		c.Next()
+	}
+
 	return
 }
 

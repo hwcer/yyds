@@ -10,6 +10,7 @@ import (
 
 type Context struct {
 	*cosrpc.Context
+	Next   func()
 	Player *player.Player
 }
 

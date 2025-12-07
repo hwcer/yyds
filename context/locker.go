@@ -10,22 +10,22 @@ import (
 )
 
 // GetPlayer 操作其他玩家
-func (this *Context) GetPlayer(c *Context, uid string, handle player.Handle) error {
-	if c.Player != nil && c.Player.Uid() == uid {
-		return handle(c.Player)
+func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) error {
+	if this.Player != nil && this.Player.Uid() == uid {
+		return handle(this.Player)
 	}
 
-	if c.Player != nil {
-		p := c.Player
+	if this.Player != nil {
+		p := this.Player
 		cs, _ := p.Submit()
 		p.Updater.Dirty(cs...)
 		p.Release()
 		p.Unlock()
-		c.Player = nil
+		this.Player = nil
 		defer func() {
 			p.Lock()
 			p.Reset()
-			c.Player = p
+			this.Player = p
 		}()
 	}
 
@@ -34,7 +34,7 @@ func (this *Context) GetPlayer(c *Context, uid string, handle player.Handle) err
 		return err
 	}
 	//强制登录
-	return players.Load(uid, true, handle)
+	return players.Load(uid, init, handle)
 
 }
 
