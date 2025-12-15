@@ -49,7 +49,6 @@ type Player struct {
 	Gateway   uint64           //网关地址
 	ClientIp  string           //客户端IP
 	Ban       bool             //封号
-	Path      string           //当前请求路径，动态
 }
 
 func (p *Player) initialize() {

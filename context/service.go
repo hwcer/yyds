@@ -117,7 +117,6 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		if p.Ban {
 			return errors.ErrRoleIsBan
 		}
-		p.Path = path
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
 		//尝试重新上线
