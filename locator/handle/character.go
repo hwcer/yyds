@@ -95,8 +95,8 @@ func (this *character) Create(c *cosrpc.Context) interface{} {
 	Analyse := model.NewAnalyse(v.Sid, sign)
 	up := update.Update{}
 	up.Inc("create", 1)
-	up.SetOnInert("sid", v.Sid)
-	up.SetOnInert("day", sign)
+	up.SetOnInsert("sid", v.Sid)
+	up.SetOnInsert("day", sign)
 	if tx := db.Model(Analyse).Upsert().Update(up, Analyse.Id); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
@@ -141,8 +141,8 @@ func (this *character) Online(c *cosrpc.Context) interface{} {
 	key := fmt.Sprintf("active.%v", dau)
 	up := update.Update{}
 	up.Inc(key, 1)
-	up.SetOnInert("sid", v.Sid)
-	up.SetOnInert("day", sign)
+	up.SetOnInsert("sid", v.Sid)
+	up.SetOnInsert("day", sign)
 	if tx := db.Model(Analyse).Upsert().Update(up, Analyse.Id); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
