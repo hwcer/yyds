@@ -40,13 +40,13 @@ func loading() (err error) {
 	tx = tx.Select("_id").Limit(int(record))
 	tx = tx.Range(func(cursor cosmo.Cursor) bool {
 		v := &preloadPlayerDecode{}
-		if e := cursor.Decode(v); e == nil {
-			progress.c <- v.Id
-			return true
+		if e := cursor.Decode(v); e != nil {
+			logger.Alert("preload error", err)
 		} else {
-			tx.Errorf(err)
-			return false
+			progress.c <- v.Id
 		}
+
+		return true
 	})
 	if tx.Error != nil {
 		return tx.Error
