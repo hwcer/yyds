@@ -7,7 +7,7 @@ import (
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/locator/model"
+	"github.com/hwcer/yyds/modules/locator/model"
 	"github.com/hwcer/yyds/options"
 )
 

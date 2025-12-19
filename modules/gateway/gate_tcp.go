@@ -16,7 +16,7 @@ import (
 	"github.com/hwcer/cosnet/tcp"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
-	"github.com/hwcer/yyds/gateway/players"
+	"github.com/hwcer/yyds/modules/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
 

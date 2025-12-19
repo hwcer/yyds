@@ -9,7 +9,7 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/client"
-	"github.com/hwcer/yyds/gateway/players"
+	"github.com/hwcer/yyds/modules/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
 

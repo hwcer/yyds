@@ -4,8 +4,8 @@ import (
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/gateway/channel"
-	"github.com/hwcer/yyds/gateway/players"
+	"github.com/hwcer/yyds/modules/gateway/channel"
+	"github.com/hwcer/yyds/modules/gateway/players"
 	"github.com/hwcer/yyds/options"
 )
 

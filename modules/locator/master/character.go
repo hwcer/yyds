@@ -7,7 +7,7 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/cosweb"
-	"github.com/hwcer/yyds/locator/model"
+	"github.com/hwcer/yyds/modules/locator/model"
 )
 
 func init() {

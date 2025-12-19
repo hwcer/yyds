@@ -5,7 +5,7 @@ import (
 
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/yyds/gateway/channel"
+	"github.com/hwcer/yyds/modules/gateway/channel"
 	"github.com/hwcer/yyds/options"
 )
 

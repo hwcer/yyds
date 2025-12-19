@@ -3,9 +3,9 @@ package locator
 import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/utils"
-	"github.com/hwcer/yyds/locator/handle"
-	"github.com/hwcer/yyds/locator/master"
-	"github.com/hwcer/yyds/locator/model"
+	"github.com/hwcer/yyds/modules/locator/handle"
+	"github.com/hwcer/yyds/modules/locator/master"
+	"github.com/hwcer/yyds/modules/locator/model"
 	"github.com/hwcer/yyds/options"
 )
 

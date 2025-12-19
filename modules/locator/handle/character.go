@@ -8,7 +8,7 @@ import (
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosmo/update"
 	"github.com/hwcer/cosrpc"
-	"github.com/hwcer/yyds/locator/model"
+	"github.com/hwcer/yyds/modules/locator/model"
 )
 
 func init() {
