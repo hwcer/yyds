@@ -2,9 +2,6 @@ package handle
 
 import (
 	"fmt"
-	"server/game/analytics"
-	"server/game/handle/social/graph"
-	"server/game/handle/social/model"
 	"server/share"
 
 	"github.com/hwcer/cosgo/registry"
@@ -13,13 +10,11 @@ import (
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/errors"
+	"github.com/hwcer/yyds/modules/social/graph"
+	"github.com/hwcer/yyds/modules/social/model"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 )
-
-func init() {
-	Register(&Friend{})
-}
 
 type Friend struct {
 }
@@ -101,9 +96,6 @@ type friendGetterReply struct {
 	Uid    string        `json:"uid"`
 	Player *share.Player `json:"player"`
 	Online int64         `json:"online"` // 0-不在线，1 -活跃
-	//CollectGold int32         `json:"collectGold"` //今日可偷
-	//Values values.Values `json:"values"`
-	//Remark string        `json:"remark"`
 }
 
 // Getter 获取好友列表
@@ -260,8 +252,6 @@ func (this *Friend) Apply(c *context.Context) any {
 			f2 := model.NewFriend(fid, uid)
 			f2.BulkWrite(bw)
 			success = append(success, f1)
-			// 上报添加好友事件
-			analytics.TrackAddFriend(c, fid)
 		}
 	}
 

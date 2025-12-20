@@ -1,20 +1,11 @@
 package model
 
 import (
-	"server/game/handle/social/graph"
-
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/logger"
-)
-
-const (
-	FriendValuesKeyLike   = "like"   //点赞
-	FriendValuesKeyRemark = "remark" //好友备注
-	//PlayerValuesKeyOnline      = "online" //是否在线
-	//PlayerValuesKeyCollectGold = "CollectGold"
-	//PlayerValuesKeyEggFast     = "EggFast"
+	"github.com/hwcer/yyds/modules/social/graph"
 )
 
 var Graph, install = graph.New(factory{})
@@ -24,24 +15,6 @@ func init() {
 	//players.On(players.EventConnect, playerConnect)
 	//players.On(players.EventDisconnect, playerDisconnect)
 }
-
-//func playerConnect(u *updater.Updater, v ...int32) {
-//	_ = Graph.Modify(u.Uid(), func(p *graph.Player) error {
-//		p.Set(PlayerValuesKeyOnline, int32(1))
-//		return nil
-//	})
-//}
-
-//func playerDisconnect(u *updater.Updater, v ...int32) {
-//	_ = Graph.Modify(u.Uid(), func(p *graph.Player) error {
-//		p.Set(PlayerValuesKeyOnline, int32(0))
-//		return nil
-//	})
-//}
-
-//func NewNotify(id string) (graph.Player, error) {
-//	return &Notify{uid: id}, nil
-//}
 
 type factory struct {
 }
