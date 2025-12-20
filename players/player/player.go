@@ -179,19 +179,19 @@ func (p *Player) KeepAlive(t int64) {
 // AddItems  无脑添加道具
 // items类型itemGroup,itemProbability,[]itemGroup,[]itemProbability
 // multi[分子,分母]
-func (p *Player) AddItems(items interface{}, multi ...int32) {
+func (p *Player) AddItems(items interface{}, multi ...int64) {
 	//概率
-	power := [2]int32{1, 0}
+	power := [2]int64{1, 0}
 	if len(multi) > 0 {
 		copy(power[0:2], multi)
 	}
 	//独立概率
 	if g, ok := items.(itemProbability); ok {
 		if g.GetId() > 0 && g.GetNum() > 0 {
-			var v int32
-			for i := int32(0); i < power[0]; i++ {
+			var v int64
+			for i := int64(0); i < power[0]; i++ {
 				if random.Probability(g.GetVal()) {
-					v += g.GetNum()
+					v += int64(g.GetNum())
 				}
 			}
 			if power[1] > 0 {
@@ -206,7 +206,7 @@ func (p *Player) AddItems(items interface{}, multi ...int32) {
 	//物品
 	if g, ok := items.(itemGroup); ok {
 		if g.GetId() > 0 && g.GetNum() > 0 {
-			v := g.GetNum() * power[0]
+			v := int64(g.GetNum()) * power[0]
 			if power[1] > 0 {
 				v = v / power[1]
 			}
@@ -226,17 +226,22 @@ func (p *Player) AddItems(items interface{}, multi ...int32) {
 // SubItems  无脑扣除道具
 // items类型itemGroup,[]itemGroup
 // multi[分子,分母]
-func (p *Player) SubItems(items interface{}, multi ...int32) {
+func (p *Player) SubItems(items interface{}, multi ...int64) {
 	//物品
-	power := [2]int32{1, 0}
+	power := [2]int64{1, 0}
 	if len(multi) > 0 {
 		copy(power[0:2], multi)
 	}
 	if g, ok := items.(itemGroup); ok {
 		if g.GetId() > 0 && g.GetNum() > 0 {
-			v := g.GetNum() * power[0]
+			v := int64(g.GetNum()) * power[0]
 			if power[1] > 0 {
 				v = v / power[1]
+			}
+			if v <= 0 {
+				logger.Alert("sub items error, uid:%s,iid:%d,val:%d,num:%d", p.Uid(), g.GetId(), v, power[0])
+				_ = p.Updater.Errorf("sub items is invalid")
+
 			}
 			p.Updater.Sub(g.GetId(), v)
 		}
