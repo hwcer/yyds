@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hwcer/cosgo/scc"
-	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 )
@@ -15,24 +14,24 @@ func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) erro
 		return handle(this.Player)
 	}
 
-	if this.Player != nil {
-		p := this.Player
-		cs, _ := p.Submit()
-		p.Updater.Dirty(cs...)
-		p.Release()
-		p.Unlock()
-		this.Player = nil
-		defer func() {
-			p.Lock()
-			p.Reset()
-			this.Player = p
-		}()
-	}
-
-	err := players.Get(uid, handle)
-	if err == nil || !errors.Is(err, errors.ErrNotOnline) {
-		return err
-	}
+	//if this.Player != nil {
+	//	p := this.Player
+	//	cs, _ := p.Submit()
+	//	p.Updater.Dirty(cs...)
+	//	p.Release()
+	//	p.Unlock()
+	//	this.Player = nil
+	//	defer func() {
+	//		p.Lock()
+	//		p.Reset()
+	//		this.Player = p
+	//	}()
+	//}
+	//
+	//err := players.Get(uid, handle)
+	//if err == nil || !errors.Is(err, errors.ErrNotOnline) {
+	//	return err
+	//}
 	//强制登录
 	return players.Load(uid, init, handle)
 
