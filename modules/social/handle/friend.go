@@ -2,11 +2,10 @@ package handle
 
 import (
 	"fmt"
-	"server/share"
 
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/slice"
-	"github.com/hwcer/cosgo/times"
+
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/errors"
@@ -91,70 +90,70 @@ func (this *Friend) recommendAppend(cb graph.RecommendHandle) {
  * @param string key 额外字段
  * 好友列表
  */
-
-type friendGetterReply struct {
-	Uid    string        `json:"uid"`
-	Player *share.Player `json:"player"`
-	Online int64         `json:"online"` // 0-不在线，1 -活跃
-}
-
-// Getter 获取好友列表
-// update int64 上次更新时间,实现增量更新,如 online 等
-// 第一次 update =0
-func (this *Friend) Getter(c *context.Context) any {
-	uid := c.Uid()
-	update := c.GetInt64("update")
-	friends := map[string]*friendGetterReply{}
-	today := times.Daily(0).Now().Unix()
-	model.Graph.Range(uid, graph.RelationFriend, func(v graph.Getter) bool {
-		p := v.Player()
-		if update > 0 && p.Update < update {
-			return true
-		}
-		k := v.Fid()
-		//f := v.Friend()
-		//ls := GetPetsCollectList(p, today)
-
-		r := &friendGetterReply{
-			Uid: uid,
-			//CollectGold: config.Data.Base.FriendCollectGold - int32(len(ls)),
-			//Online: p.Values.GetInt64(model.PlayerValuesKeyOnline),
-			//Values: f.Values.Clone(),
-		}
-		//if r.CollectGold < 0 {
-		//	r.CollectGold = 0
-		//}
-		friends[k] = r
-		return true
-	})
-
-	var fid []string
-	for k, _ := range friends {
-		fid = append(fid, k)
-	}
-
-	ps, err := model.GetPlayers(fid)
-	if err != nil {
-		return err
-	}
-	now := c.Unix()
-	reply := make([]*friendGetterReply, 0, len(ps))
-	for k, p := range ps {
-		if v := friends[k]; v != nil {
-			v.Player = p.(*share.Player)
-			if v.Online == 0 {
-				if v.Player.Login >= today {
-					v.Online = 1
-				} else if diff := now - v.Player.Login; diff < 7200 {
-					v.Online = 1
-				}
-			}
-			reply = append(reply, v)
-		}
-	}
-
-	return reply
-}
+//
+//type friendGetterReply struct {
+//	Uid    string        `json:"uid"`
+//	Player *share.Player `json:"player"`
+//	Online int64         `json:"online"` // 0-不在线，1 -活跃
+//}
+//
+//// Getter 获取好友列表
+//// update int64 上次更新时间,实现增量更新,如 online 等
+//// 第一次 update =0
+//func (this *Friend) Getter(c *context.Context) any {
+//	uid := c.Uid()
+//	update := c.GetInt64("update")
+//	friends := map[string]*friendGetterReply{}
+//	today := times.Daily(0).Now().Unix()
+//	model.Graph.Range(uid, graph.RelationFriend, func(v graph.Getter) bool {
+//		p := v.Player()
+//		if update > 0 && p.Update < update {
+//			return true
+//		}
+//		k := v.Fid()
+//		//f := v.Friend()
+//		//ls := GetPetsCollectList(p, today)
+//
+//		r := &friendGetterReply{
+//			Uid: uid,
+//			//CollectGold: config.Data.Base.FriendCollectGold - int32(len(ls)),
+//			//Online: p.Values.GetInt64(model.PlayerValuesKeyOnline),
+//			//Values: f.Values.Clone(),
+//		}
+//		//if r.CollectGold < 0 {
+//		//	r.CollectGold = 0
+//		//}
+//		friends[k] = r
+//		return true
+//	})
+//
+//	var fid []string
+//	for k, _ := range friends {
+//		fid = append(fid, k)
+//	}
+//
+//	ps, err := model.GetPlayers(fid)
+//	if err != nil {
+//		return err
+//	}
+//	now := c.Unix()
+//	reply := make([]*friendGetterReply, 0, len(ps))
+//	for k, p := range ps {
+//		if v := friends[k]; v != nil {
+//			v.Player = p.(*share.Player)
+//			if v.Online == 0 {
+//				if v.Player.Login >= today {
+//					v.Online = 1
+//				} else if diff := now - v.Player.Login; diff < 7200 {
+//					v.Online = 1
+//				}
+//			}
+//			reply = append(reply, v)
+//		}
+//	}
+//
+//	return reply
+//}
 
 // Fans 我的粉丝 ，等待我确认的
 func (this *Friend) Fans(c *context.Context) any {
