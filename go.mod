@@ -4,13 +4,13 @@ go 1.24.0
 
 require (
 	github.com/hwcer/cosgo v1.6.5
-	github.com/hwcer/cosmo v1.2.3
+	github.com/hwcer/cosmo v1.2.4
 	github.com/hwcer/cosnet v1.3.3
 	github.com/hwcer/cosrpc v1.2.3
 	github.com/hwcer/cosweb v1.3.4
 	github.com/hwcer/coswss v0.2.1
 	github.com/hwcer/logger v0.2.8
-	github.com/hwcer/updater v1.3.2
+	github.com/hwcer/updater v1.3.3
 	github.com/rpcxio/libkv v0.5.1
 	github.com/smallnest/rpcx v1.9.1
 	github.com/soheilhy/cmux v0.1.5
