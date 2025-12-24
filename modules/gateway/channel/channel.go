@@ -1,9 +1,10 @@
 package channel
 
 import (
+	"sync"
+
 	"github.com/hwcer/cosgo/session"
 	"github.com/hwcer/logger"
-	"sync"
 )
 
 func New(name string, fixed bool) *Channel {
@@ -70,13 +71,10 @@ func (this *Channel) Release() {
 
 // release 房间销毁时，清理所有房间内的成员
 func (this *Channel) removeAllPlayer() {
-	PMSMutex.Lock()
-	defer PMSMutex.Unlock()
-	for _, v := range this.ps {
-		uuid := v.UUID()
-		if pms := Players.Get(uuid); pms != nil {
-			pms.remove(this.id)
-		}
+	k, v := Split(this.id)
+	for _, d := range this.ps {
+		setter := NewSetter(d)
+		setter.Leave(k, v)
 	}
 }
 

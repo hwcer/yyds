@@ -34,9 +34,9 @@ func CookiesUpdate(cookie values.Metadata, p *session.Data) {
 	vs := values.Values{}
 	for k, v := range cookie {
 		if strings.HasPrefix(k, options.ServicePlayerRoomJoin) {
-			channel.Join(v, p)
+			channel.Join(p, v)
 		} else if strings.HasPrefix(k, options.ServicePlayerRoomLeave) {
-			channel.Leave(v, p)
+			channel.Leave(p, v)
 		} else if strings.HasPrefix(k, options.ServicePlayerSelector) {
 			vs[k] = v
 		} else if _, ok := cookiesAllowableName[k]; ok {

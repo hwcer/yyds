@@ -1,8 +1,9 @@
 package channel
 
 import (
-	"github.com/hwcer/cosgo/session"
 	"sync"
+
+	"github.com/hwcer/cosgo/session"
 )
 
 var manage = sync.Map{}
@@ -23,23 +24,26 @@ func loadOrCreate(name string, fixed bool) (r *Channel, loaded bool) {
 	return
 }
 
-func Join(name string, p *session.Data) {
-	uuid := p.UUID()
-
+func Join(p *session.Data, name string) {
+	k, v := Split(name)
+	setter := NewSetter(p)
+	if old, ok := setter.Join(k, v); ok && old != v {
+		leave(p, name, old)
+	}
 	room, _ := loadOrCreate(name, false)
 	room.Join(p)
 
-	pms := Players.Load(uuid)
-	if !pms.Has(name) {
-		pms.Set(name, room)
-	}
 }
 
-func Leave(name string, p *session.Data) {
-	uuid := p.UUID()
-	if pms := Players.Get(uuid); pms != nil {
-		pms.Delete(name)
-	}
+func Leave(p *session.Data, name string) {
+	k, v := Split(name)
+	setter := NewSetter(p)
+	setter.Leave(k, v)
+	leave(p, k, v)
+}
+
+func leave(p *session.Data, k, v string) {
+	name := Name(k, v)
 	if room := Get(name); room != nil {
 		room.Leave(p)
 	}
@@ -54,12 +58,10 @@ func Range(name string, f func(*session.Data) bool) {
 
 // Release 用户掉线,销毁时 清理所在房间信息
 func Release(p *session.Data) {
-	pms := Players.Delete(p.UUID())
-	if pms == nil {
-		return
-	}
-	for _, room := range pms.dict {
-		room.Leave(p)
+	setter := NewSetter(p)
+	rs := setter.Release()
+	for _, r := range rs {
+		leave(p, r.k, r.v)
 	}
 }
 
