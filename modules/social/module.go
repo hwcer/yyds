@@ -26,7 +26,8 @@ func Accept(uid, fid string, fast bool) error {
 	if len(success) == 0 {
 		return nil
 	}
-	bw := model.DB().BulkWrite(&model.Friend{})
+	db := model.DB()
+	bw := db.BulkWrite(&model.Friend{})
 	var myFriend []*model.Friend
 	for _, tar := range success {
 		f1 := model.NewFriend(uid, tar)

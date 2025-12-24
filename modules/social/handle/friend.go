@@ -211,8 +211,9 @@ func (this *Friend) Apply(c *context.Context) any {
 	if len(arr) == 0 {
 		return errors.ErrArgEmpty
 	}
+	uid := c.Uid()
 	for _, v := range arr {
-		if v == c.Uid() {
+		if v == uid {
 			return c.Errorf(0, "不能加自己")
 		}
 	}
@@ -227,12 +228,6 @@ func (this *Friend) Apply(c *context.Context) any {
 	var us []string
 	for k, _ := range rows {
 		us = append(us, k)
-	}
-	uid := c.Uid()
-	for _, v := range arr {
-		if v == c.Uid() {
-			return c.Errorf(0, "不能加自己")
-		}
 	}
 
 	rst, err := model.Graph.Follow(uid, us)

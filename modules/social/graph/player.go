@@ -6,11 +6,11 @@ import (
 	"github.com/hwcer/cosgo/values"
 )
 
-func NewPlayer(v values.Values) *Player {
+func NewPlayer(uid string, v values.Values) *Player {
 	if v == nil {
 		v = values.Values{}
 	}
-	return &Player{Values: v, friends: map[string]*Friend{}}
+	return &Player{uid: uid, Values: v, Likes: make(map[string]int64), friends: map[string]*Friend{}}
 }
 
 func NewFriend(r Relation, v values.Values) *Friend {
@@ -21,7 +21,7 @@ func NewFriend(r Relation, v values.Values) *Friend {
 }
 
 type Friend struct {
-	values.Values          //存储的业务数据，我对这个好友干了什么
+	values.Values          //存储的业务数据
 	relation      Relation //好友关系
 }
 
@@ -34,18 +34,19 @@ func (f *Friend) Relation() Relation {
 }
 
 type Player struct {
-	values.Values       //存储的业务数据,我干了什么 ，方便通知好友
-	Update        int64 //上次更新  Values 用于增量获取好友信息
+	uid           string
+	values.Values                  //存储的业务数据
+	Likes         map[string]int64 //点赞列表
+	Update        int64            //上次更新  Values 用于增量获取好友信息
 	friends       map[string]*Friend
 }
 
+func (p *Player) Uid() string {
+	return p.uid
+}
 func (p *Player) Set(key string, val any) {
 	p.Values.Set(key, val)
 	p.Update = time.Now().Unix()
-}
-
-func (p *Player) Get(key string) any {
-	return p.Values.Get(key)
 }
 
 func (p *Player) Has(fid string, relation ...Relation) bool {
@@ -59,6 +60,26 @@ func (p *Player) Has(fid string, relation ...Relation) bool {
 		}
 	}
 	return false
+}
+
+// IsMax 好友是否已满
+func (p *Player) IsMax(limit int32) bool {
+	if limit <= 0 {
+		return false
+	}
+	if p.Count(RelationFriend) >= limit {
+		return true
+	}
+	return false
+}
+
+func (p *Player) Count(t Relation) (r int32) {
+	for _, friend := range p.friends {
+		if friend.relation.Has(t) {
+			r++
+		}
+	}
+	return
 }
 
 func (p *Player) Relation(fid string) Relation {
@@ -102,11 +123,5 @@ func (p *Player) Remove(fid string) *Friend {
 
 // Unfriend 拉黑
 func (p *Player) Unfriend(fid string) {
-	v, ok := p.friends[fid]
-	if !ok {
-		v = NewFriend(RelationUnfriend, nil)
-		p.friends[fid] = v
-	} else {
-		v.relation = RelationUnfriend
-	}
+	p.friends[fid] = NewFriend(RelationUnfriend, nil)
 }

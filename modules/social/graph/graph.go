@@ -28,7 +28,7 @@ func (sg *Graph) load(uid string) (*Player, error) {
 		if v, err := sg.factory.Create(uid); err != nil {
 			return nil, err
 		} else {
-			r = NewPlayer(v)
+			r = NewPlayer(uid, v)
 			sg.nodes[uid] = r
 		}
 
@@ -42,7 +42,7 @@ func (sg *Graph) Add(uid string) error {
 	defer sg.mu.Unlock()
 	if _, exists := sg.nodes[uid]; !exists {
 		if v, err := sg.factory.Create(uid); err == nil {
-			sg.nodes[uid] = NewPlayer(v)
+			sg.nodes[uid] = NewPlayer(uid, v)
 		} else {
 			return err
 		}
@@ -65,32 +65,42 @@ func (sg *Graph) Has(uid, fid string) bool {
 	return v.relation.Has(RelationFriend)
 }
 
-func (sg *Graph) isMax(uid string) bool {
-	if sg.Limit <= 0 {
-		return false
-	}
-	return sg.count(uid, RelationFriend) >= sg.Limit
-}
-
-func (sg *Graph) count(uid string, t Relation) (r int32) {
-	p := sg.nodes[uid]
-	if p == nil {
-		return
-	}
-	for _, friend := range p.friends {
-		if friend.relation.Has(t) {
-			r++
-		}
-	}
-	return
-}
+//
+//func (sg *Graph) isMax(uid ...string) bool {
+//	if sg.Limit <= 0 {
+//		return false
+//	}
+//	for _, u := range uid {
+//		if sg.count(u, RelationFriend) >= sg.Limit {
+//			return true
+//		}
+//	}
+//	return false
+//}
+//
+//func (sg *Graph) count(uid string, t Relation) (r int32) {
+//	p := sg.nodes[uid]
+//	if p == nil {
+//		return
+//	}
+//	for _, friend := range p.friends {
+//		if friend.relation.Has(t) {
+//			r++
+//		}
+//	}
+//	return
+//}
 
 func (sg *Graph) Count(uid []string, t Relation) map[string]int32 {
 	sg.mu.RLock()
 	defer sg.mu.RUnlock()
 	r := make(map[string]int32)
 	for _, u := range uid {
-		r[u] = sg.count(u, t)
+		if p, _ := sg.load(u); p != nil {
+			r[u] = p.Count(t)
+		} else {
+			r[u] = 0
+		}
 	}
 	return r
 }
@@ -118,46 +128,42 @@ func (sg *Graph) Relation(uid, fid string) Relation {
 func (sg *Graph) Follow(uid string, fid []string) (map[string]FollowResult, error) {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
-	if sg.isMax(uid) {
-		return nil, ErrorYourFriendMax
+	p, err := sg.load(uid)
+	if err != nil {
+		return nil, err
 	}
+	auto := !p.IsMax(sg.Limit)
 	r := map[string]FollowResult{}
 	for _, f := range fid {
-		if sg.isMax(f) {
-			return nil, ErrorTargetFriendMax
-		}
-		r[f] = sg.follow(uid, f)
+		r[f] = sg.follow(p, f, auto)
 	}
 	return r, nil
 }
 
-func (sg *Graph) follow(uid, fid string) FollowResult {
-	var p, t *Player
-	var err error
-	if p, err = sg.load(uid); err != nil {
-		return FollowResultFailure
-	}
-
+func (sg *Graph) follow(p *Player, fid string, auto bool) FollowResult {
 	//查询对方是我的粉丝
 	relation := p.Relation(fid)
 	if relation.Has(RelationUnfriend) {
-		return FollowResultUnfriend
+		return FollowResultUnfriend //被拉黑
 	} else if relation.Has(RelationFriend) {
-		return FollowResultFriend
+		return FollowResultFriend //已经是好友
 	} else if relation.Has(RelationFollow) {
 		return FollowResultNone //已经申请过
 	}
-	if t, err = sg.load(fid); err != nil {
+	t, err := sg.load(fid)
+	if err != nil {
 		return FollowResultFailure
 	}
+
+	uid := p.Uid()
 	//对方拉黑了你
 	if t.Has(uid, RelationUnfriend) {
 		return FollowResultUnfriend
 	}
 
 	r := FollowResultNone
-	if relation.Has(RelationFans) {
-		//我的粉丝直接成为好友
+	if relation.Has(RelationFans) && auto && !t.IsMax(sg.Limit) {
+		//我的粉丝并且双方好友未满直接成为好友
 		r = FollowResultFriend
 		_ = p.Modify(fid, RelationFriend)
 		_ = t.Modify(uid, RelationFriend)
@@ -201,9 +207,35 @@ func (sg *Graph) Unfriend(uid, fid string) {
 	}
 }
 
+func (sg *Graph) accept(p *Player, fid string, fast bool) (success bool, err error) {
+
+	if f := p.friends[fid]; f == nil && !fast {
+		return false, nil
+	} else if f != nil && f.relation != RelationFans {
+		return false, nil
+	}
+	var t *Player
+	t, err = sg.load(fid)
+	if err != nil {
+		return false, err
+	}
+	if t.IsMax(sg.Limit) {
+		if fast {
+			sg.follow(p, fid, false)
+		} else {
+			err = ErrorTargetFriendMax
+		}
+		return
+	}
+	p.Modify(fid, RelationFriend)
+	t.Modify(p.Uid(), RelationFriend)
+	return true, nil
+}
+
 // Accept 接受好友申请
 // 返回 成功加为好友的列表
-// fast 快速成为好友，不需要先申请
+// fast 快速成为好友，不需要先申请,如果好友已满自动申请
+// fast 模式不会返回错误，除非用户ID 不存在
 func (sg *Graph) Accept(uid string, tar []string, fast bool) (success []string, err error) {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
@@ -213,9 +245,16 @@ func (sg *Graph) Accept(uid string, tar []string, fast bool) (success []string, 
 		return
 	}
 
-	if sg.isMax(uid) {
-		return nil, ErrorYourFriendMax
+	if p.IsMax(sg.Limit) {
+		if fast {
+			for _, t := range tar {
+				sg.follow(p, t, false)
+			}
+		} else {
+			return nil, ErrorYourFriendMax
+		}
 	}
+
 	if len(tar) == 0 {
 		for k, v := range p.friends {
 			if v.relation == RelationFans {
@@ -224,22 +263,10 @@ func (sg *Graph) Accept(uid string, tar []string, fast bool) (success []string, 
 		}
 	}
 
-	var t *Player
 	for _, fid := range tar {
-		if f := p.friends[fid]; f == nil {
-			if !fast {
-				continue
-			}
-		} else if f.relation != RelationFans {
-			continue
-		}
-
-		if sg.isMax(fid) {
-			return nil, ErrorTargetFriendMax
-		}
-		if t, err = sg.load(fid); err == nil {
-			p.Modify(fid, RelationFriend)
-			t.Modify(uid, RelationFriend)
+		if s, e := sg.accept(p, fid, fast); e != nil {
+			return success, e
+		} else if s {
 			success = append(success, fid)
 		}
 	}

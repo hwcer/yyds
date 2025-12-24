@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 )
@@ -13,28 +14,27 @@ func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) erro
 	if this.Player != nil && this.Player.Uid() == uid {
 		return handle(this.Player)
 	}
+	//解除自身锁
+	if this.Player != nil {
+		p := this.Player
+		cs, _ := p.Submit()
+		p.Updater.Dirty(cs...)
+		p.Release()
+		p.Unlock()
+		this.Player = nil
+		defer func() {
+			p.Lock()
+			p.Reset()
+			this.Player = p
+		}()
+	}
 
-	//if this.Player != nil {
-	//	p := this.Player
-	//	cs, _ := p.Submit()
-	//	p.Updater.Dirty(cs...)
-	//	p.Release()
-	//	p.Unlock()
-	//	this.Player = nil
-	//	defer func() {
-	//		p.Lock()
-	//		p.Reset()
-	//		this.Player = p
-	//	}()
-	//}
-	//
-	//err := players.Get(uid, handle)
-	//if err == nil || !errors.Is(err, errors.ErrNotOnline) {
-	//	return err
-	//}
-	//强制登录
-	return players.Load(uid, init, handle)
-
+	if err := players.Get(uid, handle); err == nil {
+		return nil
+	} else if errors.Is(err, errors.ErrNotOnline) {
+		return players.Load(uid, init, handle)
+	}
+	return nil
 }
 
 // Mutex 玩家互斥锁，需要同时获得多个用户锁时使用
@@ -55,17 +55,18 @@ type Mutex struct {
 func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, next ...func()) (any, error) {
 	//var p *player.Player
 	var done []func()
-	var includingOneself bool
-	for _, k := range uids {
-		if k == this.ctx.Uid() {
-			includingOneself = true
-			break
-		}
-	}
 
-	if p := this.ctx.Player; p != nil && includingOneself {
+	//var includingOneself bool
+	//for _, k := range uids {
+	//	if k == this.ctx.Uid() {
+	//		includingOneself = true
+	//		break
+	//	}
+	//}
+
+	if p := this.ctx.Player; p != nil {
 		this.ctx.Player = nil
-		p.Release()
+		//p.Release()
 		if players.Options.AsyncModel == players.AsyncModelLocker {
 			p.Unlock()
 		}
@@ -73,7 +74,7 @@ func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, nex
 			if players.Options.AsyncModel == players.AsyncModelLocker {
 				p.Lock()
 			}
-			p.Reset()
+			//p.Reset()
 			this.ctx.Player = p
 		})
 	}
