@@ -6,6 +6,14 @@ const PlayerChannelName = "PlayerChannel"
 
 type PlayerChannelValue map[string]string
 
+func (p PlayerChannelValue) Clone() PlayerChannelValue {
+	r := make(PlayerChannelValue, len(p))
+	for k, v := range p {
+		r[k] = v
+	}
+	return r
+}
+
 type Setter struct {
 	*session.Data
 }
@@ -18,13 +26,14 @@ func (s *Setter) Join(name, value string) (old string, ok bool) {
 	s.Mutex(func(setter session.Setter) {
 		var cv PlayerChannelValue
 		if i := setter.Get(PlayerChannelName); i != nil {
-			cv = i.(PlayerChannelValue)
+			v, _ := i.(PlayerChannelValue)
+			cv = v.Clone()
 		} else {
 			cv = make(PlayerChannelValue)
-			setter.Set(PlayerChannelName, cv)
 		}
 		old, ok = cv[name]
 		cv[name] = value
+		setter.Set(PlayerChannelName, cv)
 	})
 	return
 }
@@ -34,12 +43,31 @@ func (s *Setter) Leave(name string, value string) (ok bool) {
 	s.Mutex(func(setter session.Setter) {
 		var cv PlayerChannelValue
 		if i := setter.Get(PlayerChannelName); i != nil {
-			cv = i.(PlayerChannelValue)
-			if old, ok = cv[name]; ok && old == value {
-				delete(cv, name)
-			}
+			v, _ := i.(PlayerChannelValue)
+			cv = v.Clone()
+		} else {
+			cv = make(PlayerChannelValue)
 		}
+		if old, ok = cv[name]; ok && old == value {
+			delete(cv, name)
+		}
+		setter.Set(PlayerChannelName, cv)
 	})
+	return
+}
+
+// Get 获取 是否在渠道中 以及渠道值
+func (s *Setter) Get(name string) (value string, ok bool) {
+	i := s.Data.Get(PlayerChannelName)
+	if i == nil {
+		return "", false
+	}
+	v, ok := i.(PlayerChannelValue)
+	if !ok {
+		return "", false
+	}
+	value, ok = v[name]
+
 	return
 }
 
