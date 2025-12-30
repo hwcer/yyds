@@ -23,7 +23,7 @@ func (this *Friend) Caller(node *registry.Node, handle *context.Context) interfa
 	return f(this, handle)
 }
 
-const recommendFriendProcessName = "FriendRecommend"
+const recommendFriendProcessName = "friend_recommend_cache"
 
 func (this *Friend) RecommendReset(c *context.Context) any {
 	c.Player.Process.Set(recommendFriendProcessName, []string{})

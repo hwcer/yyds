@@ -112,9 +112,7 @@ func (p *Player) Modify(fid string, r Relation) *Friend {
 func (p *Player) Remove(fid string) *Friend {
 	v, ok := p.friends[fid]
 	if ok {
-		if len(v.Values) == 0 {
-			delete(p.friends, fid)
-		} else {
+		if v.relation != RelationUnfriend {
 			v.relation = RelationNone
 		}
 	}

@@ -3,6 +3,7 @@ package social
 import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosmo"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/modules/social/handle"
 	"github.com/hwcer/yyds/modules/social/model"
 )
@@ -27,6 +28,9 @@ func Accept(uid, fid string, fast bool) error {
 		return nil
 	}
 	db := model.DB()
+	if db == nil {
+		return errors.Error("social database empty")
+	}
 	bw := db.BulkWrite(&model.Friend{})
 	var myFriend []*model.Friend
 	for _, tar := range success {

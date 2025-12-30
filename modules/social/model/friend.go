@@ -41,9 +41,9 @@ func (f *Friend) BulkWrite(bw *cosmo.BulkWrite) {
 	up := update.Update{}
 	now := time.Now().Unix()
 	up.Set("update", now)
-	up.SetOnInert("uid", f.Uid)
-	up.SetOnInert("fid", f.Fid)
-	up.SetOnInert("create", now)
+	up.SetOnInsert("uid", f.Uid)
+	up.SetOnInsert("fid", f.Fid)
+	up.SetOnInsert("create", now)
 	bw.Update(up, f.Id)
 }
 
