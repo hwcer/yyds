@@ -12,7 +12,7 @@ var (
 	models []any
 )
 
-type Handle func(uids []string) (map[string]any, error)
+type Handle func(uids []string) (map[string]Player, error)
 
 func init() {
 	cosgo.On(cosgo.EventTypLoaded, func() error {
@@ -27,7 +27,11 @@ func DB() *cosmo.DB {
 	return db
 }
 
-var GetPlayers Handle = func(uids []string) (map[string]any, error) {
+type Player interface {
+	GetUid() string
+}
+
+var GetPlayers Handle = func(uids []string) (map[string]Player, error) {
 	return nil, errors.New("请配置model.GetPlayers")
 }
 
