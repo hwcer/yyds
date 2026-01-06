@@ -10,7 +10,7 @@ import (
 )
 
 // GetPlayer 操作其他玩家
-func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) error {
+func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) (err error) {
 	if this.Player != nil && this.Player.Uid() == uid {
 		return handle(this.Player)
 	}
@@ -29,12 +29,10 @@ func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) erro
 		}()
 	}
 
-	if err := players.Get(uid, handle); err == nil {
-		return nil
-	} else if errors.Is(err, errors.ErrNotOnline) {
-		return players.Load(uid, init, handle)
+	if err = players.Get(uid, handle); err != nil && errors.Is(err, errors.ErrNotOnline) {
+		err = players.Load(uid, init, handle)
 	}
-	return nil
+	return
 }
 
 // Mutex 玩家互斥锁，需要同时获得多个用户锁时使用
