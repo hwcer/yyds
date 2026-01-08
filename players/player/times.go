@@ -1,6 +1,7 @@
 package player
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hwcer/cosgo/times"
@@ -125,5 +126,47 @@ func (this *Times) Verify(args []int64) (t [2]int64, err error) {
 		err = errors.ErrActiveExpired
 		return
 	}
+	return
+}
+
+func (this *Times) isCycle(t int64) bool {
+	if et := times.ExpireType(t); et == times.ExpireTypeDaily || et == times.ExpireTypeWeekly || et == times.ExpireTypeMonthly {
+		return true
+	}
+
+	return false
+}
+
+// Cycle 活动周期
+//
+//	expire 活动开始结束时间 [0,0,0]
+//	refresh 活动刷新规则  [0,0],参考  times.Cycle
+func (this *Times) Cycle(expire []int64, refresh []int64) (cycle *times.Cycle, err error) {
+	var ts [2]int64
+	//开启时间检查
+	if ts, err = this.Verify(expire); err != nil {
+		return
+	}
+
+	//周期
+	refreshRule := []int64{0, 0}
+	copy(refreshRule, refresh)
+
+	if ts[0] == 0 && this.isCycle(refreshRule[0]) && refreshRule[1] > 1 {
+		return nil, fmt.Errorf("start time empty")
+	}
+
+	var st *times.Times
+	if ts[0] == 0 {
+		st = times.Daily(0)
+	} else {
+		st = times.Unix(ts[0])
+	}
+	//有效期,如果未设置有效期，而设置了活动时间，则使用整个活动周期
+	if refreshRule[0] == 0 && ts[0] > 0 && ts[1] > ts[0] {
+		refreshRule[0] = int64(times.ExpireTypeSecond)
+		refreshRule[1] = ts[1] - ts[0]
+	}
+	cycle = st.Cycle(times.ExpireType(refreshRule[0]), int(refreshRule[1]))
 	return
 }
