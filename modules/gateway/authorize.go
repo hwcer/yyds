@@ -37,9 +37,8 @@ func (this *Authorize) Verify() (r *Token, err error) {
 		}
 		r.Developer = true
 	}
-	//开发者模式和GM陌生快速登录
-	if this.Guid != "" && (r.Developer || options.Options.Gate.Develop) {
-		//if this.Guid != "" {
+	//GM模式允许快速登录
+	if this.Guid != "" && r.Developer {
 		if err = this.validateAccountComprehensive(this.Guid); err != nil {
 			return
 		}
@@ -68,6 +67,9 @@ func (this *Authorize) Verify() (r *Token, err error) {
 	}
 	if r.Appid != options.Options.Appid {
 		return nil, session.Errorf("access appid error")
+	}
+	if options.Options.Maintenance && !r.Developer {
+		return nil, errors.ErrServerMaintenance
 	}
 	return
 }

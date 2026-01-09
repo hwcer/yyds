@@ -21,6 +21,9 @@ func Start() (err error) {
 		logger.Alert("locator address is empty")
 		return nil
 	}
+	h := Service.Handler().(*cosweb.Handler)
+	h.SetSerialize(serialize)
+
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")
 	access.Methods("GET", "POST", "OPTIONS")
@@ -61,6 +64,11 @@ func request(sid, path string, args []byte, req, res values.Metadata, reply any)
 	req[binder.HeaderContentType] = binder.Json.Name()
 	err = client.CallWithMetadata(req, res, options.ServiceTypeGame, path, args, reply)
 	return
+}
+
+func serialize(c *cosweb.Context, v any) ([]byte, error) {
+	b := c.Accept()
+	return b.Marshal(values.Parse(v))
 }
 
 // Broadcast 网关广播消息

@@ -31,7 +31,8 @@ var (
 	ErrActiveExpired = values.Errorf(402, "active expired")     //活动已经结束
 	ErrConfigEmpty   = values.Errorf(403, "config empty")
 
-	ErrRoleIsBan = values.Errorf(500, "user is ban")
+	ErrRoleIsBan         = values.Errorf(500, "user is ban")
+	ErrServerMaintenance = values.Errorf(505, "server maintenance in progress")
 )
 
 //func init() {

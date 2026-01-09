@@ -2,6 +2,10 @@ package yyds
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
@@ -11,9 +15,6 @@ import (
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var mod *Module
@@ -21,9 +22,12 @@ var mod *Module
 func init() {
 	mod = &Module{}
 	cosgo.On(cosgo.EventTypStarted, func() error {
-		logger.Trace("当前服务器编号：%v", options.Game.Sid)
-		logger.Trace("当前服务器地址：%v", options.Game.Local)
-		logger.Trace("当前服务器时间：%v", times.Format())
+		logger.Trace("当前服务器编号：%d", options.Game.Sid)
+		logger.Trace("当前服务器地址：%s", options.Game.Local)
+		logger.Trace("当前服务器时间：%s", times.Format())
+		if options.Options.Maintenance {
+			logger.Alert("注意:当前服务器为维护模式只有开发者才能进入")
+		}
 		return nil
 	})
 }

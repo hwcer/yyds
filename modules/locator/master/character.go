@@ -42,7 +42,7 @@ func (this *Character) Page(c *cosweb.Context) interface{} {
 	}
 	args.Paging.Init(100)
 	if args.Key != "" && args.Value != "" {
-		tx = tx.Where(fmt.Sprintf("%v = ?", args.Key), args.Value)
+		tx = tx.Where(fmt.Sprintf("%s = ?", args.Key), args.Value)
 	}
 	if tx = tx.Page(args.Paging); tx.Error != nil {
 		return values.Error(tx.Error)
