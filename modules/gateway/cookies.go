@@ -30,13 +30,16 @@ func CookiesFilter(cookie values.Metadata) values.Values {
 	}
 	return r
 }
+
 func CookiesUpdate(cookie values.Metadata, p *session.Data) {
 	vs := values.Values{}
 	for k, v := range cookie {
 		if strings.HasPrefix(k, options.ServicePlayerRoomJoin) {
-			channel.Join(p, v)
+			k = strings.TrimPrefix(k, options.ServicePlayerRoomJoin)
+			channel.Join(p, k, v)
 		} else if strings.HasPrefix(k, options.ServicePlayerRoomLeave) {
-			channel.Leave(p, v)
+			k = strings.TrimPrefix(k, options.ServicePlayerRoomLeave)
+			channel.Leave(p, k, v)
 		} else if strings.HasPrefix(k, options.ServicePlayerSelector) {
 			vs[k] = v
 		} else if _, ok := cookiesAllowableName[k]; ok {

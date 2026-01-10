@@ -1,8 +1,9 @@
 package options
 
 import (
-	"github.com/hwcer/cosgo/registry"
 	"strings"
+
+	"github.com/hwcer/cosgo/registry"
 )
 
 // GetServiceMethod 获取外网使用的Method

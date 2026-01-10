@@ -19,8 +19,8 @@ const (
 	ServicePlayerLogout  = "_player_logout"
 	ServicePlayerGateway = "_player_gateway"
 
-	ServicePlayerRoomJoin  = "player.join"      //已经加入的房间
-	ServicePlayerRoomLeave = "player.leave"     //离开房间
+	ServicePlayerRoomJoin  = "player.join."     //已经加入的房间
+	ServicePlayerRoomLeave = "player.leave."    //离开房间
 	ServicePlayerSelector  = "service.selector" //服务器重定向
 
 )
