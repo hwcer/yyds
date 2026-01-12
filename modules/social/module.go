@@ -3,7 +3,6 @@ package social
 import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosmo"
-	"github.com/hwcer/yyds/modules/social/handle"
 	"github.com/hwcer/yyds/modules/social/model"
 )
 
@@ -13,5 +12,5 @@ var Graph = model.Graph
 func Start(service *registry.Service, mo *cosmo.DB, getter model.Handle) error {
 	model.SetPlayers(getter)
 	model.SetDatabase(mo)
-	return service.Register(&handle.Friend{})
+	return service.Register(&Friend{})
 }
