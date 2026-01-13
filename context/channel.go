@@ -20,9 +20,11 @@ type Channel struct {
 	*Context
 }
 
-//func (this *Channel) Name(name, value string) string {
-//	return strings.Join([]string{name, value}, ".")
-//}
+func (this *Channel) Name(name, value string) string {
+	roomArr := []string{name, value}
+	roomByte, _ := json.Marshal(&roomArr)
+	return string(roomByte)
+}
 
 // Join 加入频道
 func (this *Channel) Join(name, value string) {
@@ -41,14 +43,12 @@ func (this *Channel) Broadcast(path string, args any, name, value string, req va
 	if req == nil {
 		req = values.Metadata{}
 	}
-	
+
 	if _, ok := req[binder.HeaderContentType]; !ok {
 		req[binder.HeaderContentType] = binder.Json.String()
 	}
 	req[options.ServiceMessagePath] = path
-	roomArr := []string{name, value}
-	roomByte, _ := json.Marshal(&roomArr)
-	req[options.ServiceMessageRoom] = string(roomByte)
+	req[options.ServiceMessageRoom] = this.Name(name, value)
 	if err := client.CallWithMetadata(req, nil, options.ServiceTypeGate, "channel/broadcast", args, nil); err != nil {
 		logger.Debug("频道广播失败:%v", err)
 	}
