@@ -14,17 +14,6 @@ import (
 	"github.com/smallnest/rpcx/client"
 )
 
-//var Rpcx = &rpcx{
-//	Rpcx: xshare.Options,
-//}
-//
-//type rpcx struct {
-//	*xshare.Rpcx
-//	Redis string `json:"redis"` //rpc服务器注册发现 pub/sub 订阅服务
-//}
-
-//var rpcxRegister *redis.Register
-
 func Discovery(servicePath string) (client.ServiceDiscovery, error) {
 	address, opt, err := rpcxRedisParse()
 	if err != nil {
