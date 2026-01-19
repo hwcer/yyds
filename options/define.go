@@ -3,5 +3,5 @@ package options
 var Setting = struct {
 	Renewal string //启用跨天
 }{
-	Renewal: "renewal",
+	Renewal: "/role/renewal",
 }

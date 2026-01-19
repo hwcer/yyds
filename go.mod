@@ -3,11 +3,11 @@ module github.com/hwcer/yyds
 go 1.24.0
 
 require (
-	github.com/hwcer/cosgo v1.6.6
+	github.com/hwcer/cosgo v1.6.7
 	github.com/hwcer/cosmo v1.2.6
 	github.com/hwcer/cosrpc v1.3.3
 	github.com/hwcer/cosweb v1.3.7
-	github.com/hwcer/gateway v0.0.1
+	github.com/hwcer/gateway v0.0.2
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.3.4
 	github.com/smallnest/rpcx v1.9.1

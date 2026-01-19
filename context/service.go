@@ -132,7 +132,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		} else if gate := meta.GetUint64(gwcfg.ServiceMetadataGateway); gate != p.Gateway {
 			return errors.ErrReplaced
 		}
-		if options.Setting.Renewal != "" && c.Player.Login < times.Daily(0).Now().Unix() && c.ServiceMethod() != options.Setting.Renewal {
+		if options.Setting.Renewal != "" && c.Player.Login < times.Daily(0).Now().Unix() && path != options.Setting.Renewal {
 			return errors.ErrNeedResetSession
 		}
 		//重发
