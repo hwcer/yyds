@@ -15,9 +15,10 @@ import (
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/client"
+	"github.com/hwcer/cosrpc/selector"
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/verify"
 )
@@ -63,33 +64,39 @@ func (p *Player) initialize() {
 
 // Send 推送消息
 // rp  req |  path
-func (p *Player) Send(v any, rp any) {
+func (p *Player) Send(v any, req values.Metadata) {
 	if p.Status != StatusConnected {
-		logger.Debug("player disconnected:%v", p.Uid())
+		logger.Debug("player disconnected:%s", p.Uid())
 		return
 	}
 	if p.Gateway == 0 {
-		logger.Debug("player gateway empty:%v", p.Uid())
+		logger.Debug("player gateway empty:%s", p.Uid())
 		return
 	}
 	if p.Binder == nil {
-		logger.Debug("player binder empty:%v", p.Uid())
+		logger.Debug("player binder empty:%s", p.Uid())
 		return
 	}
-	req := GetReqMeta(rp)
 	if req == nil {
 		return
 	}
-	guid := p.Guid()
-	if guid == "" {
-		logger.Debug("player gateway empty:%v", p.Uid())
+	if _, ok := req[gwcfg.ServiceMessagePath]; !ok {
+		logger.Debug("player send path empty")
 		return
 	}
-	req.Set(binder.HeaderContentType, p.Binder.Name())
-	req.Set(options.SelectorAddress, utils.IPv4Decode(p.Gateway))
-	req.Set(options.ServiceMetadataUID, p.uid)
-	req.Set(options.ServiceMetadataGUID, guid)
-	_ = client.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil)
+
+	guid := p.Guid()
+	if guid == "" {
+		logger.Debug("player gateway empty:%s", p.Uid())
+		return
+	}
+	if _, ok := req[binder.HeaderContentType]; !ok {
+		req.Set(binder.HeaderContentType, p.Binder.Name())
+	}
+	req.Set(selector.MetaDataAddress, utils.IPv4Decode(p.Gateway))
+	req.Set(gwcfg.ServiceMetadataUID, p.uid)
+	req.Set(gwcfg.ServiceMetadataGUID, guid)
+	_ = client.CallWithMetadata(req, nil, gwcfg.ServiceName, gwcfg.MessageSend, v, nil)
 }
 
 // Loading 加载数据

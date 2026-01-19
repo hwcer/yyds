@@ -1,6 +1,8 @@
 package context
 
-import "github.com/hwcer/yyds/options"
+import (
+	"github.com/hwcer/gateway/gwcfg"
+)
 
 // Selector 微服务设置器
 func (this *Context) Selector() *Selector {
@@ -12,11 +14,11 @@ type Selector struct {
 }
 
 func (this *Selector) Set(k, v string) {
-	name := options.GetServiceSelectorAddress(k)
+	name := gwcfg.GetServiceSelectorAddress(k)
 	this.SetMetadata(name, v)
 }
 
 func (this *Selector) Remove(k string) {
-	name := options.GetServiceSelectorAddress(k)
+	name := gwcfg.GetServiceSelectorAddress(k)
 	this.SetMetadata(name, "")
 }

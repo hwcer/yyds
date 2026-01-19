@@ -6,6 +6,7 @@ import (
 	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/modules/locator/model"
 	"github.com/hwcer/yyds/options"
@@ -44,7 +45,7 @@ func proxy(c *cosweb.Context) any {
 		return c.JSON(values.Error("sid is empty"))
 	}
 	req := values.Metadata{}
-	req[options.SelectorServerId] = sid
+	req[gwcfg.ServiceMetadataServerId] = sid
 	reply := make([]byte, 0)
 	buffer, err := c.Buffer()
 	if err != nil {
@@ -60,7 +61,7 @@ func proxy(c *cosweb.Context) any {
 
 // request rpc转发,返回实际转发的servicePath
 func request(sid, path string, args []byte, req, res values.Metadata, reply any) (err error) {
-	req[options.ServiceMetadataServerId] = sid
+	req[gwcfg.ServiceMetadataServerId] = sid
 	req[binder.HeaderContentType] = binder.Json.Name()
 	err = client.CallWithMetadata(req, res, options.ServiceTypeGame, path, args, reply)
 	return
@@ -78,9 +79,9 @@ func Broadcast(path string, v any, req values.Metadata) error {
 	}
 	req.Set(binder.HeaderAccept, binder.Json.Name())
 	req.Set(binder.HeaderContentType, options.Options.Binder)
-	req.Set(options.ServiceMessagePath, path)
+	req.Set(gwcfg.ServiceMessagePath, path)
 	ctx, cancel := client.WithTimeout(req, nil)
 	defer cancel()
 
-	return client.Broadcast(ctx, options.ServiceTypeGate, "broadcast", v, nil)
+	return client.Broadcast(ctx, gwcfg.ServiceName, "broadcast", v, nil)
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/client"
+	"github.com/hwcer/cosrpc/selector"
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/options"
 	"github.com/smallnest/rpcx/share"
@@ -23,7 +25,7 @@ func (this *Context) Gateway() string {
 		code = this.Player.Gateway
 	} else {
 		meta := values.Metadata(this.Metadata())
-		code = uint64(meta.GetInt64(options.ServicePlayerGateway))
+		code = uint64(meta.GetInt64(gwcfg.ServiceMetadataGateway))
 	}
 	if code == 0 {
 		return ""
@@ -49,7 +51,7 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 		return nil, err
 	}
 	req := map[string]string{}
-	req[options.SelectorServerId] = fmt.Sprintf("%d", u.GetShard())
+	req[gwcfg.ServiceMetadataServerId] = fmt.Sprintf("%d", u.GetShard())
 	ctx := context.WithValue(context.Background(), share.ReqMetaDataKey, req)
 	return client.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
 }
@@ -61,17 +63,17 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		this.Player.Send(v, req)
 		return
 	}
-	if _, ok := req[options.ServiceMetadataGUID]; !ok {
-		req[options.ServiceMetadataGUID] = this.GUid()
+	if _, ok := req[gwcfg.ServiceMetadataGUID]; !ok {
+		req[gwcfg.ServiceMetadataGUID] = this.GUid()
 	}
 
 	if gateway := this.Gateway(); gateway != "" {
-		req.Set(options.SelectorAddress, gateway)
+		req.Set(selector.MetaDataAddress, gateway)
 	} else {
 		logger.Alert("grpc gateway is nil")
 	}
 
-	if err := client.CallWithMetadata(req, nil, options.ServiceTypeGate, "send", v, nil); err != nil {
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, "send", v, nil); err != nil {
 		logger.Error(err)
 	}
 }
@@ -80,18 +82,18 @@ func (this *Context) NewSender(path string, req values.Metadata) values.Metadata
 	if req == nil {
 		req = values.Metadata{}
 	}
-	req[options.ServiceMessagePath] = path
+	req[gwcfg.ServiceMessagePath] = path
 	if _, ok := req[binder.HeaderContentType]; !ok {
 		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
 	}
-	if _, ok := req[options.ServiceMetadataRequestId]; !ok {
-		if rid := this.GetMetadata(options.ServiceMetadataRequestId); rid != "" {
-			req.Set(options.ServiceMetadataRequestId, rid)
+	if _, ok := req[gwcfg.ServiceMetadataRequestId]; !ok {
+		if rid := this.GetMetadata(gwcfg.ServiceMetadataRequestId); rid != "" {
+			req.Set(gwcfg.ServiceMetadataRequestId, rid)
 		}
 	}
 	//如果 socket id存在，优先使用SOCKET ID推送消息
-	if sockId := this.GetMetadata(options.ServiceSocketId); sockId != "" {
-		req.Set(options.ServiceSocketId, sockId)
+	if sockId := this.GetMetadata(gwcfg.ServiceMetadataSocketId); sockId != "" {
+		req.Set(gwcfg.ServiceMetadataSocketId, sockId)
 	}
 
 	return req

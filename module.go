@@ -8,8 +8,8 @@ import (
 
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc"
+	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
@@ -25,9 +25,6 @@ func init() {
 		logger.Trace("当前服务器编号：%d", options.Game.Sid)
 		logger.Trace("当前服务器地址：%s", options.Game.Local)
 		logger.Trace("当前服务器时间：%s", times.Format())
-		if options.Options.Maintenance {
-			logger.Alert("注意:当前服务器为维护模式只有开发者才能进入")
-		}
 		return nil
 	})
 }
@@ -70,13 +67,13 @@ func (this *Module) Init() (err error) {
 		if options.Game.Sid == 0 {
 			options.Game.Sid = autoServerId(options.Game.Local)
 		}
-		if options.Game.Address == "" {
-			gate := utils.NewAddress(options.Gate.Address)
-			if !gate.Valid() {
-				gate.Host = options.Game.Local
-			}
-			options.Game.Address = gate.String()
-		}
+		//if options.Game.Address == "" {
+		//	gate := utils.NewAddress(options.Gate.Address)
+		//	if !gate.Valid() {
+		//		gate.Host = options.Game.Local
+		//	}
+		//	options.Game.Address = gate.String()
+		//}
 	}
 
 	if options.Game.Sid == 0 {
@@ -101,7 +98,7 @@ func (this *Module) Init() (err error) {
 		}
 	}
 	//设置游戏Metadata
-	server.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", options.SelectorServerId, options.Game.Sid))
+	server.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", selector.MetaDataServerId, options.Game.Sid))
 	cosgo.On(cosgo.EventTypLoaded, players.Start)
 	return nil
 }

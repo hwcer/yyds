@@ -10,6 +10,7 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/server"
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
@@ -35,8 +36,8 @@ func NewService(name string) *registry.Service {
 
 func Register(i interface{}, prefix ...string) {
 	var arr []string
-	if options.Gate.Prefix != "" {
-		arr = append(arr, options.Gate.Prefix)
+	if gwcfg.Gateway.Prefix != "" {
+		arr = append(arr, gwcfg.Gateway.Prefix)
 	}
 	if len(prefix) > 0 {
 		arr = append(arr, prefix...)
@@ -83,30 +84,30 @@ var handlerFilter server.HandlerFilter = func(node *registry.Node) bool {
 var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Context) (reply any, err error) {
 	c := &Context{Context: sc}
 	path := c.ServiceMethod()
-	if !options.HasServiceMethod(path) {
+	if !gwcfg.HasServiceMethod(path) {
 		return c.handle(node) //内网通信不启用玩家数据
 	}
 
-	path = options.TrimServiceMethod(path)
+	path = gwcfg.TrimServiceMethod(path)
+	auth := c.OAuth()
 
-	l, m := options.OAuth.Get(options.ServiceTypeGame, path)
+	//l, m := c.GetMetadata(gwcfg.ServiceMetadataApi)
 
-	if l == options.OAuthTypeNone {
+	if auth == gwcfg.OAuthTypeNone {
 		return c.handle(node)
 	}
-	if l == options.OAuthTypeOAuth {
-		if guid := c.GetMetadata(options.ServiceMetadataGUID); guid == "" {
+	if auth == gwcfg.OAuthTypeOAuth {
+		if guid := c.GetMetadata(gwcfg.ServiceMetadataGUID); guid == "" {
 			return nil, errors.ErrLogin
-		} else {
-			return c.handle(node)
 		}
+		return c.handle(node)
 	}
 
 	uid := c.Uid()
 	if uid == "" {
 		return nil, errors.ErrNotSelectRole
 	}
-	if l == options.OAuthTypeSelect {
+	if auth == gwcfg.OAuthTypeSelect {
 		return c.handle(node)
 	}
 
@@ -128,14 +129,14 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 			if e := players.Connected(p, meta); e != nil {
 				return e
 			}
-		} else if gate := meta.GetUint64(options.ServicePlayerGateway); gate != p.Gateway {
+		} else if gate := meta.GetUint64(gwcfg.ServiceMetadataGateway); gate != p.Gateway {
 			return errors.ErrReplaced
 		}
-		if options.Setting.Renewal && c.Player.Login < times.Daily(0).Now().Unix() && m != options.OAuthRenewal {
+		if options.Setting.Renewal != "" && c.Player.Login < times.Daily(0).Now().Unix() && c.ServiceMethod() != options.Setting.Renewal {
 			return errors.ErrNeedResetSession
 		}
 		//重发
-		if rid := meta.GetInt32(options.ServiceMetadataRequestId); rid > 0 && c.Player != nil {
+		if rid := meta.GetInt32(gwcfg.ServiceMetadataRequestId); rid > 0 && c.Player != nil {
 			if c.Player.Message == nil {
 				c.Player.Message = &player.Message{}
 			}

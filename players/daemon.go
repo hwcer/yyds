@@ -9,9 +9,9 @@ import (
 
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/errors"
-	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/player"
 )
@@ -19,7 +19,7 @@ import (
 // Connected 连线，不包括断线重连等
 func Connected(p *player.Player, meta values.Metadata) (err error) {
 	status := p.Status
-	gateway := uint64(meta.GetInt64(options.ServicePlayerGateway))
+	gateway := uint64(meta.GetInt64(gwcfg.ServiceMetadataGateway))
 	if gateway == 0 {
 		return errors.New("gateway is empty")
 	}
@@ -31,7 +31,7 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 		}
 	}()
 
-	if ip := meta.GetString(options.ServiceClientIp); ip != "" {
+	if ip := meta.GetString(gwcfg.ServiceMetadataClientIp); ip != "" {
 		p.ClientIp = ip
 	}
 
