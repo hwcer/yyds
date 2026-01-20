@@ -10,7 +10,7 @@ func NewPlayer(uid string, v values.Values) *Player {
 	if v == nil {
 		v = values.Values{}
 	}
-	return &Player{uid: uid, Values: v, Likes: make(map[string]int64), friends: map[string]*Friend{}}
+	return &Player{uid: uid, Values: v, friends: map[string]*Friend{}}
 }
 
 func NewFriend(r Relation, v values.Values) *Friend {
@@ -21,7 +21,7 @@ func NewFriend(r Relation, v values.Values) *Friend {
 }
 
 type Friend struct {
-	values.Values          //存储的业务数据
+	values.Values          //存储的业务数据,我对好友干了什么事情
 	relation      Relation //好友关系
 }
 
@@ -35,9 +35,8 @@ func (f *Friend) Relation() Relation {
 
 type Player struct {
 	uid           string
-	values.Values                  //存储的业务数据
-	Likes         map[string]int64 //点赞列表
-	Update        int64            //上次更新  Values 用于增量获取好友信息
+	values.Values       //存储的业务数据，我今天干了什么
+	Update        int64 //上次更新  Values 用于增量获取好友信息
 	friends       map[string]*Friend
 }
 

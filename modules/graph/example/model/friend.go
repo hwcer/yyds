@@ -7,16 +7,12 @@ import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/cosmo/update"
-	"github.com/hwcer/yyds/modules/social/graph"
+	"github.com/hwcer/yyds/modules/graph"
 )
 
 func init() {
 	Register(&Friend{})
 }
-
-const (
-	FriendValuesKeyRemark = "remark" //好友备注
-)
 
 type Friend struct {
 	Id       string         `json:"-" bson:"_id"`                       // uid-tar

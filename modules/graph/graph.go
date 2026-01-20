@@ -27,13 +27,12 @@ func New(factory Factory) (g *Graph, i Install) {
 func (sg *Graph) load(uid string) (*Player, error) {
 	r := sg.nodes[uid]
 	if r == nil {
-		if v, err := sg.factory.Create(uid); err != nil {
+		v, err := sg.factory.Create(uid)
+		if err != nil {
 			return nil, err
-		} else {
-			r = NewPlayer(uid, v)
-			sg.nodes[uid] = r
 		}
-
+		r = NewPlayer(uid, v)
+		sg.nodes[uid] = r
 	}
 	return r, nil
 }
@@ -319,11 +318,12 @@ func (sg *Graph) RLock(handle func(Statement)) {
 func (sg *Graph) Modify(uid string, handle func(*Player) error) error {
 	sg.mu.Lock()
 	defer sg.mu.Unlock()
-	if p, err := sg.load(uid); err == nil {
-		return handle(p)
-	} else {
+	p, err := sg.load(uid)
+	if err != nil {
 		return err
 	}
+	return handle(p)
+
 }
 
 // Reader 获取用户缓存信息

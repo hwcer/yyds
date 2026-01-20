@@ -1,18 +1,18 @@
-package social
+package handle
 
 import (
 	"fmt"
 
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/slice"
+	"github.com/hwcer/yyds/modules/graph"
+	"github.com/hwcer/yyds/modules/graph/example/model"
 
 	"github.com/hwcer/cosgo/values"
 
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/errors"
-	"github.com/hwcer/yyds/modules/social/graph"
-	"github.com/hwcer/yyds/modules/social/model"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 )

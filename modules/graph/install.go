@@ -13,7 +13,7 @@ func (i *Install) GetPlayer(uid string) *Player {
 }
 
 func (i *Install) SetPlayer(uid string, value values.Values) {
-	i.g.nodes[uid] = NewPlayer(value)
+	i.g.nodes[uid] = NewPlayer(uid, value)
 }
 func (i *Install) SetFriend(uid string, fid string, relation Relation, val values.Values) (*Friend, error) {
 	p, err := i.g.load(uid)

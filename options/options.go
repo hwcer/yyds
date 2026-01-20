@@ -14,7 +14,7 @@ const (
 	ServiceTypeWorld   = "world"   //世界服
 	ServiceTypeBattle  = "battle"  //战斗服
 	ServiceTypeRooms   = "rooms"   //游戏大厅
-	ServiceTypeSocial  = "social"  //社交用户中心
+	ServiceTypeSocial  = "example" //社交用户中心
 	ServiceTypeLocator = "locator" //角色定位中心
 )
 
