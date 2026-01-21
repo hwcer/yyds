@@ -164,6 +164,9 @@ func (p *Player) Emit(t int32, v int32, args ...int32) {
 func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
 	return p.Emitter.Listen(t, args, handle)
 }
+func (p *Player) Connected() bool {
+	return p.Status == StatusConnected
+}
 
 // Heartbeat 获取最后心跳时间
 func (p *Player) Heartbeat() int64 {

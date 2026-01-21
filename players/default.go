@@ -87,31 +87,3 @@ func Locker(uid []string, args any, handle player.LockerHandle, done ...func()) 
 func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
 }
-
-//// Disconnect 下线,心跳超时,断开连接等
-//func Disconnect(p *player.Player) bool {
-//	status := p.Status
-//	if status != player.StatusConnected {
-//		return false
-//	}
-//	if !atomic.CompareAndSwapInt32(&p.Status, player.StatusConnected, player.StatusDisconnect) {
-//		return false
-//	}
-//	p.KeepAlive(0)
-//	atomic.AddInt32(&playersOnline, -1)
-//	updater.Emit(p.Updater, player.EventDisconnect)
-//	return true
-//}
-//
-//// Offline 业务逻辑层面掉线
-//func Offline(p *player.Player) bool {
-//	status := p.Status
-//	if !(status == player.StatusNone || status == player.StatusDisconnect) {
-//		return false
-//	}
-//	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusOffline) {
-//		return false
-//	}
-//	p.KeepAlive(0)
-//	return true
-//}
