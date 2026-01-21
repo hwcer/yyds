@@ -14,4 +14,18 @@ const NotifyName = "ChatNotifyIndex"
 //
 //	true: 保留该消息
 //	false: 过滤掉该消息
-type Filter func(*Message) bool
+type Filter func(Message) bool
+
+type Message interface {
+	GetId() uint64
+}
+
+// Channel 频道信息
+type Channel struct {
+	Key string `json:"k" bson:"k"` // 频道类型
+	Val string `json:"v" bson:"v"` // 频道ID，私聊时为对方UID
+}
+
+type Factory interface {
+	New(id uint64, text string, args map[string]any, channel *Channel) Message //创建用户消息
+}

@@ -27,46 +27,55 @@ go get github.com/hwcer/yyds/modules/chat
 import "github.com/hwcer/yyds/modules/chat"
 
 // 创建一个容量为1024的聊天系统
-chatSystem := chat.New(1024)
+chatSystem := chat.New(1024, nil)
+
+// 或者使用默认容量
+chatSystem := chat.New(0, nil) // 会使用DefaultCap
 ```
 
-### 2. 添加消息
+### 2. 配置默认值
 
 ```go
-// 创建消息
-msg := &chat.Message{
-    Uid:  "player123",
-    Msg:  "Hello, world!",
-    Time: time.Now().Unix(),
-}
-
-// 设置附加参数
-msg.Set("name", "Player1")
-msg.Set("level", 100)
-
-// 添加消息到聊天系统
-chatSystem.Add(msg)
+// 设置默认配置
+chat.DefaultCap = 2048  // 默认缓冲区容量
+chat.DefaultSize = 150  // 默认读取消息数量
 ```
 
-### 3. 读取消息
+### 3. 添加消息
+
+```go
+// 创建频道信息（可选）
+channel := &chat.Channel{
+    Key: "world", // 频道类型
+    Val: "",      // 频道ID
+}
+
+// 添加消息到聊天系统
+message, err := chat.Send("Hello, world!", map[string]any{
+    "name": "Player1",
+    "level": 100,
+}, channel)
+```
+
+### 4. 读取消息
 
 ```go
 // 定义消息过滤器
-filter := func(m *chat.Message) bool {
+filter := func(m chat.Message) bool {
     // 只保留世界频道的消息
-    return m.Channel == nil || m.Channel.Id == chat.ChannelTypeNone
+    return true
 }
 
-// 读取消息，从ID 0开始，最多读取50条
-lastID, messages := chatSystem.Read(0, 50, filter)
+// 读取消息，从ID 0开始，最多读取100条
+lastID, messages := chatSystem.Read(0, 100, filter)
 
 // 处理消息
 for _, msg := range messages {
-    fmt.Printf("[%d] %s: %s\n", msg.Time, msg.Args["name"], msg.Msg)
+    // 处理消息
 }
 ```
 
-### 4. 检查新消息
+### 5. 检查新消息
 
 ```go
 // 假设player是玩家对象
@@ -77,15 +86,15 @@ if newMsgCount > 0 {
 }
 ```
 
-### 5. 获取最新消息
+### 6. 获取最新消息
 
 ```go
-// 获取最新10条消息
-messages := chatSystem.Getter(player, 10, nil)
+// 获取最新消息
+messages := chatSystem.Getter(player, 50, nil)
 
 // 处理消息
 for _, msg := range messages {
-    fmt.Printf("[%d] %s: %s\n", msg.Time, msg.Args["name"], msg.Msg)
+    // 处理消息
 }
 ```
 
@@ -95,68 +104,98 @@ for _, msg := range messages {
 
 ```go
 type Chat struct {
-    cap  int        // 环形缓冲区大小
-    rows []*Message // 环形缓冲区，存储消息的数组
-    head uint64     // 头指针，指向最早的消息位置
-    tail uint64     // 尾指针，指向下一个要存储的位置
+    cap     int       // 环形缓冲区大小
+    rows    []Message // 环形缓冲区，存储消息的数组
+    head    uint64    // 头指针，指向最早的消息位置
+    tail    uint64    // 尾指针，指向下一个要存储的位置
+    factory Factory   // 用户工厂函数
 }
 ```
 
 ### 主要方法
 
-#### 1. New(cap int) *Chat
+#### 1. New(cap int, factory Factory) *Chat
 - **功能**：创建一个新的聊天系统
-- **参数**：`cap` - 缓冲区容量，必须大于0
+- **参数**：
+  - `cap` - 缓冲区容量，必须大于0
+  - `factory` - 消息工厂，用于创建消息实例
 - **返回值**：新创建的聊天系统实例
-- **注意**：如果 `cap <= 0`，会使用默认值 1024
-
-#### 2. Add(m *Message)
-- **功能**：添加消息到聊天系统
-- **参数**：`m` - 要添加的消息
 - **注意**：
-  - 如果消息为 nil，会直接返回
-  - 如果消息的 Time 字段为 0，会自动设置为当前时间戳
+  - 如果 `cap <= 0`，会使用默认值 `DefaultCap`
+  - 如果 `factory == nil`，会使用默认工厂
+
+#### 2. Write(text string, args map[string]any, channel *Channel) Message
+- **功能**：添加消息到聊天系统
+- **参数**：
+  - `text` - 消息内容
+  - `args` - 附加参数
+  - `channel` - 频道信息
+- **返回值**：创建的消息对象
+- **注意**：
   - 消息的 Id 字段会被自动设置为递增的值
   - 当缓冲区已满时，会自动覆盖最早的消息
+  - 消息的生命周期由缓冲区大小和写入速度决定
 
-#### 3. Read(t uint64, size int, filter Filter) (n uint64, r []*Message)
+#### 3. Read(t uint64, size int, filter Filter) (n uint64, r []Message)
 - **功能**：获取最新聊天信息
 - **参数**：
   - `t` - 上次拉取的最后消息ID，用于过滤旧消息
-  - `size` - 要获取的消息数量，最大为100
+  - `size` - 要获取的消息数量
   - `filter` - 消息过滤器，用于筛选符合条件的消息
 - **返回值**：
   - `n` - 当前最大消息ID
   - `r` - 符合条件的最新消息列表
 - **注意**：
   - 如果 `t >= 当前最大ID`，会返回空列表
-  - 如果 `size <= 0`，会使用默认值50
-  - 如果 `size > 100`，会被限制为100
+  - 如果 `size <= 0` 或 `size > DefaultSize`，会使用默认值 `DefaultSize`
   - 消息按时间倒序排列（最新的在前）
 
-#### 4. Index() uint64
-- **功能**：获取当前最大消息ID
-- **返回值**：当前最大消息ID，可用于下次拉取消息时的过滤
-
-#### 5. Notify(p *player.Player) uint64
+#### 4. Notify(p *player.Player) uint64
 - **功能**：获取是否有新的消息
 - **参数**：`p` - 玩家对象
 - **返回值**：新消息的数量
 - **注意**：
   - 如果设置了频道，此时只能做模糊检查，用于红点提示
   - 内部通过比较玩家存储的最后消息ID和当前最大ID来计算
+  - 此方法是无锁的，适用于高频调用场景
 
-#### 6. Getter(p *player.Player, size int, filter Filter) []*Message
+#### 5. Getter(p *player.Player, size int, filter Filter) []Message
 - **功能**：获取最新聊天记录
 - **参数**：
   - `p` - 玩家对象
-  - `size` - 要获取的消息数量，最大为100
+  - `size` - 要获取的消息数量
   - `filter` - 消息过滤器，用于筛选符合条件的消息
 - **返回值**：符合条件的最新消息列表
 - **注意**：
-  - 如果 `size < 10`，会使用默认值10
-  - 如果 `size > 100`，会被限制为100
   - 会自动更新玩家存储的最后消息ID
+  - 此方法依赖于Read方法的无锁实现
+
+### 辅助方法
+
+#### 1. Send(text string, args map[string]any, channel *Channel) (Message, error)
+- **功能**：发送聊天消息
+- **参数**：
+  - `text` - 消息内容
+  - `args` - 附加参数
+  - `channel` - 频道信息
+- **返回值**：
+  - 创建的消息对象
+  - 错误信息
+- **注意**：
+  - 消息内容不能为空且不能超过300字节
+  - 消息内容不能包含非法字符
+
+#### 2. Getter(p *player.Player, size int, filter Filter) []Message
+- **功能**：获取最新聊天记录
+- **参数**：
+  - `p` - 玩家对象
+  - `size` - 要获取的消息数量
+  - `filter` - 消息过滤器，用于筛选符合条件的消息
+- **返回值**：符合条件的最新消息列表
+
+#### 3. Notify(p *player.Player)
+- **功能**：检查是否有新消息
+- **参数**：`p` - 玩家对象
 
 ## 技术实现
 
@@ -167,6 +206,7 @@ type Chat struct {
 - **head**：指向最早的消息位置
 - **tail**：指向下一个要存储的位置
 - **容量**：固定大小的数组，避免频繁内存分配
+- **默认容量**：`DefaultCap`，可配置
 
 ### 2. 原子操作
 
@@ -185,6 +225,20 @@ type Chat struct {
 - **自动覆盖**：当缓冲区已满时，自动覆盖最早的消息
 - **内存复用**：重复使用缓冲区空间，避免内存碎片
 
+### 5. 默认值配置
+
+提供可配置的默认值：
+
+- `DefaultCap`：默认缓冲区容量，默认值为 1024
+- `DefaultSize`：默认读取消息数量，默认值为 100
+
+### 6. 消息工厂
+
+使用工厂模式创建消息实例：
+
+- 默认工厂：创建默认消息实例
+- 自定义工厂：支持用户自定义消息结构
+
 ## 性能优化
 
 1. **无锁设计**：避免锁竞争，提高并发性能
@@ -192,6 +246,8 @@ type Chat struct {
 3. **预分配内存**：减少内存碎片和垃圾回收
 4. **边界情况处理**：提高代码健壮性，避免运行时错误
 5. **原子操作**：高效的并发控制，减少线程切换开销
+6. **可配置默认值**：根据实际需求调整系统参数
+7. **消息工厂**：支持自定义消息结构，提高灵活性
 
 ## 性能测试
 
@@ -206,14 +262,15 @@ go test -bench=. -benchmem
 - **添加消息**：约 10,000,000 次/秒
 - **读取消息**：约 5,000,000 次/秒
 - **内存使用**：固定大小，不随消息数量增长
+- **并发性能**：支持高并发场景，适用于游戏服务器等实时应用
 
 ## 代码结构
 
 ```
 chat/
 ├── chat.go        // 核心聊天系统实现
-├── message.go     // 消息和频道定义
 ├── define.go      // 常量和类型定义
+├── message.go     // 消息和频道定义
 ├── default.go     // 默认聊天实例
 └── README.md      // 文档
 ```
@@ -225,6 +282,8 @@ chat/
 3. **消息大小**：避免发送过大的消息，影响系统性能
 4. **并发访问**：虽然使用了无锁设计，但仍需注意并发访问的安全性
 5. **服务器重启**：消息ID在服务器重启后会重新计数，客户端需要处理这种情况
+6. **默认值配置**：根据实际需求调整默认值配置，优化系统性能
+7. **消息生命周期**：消息的生命周期由缓冲区大小和写入速度决定，需要合理设置缓冲区容量
 
 ## 许可证
 
