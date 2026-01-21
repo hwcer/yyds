@@ -31,7 +31,7 @@ func (sg *Graph) Recommend(uid string, size int, filter RecommendFilter, done Re
 	friendUsers := make(map[string]struct{})
 
 	var verifyAndModify = func(t string) (next bool) {
-		if t == uid || p.Has(t, RelationFollow, RelationFriend) {
+		if t == uid || p.Has(t, RelationFollow+RelationFriend) {
 			return true
 		}
 		if _, ok := friendUsers[t]; ok {

@@ -1,8 +1,6 @@
 package handle
 
 import (
-	"fmt"
-
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/slice"
 	"github.com/hwcer/yyds/modules/graph"
@@ -10,7 +8,6 @@ import (
 
 	"github.com/hwcer/cosgo/values"
 
-	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players"
@@ -107,15 +104,13 @@ func (this *Friend) Getter(c *context.Context) any {
 	update := c.GetInt64("update")
 	friends := map[string]*friendGetterReply{}
 	model.Graph.Range(uid, graph.RelationFriend, func(v graph.Getter) bool {
-		p := v.Player()
-		if update > 0 && p.Update < update {
+		if update > 0 && v.Update() < update {
 			return true
 		}
 		k := v.Fid()
-		f := v.Friend()
 		r := &friendGetterReply{
 			Uid:    k,
-			Values: f.Values.Clone(),
+			Values: v.Values(),
 		}
 		friends[k] = r
 		return true
@@ -337,45 +332,4 @@ func (this *Friend) Remove(c *context.Context) any {
 	// 通知对方删除好友
 	//u.SendMessage("删除好友",c.Uid())
 	return arr
-}
-
-/**
- * @name Remark
- * @param string fid 好友ID
- * @param string remark 备注
- * 好友备注
- */
-
-func (this *Friend) Remark(c *context.Context) any {
-	fid := c.GetString("fid")
-	if fid == "" {
-		return errors.ErrArgEmpty
-	}
-	remark := c.GetString("remark")
-	if l := len(remark); l < 2 || l > 30 {
-		return c.Errorf(0, "args error")
-	}
-	if utils.IncludeNotPrintableChar(remark) {
-		return c.Errorf(0, "非法字符")
-	}
-
-	err := model.Graph.Modify(c.Uid(), func(p *graph.Player) error {
-		friend := p.Friend(fid)
-		if friend == nil || !friend.Has(graph.RelationFriend) {
-			return errors.New("not friend")
-		}
-		friend.Set(model.FriendValuesKeyRemark, remark)
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	fri := model.NewFriend(c.Uid(), fid)
-	key := fmt.Sprintf("values.%s", model.FriendValuesKeyRemark)
-	if tx := model.DB().Model(fri, true).Where(fri.Id).Set(key, remark); tx.Error != nil {
-		return tx.Error
-	}
-	return fri
 }
