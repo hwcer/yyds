@@ -2,16 +2,11 @@ package chat
 
 import (
 	"sync/atomic"
+	"unicode/utf8"
 
+	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/yyds/players/player"
-)
-
-// 默认配置值
-var (
-	// DefaultSize 默认读取消息数量
-	DefaultSize = 100
-	// DefaultCap 默认缓冲区容量
-	DefaultCap = 1024
 )
 
 // 短连接聊天模块
@@ -25,7 +20,7 @@ var (
 func New(cap int, factory Factory) *Chat {
 	// 确保容量大于0
 	if cap <= 0 {
-		cap = DefaultCap // 默认容量
+		cap = Options.ChatCap // 默认容量
 	}
 	if factory == nil {
 		factory = &defaultFactory{}
@@ -75,7 +70,19 @@ type Chat struct {
 //  1. 消息的 Id 字段会被自动设置为递增的值
 //  2. 当缓冲区已满时，会自动覆盖最早的消息
 //  3. 消息的生命周期由缓冲区大小和写入速度决定
-func (this *Chat) Write(text string, args map[string]any, channel *Channel) Message {
+func (this *Chat) Write(text string, args map[string]any, channel *Channel) (Message, error) {
+	if len(text) == 0 {
+		return nil, values.Error("msg empty")
+	}
+	if Options.TextRune > 0 && utf8.RuneCountInString(text) > Options.TextRune {
+		return nil, values.Error("msg rune too long")
+	}
+	if Options.TextBytes > 0 && len(text) > Options.TextBytes {
+		return nil, values.Error("msg bytes too long")
+	}
+	if utils.IncludeNotPrintableChar(text) {
+		return nil, values.Error("非法字符")
+	}
 	// 原子更新尾指针并获取新值
 	tail := atomic.AddUint64(&this.tail, 1)
 	// 创建消息
@@ -91,7 +98,7 @@ func (this *Chat) Write(text string, args map[string]any, channel *Channel) Mess
 		// 缓冲区已满，移动头指针
 		atomic.AddUint64(&this.head, 1)
 	}
-	return m
+	return m, nil
 }
 
 // Read 获取最新聊天信息
@@ -126,8 +133,8 @@ func (this *Chat) Read(t uint64, size int, filter Filter) (n uint64, r []Message
 	}
 
 	// 限制返回消息数量
-	if size <= 0 || size > DefaultSize {
-		size = DefaultSize
+	if size <= 0 || size > Options.PageSize {
+		size = Options.PageSize
 	}
 
 	// 预分配返回切片，减少内存分配

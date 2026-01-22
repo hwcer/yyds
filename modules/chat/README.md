@@ -30,15 +30,16 @@ import "github.com/hwcer/yyds/modules/chat"
 chatSystem := chat.New(1024, nil)
 
 // 或者使用默认容量
-chatSystem := chat.New(0, nil) // 会使用DefaultCap
+chatSystem := chat.New(0, nil) // 会使用Options.ChatCap
 ```
 
 ### 2. 配置默认值
 
 ```go
 // 设置默认配置
-chat.DefaultCap = 2048  // 默认缓冲区容量
-chat.DefaultSize = 150  // 默认读取消息数量
+chat.Options.ChatCap = 2048  // 默认缓冲区容量
+chat.Options.PageSize = 150  // 默认读取消息数量
+chat.Options.TextRune = 300  // 默认消息字符数限制
 ```
 
 ### 3. 添加消息
@@ -121,20 +122,24 @@ type Chat struct {
   - `factory` - 消息工厂，用于创建消息实例
 - **返回值**：新创建的聊天系统实例
 - **注意**：
-  - 如果 `cap <= 0`，会使用默认值 `DefaultCap`
+  - 如果 `cap <= 0`，会使用默认值 `Options.ChatCap`
   - 如果 `factory == nil`，会使用默认工厂
 
-#### 2. Write(text string, args map[string]any, channel *Channel) Message
+#### 2. Write(text string, args map[string]any, channel *Channel) (Message, error)
 - **功能**：添加消息到聊天系统
 - **参数**：
   - `text` - 消息内容
   - `args` - 附加参数
   - `channel` - 频道信息
-- **返回值**：创建的消息对象
+- **返回值**：
+  - 创建的消息对象
+  - 错误信息
 - **注意**：
   - 消息的 Id 字段会被自动设置为递增的值
   - 当缓冲区已满时，会自动覆盖最早的消息
   - 消息的生命周期由缓冲区大小和写入速度决定
+  - 消息内容不能为空且不能超过Options.TextRune个字符
+  - 消息内容不能包含非法字符
 
 #### 3. Read(t uint64, size int, filter Filter) (n uint64, r []Message)
 - **功能**：获取最新聊天信息
@@ -147,7 +152,7 @@ type Chat struct {
   - `r` - 符合条件的最新消息列表
 - **注意**：
   - 如果 `t >= 当前最大ID`，会返回空列表
-  - 如果 `size <= 0` 或 `size > DefaultSize`，会使用默认值 `DefaultSize`
+  - 如果 `size <= 0` 或 `size > Options.PageSize`，会使用默认值 `Options.PageSize`
   - 消息按时间倒序排列（最新的在前）
 
 #### 4. Notify(p *player.Player) uint64
@@ -182,7 +187,7 @@ type Chat struct {
   - 创建的消息对象
   - 错误信息
 - **注意**：
-  - 消息内容不能为空且不能超过300字节
+  - 消息内容不能为空且不能超过Options.TextRune个字符
   - 消息内容不能包含非法字符
 
 #### 2. Getter(p *player.Player, size int, filter Filter) []Message
@@ -206,7 +211,7 @@ type Chat struct {
 - **head**：指向最早的消息位置
 - **tail**：指向下一个要存储的位置
 - **容量**：固定大小的数组，避免频繁内存分配
-- **默认容量**：`DefaultCap`，可配置
+- **默认容量**：`Options.ChatCap`，可配置
 
 ### 2. 原子操作
 
@@ -229,8 +234,9 @@ type Chat struct {
 
 提供可配置的默认值：
 
-- `DefaultCap`：默认缓冲区容量，默认值为 1024
-- `DefaultSize`：默认读取消息数量，默认值为 100
+- `Options.ChatCap`：默认缓冲区容量，默认值为 1024
+- `Options.PageSize`：默认读取消息数量，默认值为 100
+- `Options.TextRune`：默认消息字符数限制，默认值为 300
 
 ### 6. 消息工厂
 
