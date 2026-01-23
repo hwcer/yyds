@@ -158,6 +158,8 @@ github.com/hwcer/gateway v0.0.2 h1:ZWBL3kN4+Y1mAf2/MQ8ooBm41KGkpjYqL36aGtIksUs=
 github.com/hwcer/gateway v0.0.2/go.mod h1:K1G7SX0gka32Ay9REQw32mAGBA0kFsIJ9jDJmQtY/r4=
 github.com/hwcer/gateway v0.0.3 h1:6QWty42Ih8McJyNYSthJGdxp5TMv7bp1a4aGs8MInDw=
 github.com/hwcer/gateway v0.0.3/go.mod h1:K1G7SX0gka32Ay9REQw32mAGBA0kFsIJ9jDJmQtY/r4=
+github.com/hwcer/gateway v0.0.4 h1:41TJZkQmnrCEz++l1MzqeaKbU6f1L6IPZoE14sOhOE8=
+github.com/hwcer/gateway v0.0.4/go.mod h1:gr2IS1EKzkMezeCidgdhBAsWYLec7QF6UOT2+fIZYVA=
 github.com/hwcer/logger v0.2.8 h1:TjXr/MDNuMcM+kGADa0MnviY1fs9lSwb62cQOEeros8=
 github.com/hwcer/logger v0.2.8/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/updater v1.3.4 h1:F2kQlrU64AcDAW5tgSOPLD5Ew6wiHC8lmPZOj5xgTfE=
@@ -210,6 +212,8 @@ github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKju
 github.com/miekg/dns v1.1.27/go.mod h1:KNUDUusw/aVsxyTYZM1oqvCicbwhgbNgztCETuNZ7xM=
 github.com/miekg/dns v1.1.70 h1:DZ4u2AV35VJxdD9Fo9fIWm119BsQL5cZU1cQ9s0LkqA=
 github.com/miekg/dns v1.1.70/go.mod h1:+EuEPhdHOsfk6Wk5TT2CzssZdqkmFhf8r+aVyDEToIs=
+github.com/miekg/dns v1.1.72 h1:vhmr+TF2A3tuoGNkLDFK9zi36F2LS+hKTRW0Uf8kbzI=
+github.com/miekg/dns v1.1.72/go.mod h1:+EuEPhdHOsfk6Wk5TT2CzssZdqkmFhf8r+aVyDEToIs=
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-testing-interface v1.0.0/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=

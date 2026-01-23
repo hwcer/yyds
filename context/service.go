@@ -202,9 +202,8 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 		}
 		if err != nil {
 			return Error(err)
-		} else {
-			return Parse(b)
 		}
+		return Parse(b)
 	}
 
 	r = Parse(v)

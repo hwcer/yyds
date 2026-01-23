@@ -7,7 +7,7 @@ require (
 	github.com/hwcer/cosmo v1.2.6
 	github.com/hwcer/cosrpc v1.3.3
 	github.com/hwcer/cosweb v1.3.7
-	github.com/hwcer/gateway v0.0.3
+	github.com/hwcer/gateway v0.0.4
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.3.4
 	github.com/smallnest/rpcx v1.9.1
@@ -50,7 +50,7 @@ require (
 	github.com/libp2p/go-sockaddr v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/miekg/dns v1.1.70 // indirect
+	github.com/miekg/dns v1.1.72 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
