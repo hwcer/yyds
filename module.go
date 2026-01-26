@@ -80,7 +80,7 @@ func (this *Module) Init() (err error) {
 		return errors.New("share.Options.Game.Sid empty")
 	}
 	if options.Game.Address == "" {
-		return errors.New(" share.Options.Game.Address empty")
+		logger.Alert("游戏服务器网关地址为空,客户端无法通过游戏平台获取游戏服务器地址")
 	}
 
 	args := map[string]any{
