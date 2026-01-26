@@ -58,8 +58,9 @@ func (this *Context) Milli() int64 {
 	}
 	return time.Now().UnixMilli()
 }
-func (this *Context) OAuth() gwcfg.OAuthType {
-	auth := this.GetMetadata(gwcfg.ServiceMetadataAuthorize)
+
+func (this *Context) Permission() gwcfg.OAuthType {
+	auth := this.GetMetadata(gwcfg.ServiceMetadataPermission)
 	if auth == "" {
 		return gwcfg.OAuthTypeNone
 	}

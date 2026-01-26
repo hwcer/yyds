@@ -89,7 +89,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	}
 
 	path = gwcfg.TrimServiceMethod(path)
-	auth := c.OAuth()
+	auth := c.Permission()
 
 	//l, m := c.GetMetadata(gwcfg.ServiceMetadataApi)
 
