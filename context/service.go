@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"runtime/debug"
 
-	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
@@ -167,7 +166,7 @@ func serializeDefault(c *Context, r *Message) ([]byte, error) {
 	if r.Code == 0 && r.Data == nil {
 		return nil, nil
 	}
-	b := c.Binder(binder.ContentTypeModRes)
+	b := c.Binder()
 	return b.Marshal(r)
 }
 

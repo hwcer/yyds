@@ -84,7 +84,7 @@ func (this *Context) NewSender(path string, req values.Metadata) values.Metadata
 	}
 	req[gwcfg.ServiceMessagePath] = path
 	if _, ok := req[binder.HeaderContentType]; !ok {
-		req[binder.HeaderContentType] = this.Binder(binder.ContentTypeModRes).Name()
+		req[binder.HeaderContentType] = this.Binder(binder.HeaderAccept, binder.HeaderContentType).Name()
 	}
 	if _, ok := req[gwcfg.ServiceMetadataRequestId]; !ok {
 		if rid := this.GetMetadata(gwcfg.ServiceMetadataRequestId); rid != "" {
