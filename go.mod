@@ -8,7 +8,7 @@ require (
 	github.com/hwcer/cosmo v1.2.6
 	github.com/hwcer/cosrpc v1.3.4-0.20260127073717-ee1bb5074c4b
 	github.com/hwcer/cosweb v1.3.9-0.20260128070348-8144316fc80a
-	github.com/hwcer/gateway v0.0.6-0.20260128073759-12a119d9218c
+	github.com/hwcer/gateway v0.0.6-0.20260202103712-13b17cd05785
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.3.6
 	github.com/smallnest/rpcx v1.9.1
