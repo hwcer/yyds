@@ -83,8 +83,12 @@ func (this *Bucket) Writable(cycle int64) (r bool) {
 }
 
 // Cycle 获取当前第几期
-func (this *Bucket) Cycle() (cycle int64, writable bool) {
-	cycle = this.handle.Cycle(0)
+func (this *Bucket) Cycle(skip ...int64) (cycle int64, writable bool) {
+	n := int64(0)
+	if len(skip) > 0 {
+		n = skip[0]
+	}
+	cycle = this.handle.Cycle(n)
 	writable = true
 	//初始化 或 换届
 	if this.Statement == nil || this.Statement.zCycle != cycle {
@@ -99,6 +103,10 @@ func (this *Bucket) Cycle() (cycle int64, writable bool) {
 		}
 	}
 	return
+}
+
+func (this *Bucket) Expire(cycle int64) (start, expire int64) {
+	return this.handle.Expire(cycle)
 }
 
 func (this *Bucket) ZAdd(cycle int64, uid string, score int64) (err error) {
