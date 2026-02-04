@@ -164,6 +164,8 @@ github.com/hwcer/gateway v0.0.6-0.20260202103712-13b17cd05785 h1:Z4R1IiDcgnPWDyJ
 github.com/hwcer/gateway v0.0.6-0.20260202103712-13b17cd05785/go.mod h1:UdX7kRJVuSD2EvKHBeruXxERbqfuGXgZjkTKPuO/rAE=
 github.com/hwcer/gateway v0.0.6-0.20260204065805-374e69d5f85a h1:JPVTs+gE5YcVUK2gaviLO6qulGHhFMpf31ObDns01yM=
 github.com/hwcer/gateway v0.0.6-0.20260204065805-374e69d5f85a/go.mod h1:UdX7kRJVuSD2EvKHBeruXxERbqfuGXgZjkTKPuO/rAE=
+github.com/hwcer/gateway v0.0.6-0.20260204074257-1b8745da2cda h1:ZEkDoaAxdHlTX8ni9rMOqNwfNaG/S4DW/ohqIynGpQg=
+github.com/hwcer/gateway v0.0.6-0.20260204074257-1b8745da2cda/go.mod h1:UdX7kRJVuSD2EvKHBeruXxERbqfuGXgZjkTKPuO/rAE=
 github.com/hwcer/logger v0.2.8 h1:TjXr/MDNuMcM+kGADa0MnviY1fs9lSwb62cQOEeros8=
 github.com/hwcer/logger v0.2.8/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/updater v1.3.6 h1:9MnT7k4XAIBznCWnM12iJ/gLNvpWsgwJ22SdBMh5Ozo=
