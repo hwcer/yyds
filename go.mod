@@ -4,13 +4,13 @@ go 1.24.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/hwcer/cosgo v1.6.9-0.20260205093801-75749eeff7b1
+	github.com/hwcer/cosgo v1.7.1
 	github.com/hwcer/cosmo v1.2.6
-	github.com/hwcer/cosrpc v1.3.4-0.20260127073717-ee1bb5074c4b
-	github.com/hwcer/cosweb v1.3.9-0.20260128070348-8144316fc80a
-	github.com/hwcer/gateway v0.0.6-0.20260210071225-ad5dc9195af9
+	github.com/hwcer/cosrpc v1.4.0
+	github.com/hwcer/cosweb v1.4.0
+	github.com/hwcer/gateway v0.1.0
 	github.com/hwcer/logger v0.2.8
-	github.com/hwcer/updater v1.3.6
+	github.com/hwcer/updater v1.3.7
 	github.com/smallnest/rpcx v1.9.1
 )
 
@@ -83,6 +83,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/exp v0.0.0-20260209203927-2842357ff358 // indirect
