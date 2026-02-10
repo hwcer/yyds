@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/hwcer/cosgo v1.7.1
-	github.com/hwcer/cosmo v1.2.6
+	github.com/hwcer/cosmo v1.2.7
 	github.com/hwcer/cosrpc v1.4.0
 	github.com/hwcer/cosweb v1.4.0
 	github.com/hwcer/gateway v0.1.0
@@ -34,10 +34,13 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/hwcer/cosnet v1.4.0 // indirect
+	github.com/hwcer/coswss v0.3.0 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
