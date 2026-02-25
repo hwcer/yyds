@@ -26,13 +26,12 @@ var (
 	ErrItemNotEnough = values.Errorf(202, "item not enough")    //道具,材料不足
 	ErrTargetLimit   = values.Errorf(203, "target limit")       //任务目标未达成
 	ErrPreTaskLimit  = values.Errorf(204, "pre task limit")     //前置任务没完成
-	ErrArgEmpty      = values.Errorf(400, "args empty")         //参数不能为空
-	ErrActiveDisable = values.Errorf(401, "active disable")     //活动未开始
-	ErrActiveExpired = values.Errorf(402, "active expired")     //活动已经结束
-	ErrConfigEmpty   = values.Errorf(403, "config empty")
+	ErrArgEmpty      = values.Errorf(600, "args empty")         //参数不能为空
+	ErrConfigEmpty   = values.Errorf(601, "config empty")
+	ErrActiveDisable = values.Errorf(602, "active disable") //活动未开始
+	ErrActiveExpired = values.Errorf(603, "active expired") //活动已经结束
 
-	ErrRoleIsBan         = values.Errorf(500, "user is ban")
-	ErrServerMaintenance = values.Errorf(505, "server maintenance in progress")
+	ErrRoleIsBan = values.Errorf(500, "user is ban")
 )
 
 //func init() {

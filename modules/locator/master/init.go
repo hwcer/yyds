@@ -22,7 +22,7 @@ func Start() (err error) {
 		logger.Alert("locator address is empty")
 		return nil
 	}
-	h := Service.Handler().(*cosweb.Handler)
+	h := Server.Handler()
 	h.SetSerialize(serialize)
 
 	access := middleware.NewAccessControlAllow()

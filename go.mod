@@ -1,14 +1,14 @@
 module github.com/hwcer/yyds
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/hwcer/cosgo v1.7.1
+	github.com/hwcer/cosgo v1.7.2-0.20260225025403-cac7fe02996e
 	github.com/hwcer/cosmo v1.2.7
 	github.com/hwcer/cosrpc v1.4.0
-	github.com/hwcer/cosweb v1.4.0
-	github.com/hwcer/gateway v0.1.1
+	github.com/hwcer/cosweb v1.4.1-0.20260225143149-e4fc31891080
+	github.com/hwcer/gateway v0.1.2-0.20260225145706-ddd44260f8c7
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.3.7
 	github.com/smallnest/rpcx v1.9.1
@@ -84,7 +84,7 @@ require (
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/exp v0.0.0-20260209203927-2842357ff358 // indirect
+	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
