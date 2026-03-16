@@ -23,6 +23,7 @@ var (
 	ErrDataNotExists = values.Errorf(104, "data not exists")    //数据库数据不存在
 	ErrPlayerMax     = values.Errorf(105, "player max")         //房间已满
 	ErrDataExists    = values.Errorf(106, "data exists")        //数据已经存在
+	ErrRoleIsBan     = values.Errorf(110, "user is ban")        //账号被封
 	ErrItemNotEnough = values.Errorf(202, "item not enough")    //道具,材料不足
 	ErrTargetLimit   = values.Errorf(203, "target limit")       //任务目标未达成
 	ErrPreTaskLimit  = values.Errorf(204, "pre task limit")     //前置任务没完成
@@ -31,7 +32,6 @@ var (
 	ErrActiveDisable = values.Errorf(602, "active disable") //活动未开始
 	ErrActiveExpired = values.Errorf(603, "active expired") //活动已经结束
 
-	ErrRoleIsBan = values.Errorf(500, "user is ban")
 )
 
 //func init() {
