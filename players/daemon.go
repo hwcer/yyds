@@ -2,7 +2,6 @@ package players
 
 import (
 	"context"
-	"fmt"
 	"runtime/debug"
 	"sort"
 	"sync/atomic"
@@ -107,13 +106,10 @@ func released(p *player.Player) (ok bool) {
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusReleased) {
 		return false
 	}
-	fmt.Printf("released:%s\n", p.Uid())
 	p.Reset()
 	if err := p.Destroy(); err == nil {
-		fmt.Printf("Destroy:%s\n", p.Uid())
 		ok = true
-		//ps.Delete(p.Uid()) //可能在循环中，不能直接删除
-		fmt.Printf("Delete:%s\n", p.Uid())
+		ps.Delete(p.Uid())
 	} else {
 		ok = false
 		p.Status = status
@@ -188,7 +184,6 @@ func worker() {
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && released(p) {
 			ct--
-			ps.Delete(p.Uid())
 		} else if p.Status == player.StatusOffline || p.Status == player.StatusNone {
 			next[p.Uid()] = p
 		}
@@ -218,6 +213,7 @@ func shutdown() {
 	}
 	logger.Alert("收到退出信号，正在保存所有玩家数据")
 	//关闭所有用户
+	var rel []*player.Player
 	ps.Range(func(uid string, p *player.Player) bool {
 		if p.Status == player.StatusConnected {
 			disconnect(p)
@@ -225,8 +221,12 @@ func shutdown() {
 		if p.Status == player.StatusDisconnect {
 			offline(p)
 		}
-		_ = released(p)
+		rel = append(rel, p)
 		return true
 	})
+	//释放所有用户,必须在Range外部循环，否则会死锁
+	for _, p := range rel {
+		_ = released(p)
+	}
 	return
 }
