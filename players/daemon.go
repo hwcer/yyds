@@ -2,6 +2,7 @@ package players
 
 import (
 	"context"
+	"fmt"
 	"runtime/debug"
 	"sort"
 	"sync/atomic"
@@ -106,10 +107,13 @@ func released(p *player.Player) (ok bool) {
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusReleased) {
 		return false
 	}
+	fmt.Printf("released:%s\n", p.Uid())
 	p.Reset()
 	if err := p.Destroy(); err == nil {
+		fmt.Printf("Destroy:%s\n", p.Uid())
 		ok = true
-		ps.Delete(p.Uid())
+		//ps.Delete(p.Uid()) //可能在循环中，不能直接删除
+		fmt.Printf("Delete:%s\n", p.Uid())
 	} else {
 		ok = false
 		p.Status = status
@@ -184,6 +188,7 @@ func worker() {
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && released(p) {
 			ct--
+			ps.Delete(p.Uid())
 		} else if p.Status == player.StatusOffline || p.Status == player.StatusNone {
 			next[p.Uid()] = p
 		}
