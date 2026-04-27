@@ -51,20 +51,12 @@ type Mutex struct {
 // next   获取操作结束后是否需要回到玩家自身,
 
 func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, next ...func()) (any, error) {
-	//var p *player.Player
 	var done []func()
-
-	//var includingOneself bool
-	//for _, k := range uids {
-	//	if k == this.ctx.Uid() {
-	//		includingOneself = true
-	//		break
-	//	}
-	//}
+	var self string
 
 	if p := this.ctx.Player; p != nil {
+		self = p.Uid()
 		this.ctx.Player = nil
-		//p.Release()
 		if players.Options.AsyncModel == players.AsyncModelLocker {
 			p.Unlock()
 		}
@@ -72,12 +64,11 @@ func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, nex
 			if players.Options.AsyncModel == players.AsyncModelLocker {
 				p.Lock()
 			}
-			//p.Reset()
 			this.ctx.Player = p
 		})
 	}
 	done = append(done, next...)
-	return players.Locker(uids, args, handle, done...)
+	return players.Locker(self, uids, args, handle, done...)
 }
 
 // Async 异步获得锁，独立协程执行锁任务
@@ -90,6 +81,6 @@ func (this *Mutex) Async(uids []string, args any, handle player.AsyncHandle, don
 		return nil, nil
 	}
 	scc.SGO(func(ctx context.Context) {
-		_, _ = players.Locker(uids, args, lh, done...)
+		_, _ = players.Locker("", uids, args, lh, done...)
 	})
 }

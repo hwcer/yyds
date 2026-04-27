@@ -6,7 +6,7 @@ import (
 
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/yyds/errors"
-	"github.com/hwcer/yyds/players/channel"
+	"github.com/hwcer/yyds/players/actor"
 	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
 )
@@ -20,6 +20,7 @@ var (
 )
 
 var ps Players
+var newSyncer func() player.Syncer
 
 func Start() error {
 	if !atomic.CompareAndSwapInt32(&playersStarted, 0, 1) {
@@ -28,8 +29,10 @@ func Start() error {
 	//cosgo.On(cosgo.EventTypStarted, loading)
 	if Options.AsyncModel == AsyncModelLocker {
 		ps = locker.New()
-	} else if Options.AsyncModel == AsyncModelChannel {
-		ps = channel.New()
+		newSyncer = locker.NewSyncer
+	} else if Options.AsyncModel == AsyncModelActor {
+		ps = actor.New()
+		newSyncer = actor.NewSyncer
 	} else {
 		return fmt.Errorf("players: invalid options")
 	}
@@ -77,13 +80,19 @@ func Login(uid string, meta map[string]string, handle player.Handle) (err error)
 	return
 }
 
-func Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+func Locker(self string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
 	if playersStarted == 0 {
 		return nil, errors.ErrServerClosed
 	}
-	return ps.Locker(uid, args, handle, done...)
+	return ps.Locker(self, uid, args, handle, done...)
 }
 
 func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
+}
+
+func NewPlayer(uid string) *player.Player {
+	p := player.New(uid)
+	p.Syncer = newSyncer()
+	return p
 }

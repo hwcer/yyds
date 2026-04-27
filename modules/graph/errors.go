@@ -17,7 +17,7 @@ var (
 	ErrorAlreadyFollow = values.Errorf(ErrorIndex+7, "already follow")
 
 	ErrorUserNotExist = values.Errorf(ErrorIndex+8, "User does not exist")
-	ErrorNotFans      = values.Errorf(ErrorIndex+8, "User not fans")
+	ErrorNotFans      = values.Errorf(ErrorIndex+9, "User not fans")
 )
 
 type Result struct {
@@ -38,7 +38,7 @@ func (this *Result) Success() (r []string) {
 		return
 	}
 	for k, v := range this.Result {
-		if v != nil {
+		if v == nil {
 			r = append(r, k)
 		}
 	}

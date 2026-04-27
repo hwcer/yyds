@@ -58,7 +58,7 @@ func (this *Times) StartWithArray(args ...int64) (r int64, err error) {
 	}
 	v := make([]int64, 2)
 	copy(v, args)
-	return this.Expire(v[0], v[1])
+	return this.Start(v[0], v[1])
 }
 
 func (this *Times) ExpireWithArray(args ...int64) (r int64, err error) {

@@ -1,6 +1,7 @@
 package locker
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/hwcer/cosgo/await"
@@ -20,6 +21,10 @@ func New() *Players {
 	return instance
 }
 
+//func (this *Players) Syncer() player.Syncer {
+//	return NewSyncer()
+//}
+
 type Players struct {
 	player.Manage
 }
@@ -34,21 +39,21 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 		p.Reset()
 		defer p.Release()
 	}
-	if p == nil || p.Status == player.StatusReleased {
+	if p == nil || atomic.LoadInt32(&p.Status) == player.StatusReleased {
 		return errors.ErrNotOnline
 	}
 	return handle(p)
 }
 
 func (this *Players) Load(uid string, init bool, handle player.Handle) (err error) {
-	r := player.New(uid)
+	r := newPlayer(uid)
 	r.Lock()
-	defer r.Unlock()
 	if i, loaded := this.Manage.LoadOrStore(uid, r); loaded {
+		r.Unlock()
 		r = i
 		r.Lock()
-		defer r.Unlock()
 	}
+	defer r.Unlock()
 	if err = r.Loading(init); err != nil {
 		this.Manage.Delete(uid)
 		return
@@ -58,6 +63,6 @@ func (this *Players) Load(uid string, init bool, handle player.Handle) (err erro
 	return handle(r)
 }
 
-func (this *Players) Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+func (this *Players) Locker(_ string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
 	return NewLocker(uid, args, handle, done...)
 }

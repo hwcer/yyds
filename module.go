@@ -8,10 +8,12 @@ import (
 
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
@@ -65,7 +67,10 @@ func (this *Module) Init() (err error) {
 	}
 	if options.Options.Debug {
 		if options.Game.Sid == 0 {
-			options.Game.Sid = autoServerId(options.Game.Local)
+			options.Game.Sid, err = autoServerId()
+		}
+		if err != nil {
+			return err
 		}
 		//if options.Game.Address == "" {
 		//	gate := utils.NewAddress(options.Gate.Address)
@@ -104,6 +109,9 @@ func (this *Module) Init() (err error) {
 }
 
 func (this *Module) Start() error {
+	if options.Setting.GetIType != nil {
+		updater.Config.IType = options.Setting.GetIType
+	}
 	return nil
 }
 
@@ -117,9 +125,13 @@ func (this *Module) Close() (err error) {
 	return nil
 }
 
-func autoServerId(ip string) (sid int32) {
+func autoServerId() (sid int32, err error) {
+	ip, err := utils.LocalIPv4()
+	if err != nil {
+		return 0, err
+	}
 	if i := strings.Index(ip, ":"); i >= 0 {
-		ip = ip[:i-1]
+		ip = ip[:i]
 	}
 	ips := strings.Split(ip, ".")
 	var pos uint = 8

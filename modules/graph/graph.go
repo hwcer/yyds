@@ -68,7 +68,7 @@ func (sg *Graph) Count(uid []string, t Relation) map[string]int32 {
 	defer sg.mu.RUnlock()
 	r := make(map[string]int32)
 	for _, u := range uid {
-		if p, _ := sg.load(u); p != nil {
+		if p := sg.nodes[u]; p != nil {
 			r[u] = p.Count(t)
 		} else {
 			r[u] = 0

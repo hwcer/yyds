@@ -17,8 +17,18 @@ func init() {
 type factory struct {
 }
 
+func (factory) Limit(uid string) int32 {
+	return 0
+}
+
 func (factory) Create(uid string) (values.Values, error) {
 	return values.Values{}, nil
+}
+
+func (factory) SetPlayer(uid string, key string, val any) {
+}
+
+func (factory) SetFriend(uid string, fid string, key string, val any) {
 }
 
 func (factory) SendMessage(uid string, path string, data any) {

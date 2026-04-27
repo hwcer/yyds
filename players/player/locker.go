@@ -22,12 +22,10 @@ func (p *Player) Release() {
 }
 
 func (p *Player) Lock() {
-	p.mutex.Lock()
+	p.Syncer.Lock()
 }
 
 func (p *Player) Unlock() {
-	p.mutex.Unlock()
+	p.Syncer.Unlock()
 }
-func (p *Player) TryLock() bool {
-	return p.mutex.TryLock()
-}
+

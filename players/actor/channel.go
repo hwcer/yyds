@@ -1,30 +1,33 @@
-package channel
+package actor
 
 import (
 	"github.com/hwcer/cosgo/await"
 	"github.com/hwcer/yyds/players/player"
 )
 
-//func NewMulti(readOnly bool) *Locker {
-//	return &Locker{dict: map[uint64]*players.Player{}, readOnly: readOnly}
-//}
-
 var w *await.Await
 
 type Args struct {
+	self   string
 	uid    []string
 	args   any
 	handle player.LockerHandle
 }
 
-// 已经在控制携程内
-func NewLocker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
-	msg := &Args{uid: uid, args: args, handle: handle}
-	l := &Locker{done: done}
-	return l.call(msg)
+// NewLocker 已经在玩家通道内调用
+func NewLocker(self string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+	l := &Locker{self: self, done: done}
+	for _, v := range uid {
+		if err := l.loading(v); err != nil {
+			l.release()
+			return nil, err
+		}
+	}
+	defer l.release()
+	return handle(l, args)
 }
 
-// NewLockerWithLocker 通常在脚本或者不在控制携程之内才使用这个方法先进入防并发携程
+// NewLockerWithLocker 不在玩家通道内，通过全局通道进入
 func NewLockerWithLocker(uid []string, handle player.LockerHandle, args any, done ...func()) (any, error) {
 	msg := &Args{uid: uid, handle: handle, args: args}
 	l := &Locker{done: done}
@@ -32,12 +35,14 @@ func NewLockerWithLocker(uid []string, handle player.LockerHandle, args any, don
 }
 
 type Locker struct {
+	self string
 	dict map[string]*player.Player
 	done []func()
 }
 
 func (this *Locker) call(args any) (reply any, err error) {
 	msg, _ := args.(*Args)
+	this.self = msg.self
 	for _, v := range msg.uid {
 		if err = this.loading(v); err != nil {
 			return
@@ -48,8 +53,11 @@ func (this *Locker) call(args any) (reply any, err error) {
 }
 
 func (this *Locker) release() {
-	for _, p := range this.dict {
+	for uid, p := range this.dict {
 		p.Release()
+		if uid != this.self {
+			p.Unlock()
+		}
 	}
 	for _, d := range this.done {
 		d()
@@ -68,14 +76,33 @@ func (this *Locker) loading(uid string) (err error) {
 	if i, ok := instance.Manage.Load(uid); ok {
 		r = i
 	} else {
-		r = player.New(uid)
+		r = newPlayer(uid)
 	}
-	//未初始化
-	if err = r.Loading(false); err != nil {
-		instance.Manage.Delete(uid)
-		return err
+
+	if uid != this.self {
+		// 非自己：通过目标玩家的 channel 加载，确保数据安全
+		err = invoke(r, func() error {
+			if e := r.Loading(false); e != nil {
+				instance.Manage.Delete(uid)
+				return e
+			}
+			r.Reset()
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		// 加载完成后 Lock 占住目标 actor，直到 release 时 Unlock
+		r.Lock()
+	} else {
+		// 自己：已在自己的 actor 协程内，直接操作
+		if err = r.Loading(false); err != nil {
+			instance.Manage.Delete(uid)
+			return err
+		}
+		r.Reset()
 	}
-	r.Reset()
+
 	this.dict[uid] = r
 	return
 }

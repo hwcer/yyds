@@ -28,7 +28,7 @@ func Start() (err error) {
 	access := middleware.NewAccessControlAllow()
 	access.Origin("*")
 	access.Methods("GET", "POST", "OPTIONS")
-	Server.Use(access.Handle)
+	Server.Use(access.Middleware)
 	Server.Register("/*", proxy)
 
 	if err = Server.Listen(model.Options.Address); err == nil {

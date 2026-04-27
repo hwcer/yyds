@@ -30,6 +30,10 @@ type CharacterPageArgs struct {
 	Value string `json:"value"` //查询值
 }
 
+var characterAllowedKeys = map[string]bool{
+	"uid": true, "guid": true, "name": true, "sid": true, "lv": true,
+}
+
 func (this *Character) Page(c *cosweb.Context) interface{} {
 	args := &CharacterPageArgs{}
 	if err := c.Bind(args); err != nil {
@@ -42,6 +46,9 @@ func (this *Character) Page(c *cosweb.Context) interface{} {
 	}
 	args.Paging.Init(100)
 	if args.Key != "" && args.Value != "" {
+		if !characterAllowedKeys[args.Key] {
+			return values.Errorf(0, "invalid query key: %s", args.Key)
+		}
 		tx = tx.Where(fmt.Sprintf("%s = ?", args.Key), args.Value)
 	}
 	if tx = tx.Page(args.Paging); tx.Error != nil {

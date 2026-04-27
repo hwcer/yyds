@@ -9,7 +9,6 @@ import (
 
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/players/player"
 )
 
 type preloadPlayerDecode struct {
@@ -41,7 +40,7 @@ func loading() (err error) {
 	tx = tx.Range(func(cursor cosmo.Cursor) bool {
 		v := &preloadPlayerDecode{}
 		if e := cursor.Decode(v); e != nil {
-			logger.Alert("preload error", err)
+			logger.Alert("preload error: %v", e)
 		} else {
 			progress.c <- v.Id
 		}
@@ -73,6 +72,7 @@ type Progress struct {
 	value int64
 	block string
 	done  chan struct{}
+	once  sync.Once
 	wg    *sync.WaitGroup
 	c     chan string
 }
@@ -97,7 +97,7 @@ func (this *Progress) player(uid string) {
 		_ = recover()
 		this.Add(1)
 	}()
-	p := player.New(uid)
+	p := NewPlayer(uid)
 	if e := p.Loading(true); e == nil {
 		ps.Store(uid, p)
 		p.KeepAlive(time.Now().Unix())
@@ -131,7 +131,7 @@ func (this *Progress) Printf() {
 	fmt.Printf("\r[%-50s] %d%%", s, n)
 	if this.value >= this.total && len(this.c) == 0 {
 		fmt.Println()
-		close(this.done)
+		this.once.Do(func() { close(this.done) })
 	}
 }
 

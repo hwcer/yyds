@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -36,10 +35,10 @@ func New(uid string) *Player {
 type Player struct {
 	*updater.Updater
 	uid       string
-	mutex     sync.Mutex       //底层自动使用锁，不要手动调用
 	heartbeat int64            //最后心跳时间
 	Dirty     Dirty            //短连接推送数据缓存
 	Login     int64            //登录时间
+	Syncer    Syncer           //并发控制器
 	Binder    binder.Binder    //当前端使用的序列化方式
 	Status    int32            //在线状态
 	Times     *Times           //时间控制器
@@ -65,7 +64,7 @@ func (p *Player) initialize() {
 // Send 推送消息
 // rp  req |  path
 func (p *Player) Send(v any, req values.Metadata) {
-	if p.Status != StatusConnected {
+	if atomic.LoadInt32(&p.Status) != StatusConnected {
 		logger.Debug("player disconnected:%s", p.Uid())
 		return
 	}
@@ -107,7 +106,7 @@ func (p *Player) Loading(init bool) (err error) {
 		return fmt.Errorf("player uid(%s) is invalid", uid)
 	}
 
-	status := p.Status
+	status := atomic.LoadInt32(&p.Status)
 	if status == StatusLocked || status == StatusReleased {
 		return fmt.Errorf("player status disable")
 	}
@@ -120,11 +119,10 @@ func (p *Player) Loading(init bool) (err error) {
 			logger.Error(e)
 		}
 		if err != nil {
-			p.Status = StatusReleased
+			atomic.StoreInt32(&p.Status, StatusReleased)
 		} else {
-			p.Status = status
+			atomic.StoreInt32(&p.Status, status)
 		}
-
 	}()
 	if p.Updater == nil {
 		p.Updater = updater.New(p)
@@ -149,7 +147,9 @@ func (p *Player) Destroy() error {
 		return err
 	}
 	p.Updater = nil
-	// 清理所有可能导致内存泄漏的字段
+	if p.Syncer != nil {
+		p.Syncer.Close()
+	}
 	p.Values = nil
 	p.Dirty = Dirty{}
 	p.Emitter = nil
@@ -165,7 +165,7 @@ func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitte
 	return p.Emitter.Listen(t, args, handle)
 }
 func (p *Player) Connected() bool {
-	return p.Status == StatusConnected
+	return atomic.LoadInt32(&p.Status) == StatusConnected
 }
 
 // Heartbeat 获取最后心跳时间
@@ -182,7 +182,6 @@ func (p *Player) KeepAlive(t int64) {
 			t = time.Now().Unix()
 		}
 	}
-
 	p.heartbeat = t
 }
 

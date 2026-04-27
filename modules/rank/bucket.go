@@ -331,5 +331,7 @@ func (this *Bucket) mayKeeper(stmt *Statement) {
 		start = 0
 		stop = v - this.zMax - 1
 	}
-	Redis.ZRemRangeByRank(context.Background(), key, start, stop)
+	if err := Redis.ZRemRangeByRank(context.Background(), key, start, stop).Err(); err != nil {
+		logger.Error("ZRemRangeByRank error, key:%v, err:%v", key, err)
+	}
 }

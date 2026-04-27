@@ -18,7 +18,7 @@ import (
 
 // Connected 连线，不包括断线重连等
 func Connected(p *player.Player, meta values.Metadata) (err error) {
-	status := p.Status
+	status := atomic.LoadInt32(&p.Status)
 	gateway := uint64(meta.GetInt64(gwcfg.ServiceMetadataGateway))
 	if gateway == 0 {
 		return errors.New("gateway is empty")
@@ -66,7 +66,7 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 
 // Disconnect 下线,心跳超时,断开连接等
 func disconnect(p *player.Player) bool {
-	status := p.Status
+	status := atomic.LoadInt32(&p.Status)
 	if status != player.StatusConnected {
 		return false
 	}
@@ -83,7 +83,7 @@ func disconnect(p *player.Player) bool {
 
 // Offline 业务逻辑层面掉线
 func offline(p *player.Player) bool {
-	status := p.Status
+	status := atomic.LoadInt32(&p.Status)
 	if !(status == player.StatusNone || status == player.StatusDisconnect) {
 		return false
 	}
@@ -99,7 +99,7 @@ func offline(p *player.Player) bool {
 
 // released 释放用户实例
 func released(p *player.Player) (ok bool) {
-	status := p.Status
+	status := atomic.LoadInt32(&p.Status)
 	if status != player.StatusOffline {
 		return false
 	}
@@ -112,7 +112,7 @@ func released(p *player.Player) (ok bool) {
 		ps.Delete(p.Uid())
 	} else {
 		ok = false
-		p.Status = status
+		atomic.StoreInt32(&p.Status, status)
 		logger.Alert("Players.release uid:%v,err:%v", p.Uid(), err)
 	}
 	return
@@ -137,7 +137,7 @@ func worker() {
 		tot += 1
 		//检查掉线情况
 		//logger.Debug("uid:%v   status:%v   heartbeat:%v ", p.Uid(), p.status, p.heartbeat)
-		switch p.Status {
+		switch atomic.LoadInt32(&p.Status) {
 		case player.StatusNone, player.StatusOffline:
 			if p.Heartbeat() < offlineTime {
 				if _, ok := playersRecycling[uid]; !ok {
@@ -184,7 +184,7 @@ func worker() {
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && released(p) {
 			ct--
-		} else if p.Status == player.StatusOffline || p.Status == player.StatusNone {
+		} else if s := atomic.LoadInt32(&p.Status); s == player.StatusOffline || s == player.StatusNone {
 			next[p.Uid()] = p
 		}
 	}
@@ -215,10 +215,10 @@ func shutdown() {
 	//关闭所有用户
 	var rel []*player.Player
 	ps.Range(func(uid string, p *player.Player) bool {
-		if p.Status == player.StatusConnected {
+		if atomic.LoadInt32(&p.Status) == player.StatusConnected {
 			disconnect(p)
 		}
-		if p.Status == player.StatusDisconnect {
+		if atomic.LoadInt32(&p.Status) == player.StatusDisconnect {
 			offline(p)
 		}
 		rel = append(rel, p)

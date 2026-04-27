@@ -43,7 +43,7 @@ func (this *Locker) loading(uid string) error {
 	if _, ok := this.dict[uid]; ok {
 		return nil
 	}
-	r := player.New(uid)
+	r := newPlayer(uid)
 	r.Lock()
 	if i, loaded := instance.Manage.LoadOrStore(uid, r); loaded {
 		i.Lock()

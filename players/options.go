@@ -8,7 +8,7 @@ type AsyncModel int8
 
 const (
 	AsyncModelLocker  AsyncModel = iota //用户锁模式,基于用户层面，并发更高,但用户之间数据交互麻烦，需要使用 NewLocker 同时锁定多个用户
-	AsyncModelChannel                   //通道模式,全局通道无并发风险，但并发相对低，容易被高延时接口堵塞
+	AsyncModelActor                     //Actor模式,每玩家独立通道，不同玩家并发，同一玩家串行
 )
 
 var Options = struct {
