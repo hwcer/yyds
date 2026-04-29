@@ -8,3 +8,4 @@ pid
 logs
 developer
 private.toml
+/.claude

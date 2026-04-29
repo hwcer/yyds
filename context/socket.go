@@ -70,7 +70,7 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	if gateway := this.Gateway(); gateway != "" {
 		req.Set(selector.MetaDataAddress, gateway)
 	} else {
-		logger.Alert("grpc gateway is nil")
+		logger.Alert("gateway is nil")
 	}
 
 	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, "send", v, nil); err != nil {
