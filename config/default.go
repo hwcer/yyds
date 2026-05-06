@@ -1,6 +1,6 @@
 package config
 
-import "strconv"
+import "github.com/hwcer/yyds/options"
 
 var Config = &CS{ITypes: ITypes{}, Process: Process{}}
 
@@ -14,10 +14,7 @@ func Has(k int32) bool {
 }
 
 func GetIMax(iid int32) (r int64) {
-	if i := Config.ITypes.get(iid); i != nil {
-		r = int64(i.IMax)
-	}
-	return
+	return options.Setting.GetIMax(iid)
 }
 func GetName(iid int32) (r string) {
 	if i := Config.ITypes.get(iid); i != nil {
@@ -26,17 +23,7 @@ func GetName(iid int32) (r string) {
 	return
 }
 func GetIType(iid int32) (r int32) {
-	if iid < 10 {
-		return 0
-	}
-	if i := Config.ITypes.get(iid); i != nil {
-		r = i.IType
-	} else {
-		s := strconv.Itoa(int(iid))
-		v, _ := strconv.Atoi(s[0:2])
-		r = int32(v)
-	}
-	return
+	return options.Setting.GetIType(iid)
 }
 
 func Reload(data any, path string) (err error) {

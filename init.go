@@ -4,13 +4,13 @@ import (
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/yyds/config"
+	"github.com/hwcer/yyds/options"
 )
 
 func init() {
 	logger.SetCallDepth(4)
-	updater.Config.IMax = config.GetIMax
-	updater.Config.IType = config.GetIType
+	updater.Config.IMax = options.Setting.GetIMax
+	updater.Config.IType = options.Setting.GetIType
 	updater.Config.ParseId = ParseId
 }
 

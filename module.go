@@ -13,7 +13,6 @@ import (
 	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
@@ -109,9 +108,6 @@ func (this *Module) Init() (err error) {
 }
 
 func (this *Module) Start() error {
-	if options.Setting.GetIType != nil {
-		updater.Config.IType = options.Setting.GetIType
-	}
 	return nil
 }
 

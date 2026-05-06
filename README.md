@@ -10,8 +10,8 @@
 |------|------|
 | `players/` | 玩家管理，支持 Locker（互斥锁）和 Actor（通道）两种并发模式 |
 | `context/` | RPC 请求上下文，玩家操作、消息推送、频道管理 |
-| `config/` | 静态数据加载与热更新 |
-| `options/` | 全局配置、服务发现、Master 通信 |
+| `config/` | 静态数据加载与热更新，IType/IMax 委托 options.Setting |
+| `options/` | 运行时配置（Game/Master/Setting）、Redis 服务发现、服务类型定义 |
 | `errors/` | 统一错误定义 |
 | `modules/rank/` | 基于 Redis ZSet 的排行榜系统 |
 | `modules/graph/` | 社交图谱（好友、关注、粉丝、黑名单） |
