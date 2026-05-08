@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/hwcer/logger"
+	"github.com/hwcer/yyds/options"
 )
 
 type IType struct {
@@ -49,6 +50,8 @@ func (its ITypes) Has(k int32) bool {
 func (its ITypes) GetIMax(iid int32) (r int64) {
 	if i := its.get(iid); i != nil {
 		r = int64(i.IMax)
+	} else {
+		r = options.Setting.GetIMax(iid)
 	}
 	return
 }
@@ -65,9 +68,7 @@ func (its ITypes) GetIType(iid int32) (r int32) {
 	if i := its.get(iid); i != nil {
 		r = i.IType
 	} else {
-		s := strconv.Itoa(int(iid))
-		v, _ := strconv.Atoi(s[0:2])
-		r = int32(v)
+		r = options.Setting.GetIType(iid)
 	}
 	return
 }

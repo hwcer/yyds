@@ -1,7 +1,5 @@
 package config
 
-import "github.com/hwcer/yyds/options"
-
 var Config = &CS{ITypes: ITypes{}, Process: Process{}}
 
 func Is(iid int32, it int32) bool {
@@ -14,16 +12,18 @@ func Has(k int32) bool {
 }
 
 func GetIMax(iid int32) (r int64) {
-	return options.Setting.GetIMax(iid)
+	return Config.GetIMax(iid)
 }
+
+func GetIType(iid int32) (r int32) {
+	return Config.GetIType(iid)
+}
+
 func GetName(iid int32) (r string) {
 	if i := Config.ITypes.get(iid); i != nil {
 		r = i.Name
 	}
 	return
-}
-func GetIType(iid int32) (r int32) {
-	return options.Setting.GetIType(iid)
 }
 
 func Reload(data any, path string) (err error) {
