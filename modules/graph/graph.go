@@ -104,9 +104,9 @@ func (sg *Graph) Follow(uid string, fid []string) *Result {
 	if err != nil {
 		return NewResultError(err)
 	}
-	auto := !p.IsMax(sg.Factory.Limit(uid))
 	r := NewResult()
 	for _, f := range fid {
+		auto := !p.IsMax(sg.Factory.Limit(uid))
 		r.Result[f] = sg.follow(p, f, auto)
 	}
 	return r

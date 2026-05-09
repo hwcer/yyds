@@ -2,12 +2,13 @@ package context
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/cosnet/message"
 	"github.com/hwcer/cosrpc/client"
 	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/gateway/gwcfg"
@@ -51,7 +52,7 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 		return nil, err
 	}
 	req := map[string]string{}
-	req[gwcfg.ServiceMetadataServerId] = fmt.Sprintf("%d", u.GetShard())
+	req[gwcfg.ServiceMetadataServerId] = strconv.FormatUint(u.GetShard(), 10)
 	ctx := context.WithValue(context.Background(), share.ReqMetaDataKey, req)
 	return client.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
 }
@@ -67,12 +68,12 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		req[gwcfg.ServiceMetadataGUID] = this.GUid()
 	}
 
-	if gateway := this.Gateway(); gateway != "" {
-		req.Set(selector.MetaDataAddress, gateway)
-	} else {
+	gateway := this.Gateway()
+	if gateway == "" {
 		logger.Alert("gateway is nil")
+		return
 	}
-
+	req.Set(selector.MetaDataAddress, gateway)
 	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, "send", v, nil); err != nil {
 		logger.Error(err)
 	}
@@ -95,6 +96,8 @@ func (this *Context) NewSender(path string, req values.Metadata) values.Metadata
 	if sockId := this.GetMetadata(gwcfg.ServiceMetadataSocketId); sockId != "" {
 		req.Set(gwcfg.ServiceMetadataSocketId, sockId)
 	}
-
+	if _, ok := req[gwcfg.ServiceResponseFlag]; !ok {
+		req[gwcfg.ServiceResponseFlag] = strconv.FormatUint(uint64(message.FlagNoreply), 10)
+	}
 	return req
 }

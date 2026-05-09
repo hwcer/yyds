@@ -48,7 +48,7 @@ func graphInstall() (err error) {
 		if err = cursor.Decode(fri); err != nil {
 			return false
 		}
-		if _, err = install.SetFriend(fri.Uid, fri.Fid, graph.RelationFriend, fri.Values); err != nil {
+		if _, err = install.SetFriend(fri.Uid, fri.Fid, fri.Relation, fri.Values); err != nil {
 			return false
 		}
 

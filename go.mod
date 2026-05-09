@@ -6,6 +6,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/hwcer/cosgo v1.8.0
 	github.com/hwcer/cosmo v1.3.0
+	github.com/hwcer/cosnet v1.4.3
 	github.com/hwcer/cosrpc v1.4.1
 	github.com/hwcer/cosweb v1.4.1
 	github.com/hwcer/gateway v0.2.0

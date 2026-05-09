@@ -17,8 +17,11 @@ func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) (err
 	//解除自身锁
 	if this.Player != nil {
 		p := this.Player
-		cs, _ := p.Submit()
-		p.Updater.Dirty(cs...)
+		if cs, e := p.Submit(); e != nil {
+			return e
+		} else {
+			p.Updater.Dirty(cs...)
+		}
 		p.Release()
 		p.Unlock()
 		this.Player = nil

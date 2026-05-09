@@ -35,19 +35,19 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 		p.ClientIp = ip
 	}
 
+	oldGateway := p.Gateway
 	p.Gateway = gateway
 	if b := binder.GetBinder(meta, binder.HeaderAccept, binder.HeaderContentType); b != nil {
 		p.Binder = b
 	}
 	// 不同端不同协议顶号
 	if status == player.StatusConnected {
-		if p.Gateway == gateway {
+		if oldGateway == gateway {
 			emitter.Events.Emit(p.Updater, EventReconnect)
-			return
 		} else {
 			emitter.Events.Emit(p.Updater, EventReplace)
-			return
 		}
+		return
 	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusOffline {
 		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusConnected) {
 			return errors.ErrLoginWaiting

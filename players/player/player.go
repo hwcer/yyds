@@ -250,7 +250,7 @@ func (p *Player) SubItems(items interface{}, multi ...int64) {
 			if v <= 0 {
 				logger.Alert("sub items error, uid:%s,iid:%d,val:%d,num:%d", p.Uid(), g.GetId(), v, power[0])
 				_ = p.Updater.Errorf("sub items is invalid")
-
+				return
 			}
 			p.Updater.Sub(g.GetId(), v)
 		}

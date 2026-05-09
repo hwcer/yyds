@@ -109,11 +109,11 @@ func (this *Locker) Submit() error {
 
 func (this *Locker) call(i any) (reply any, err error) {
 	args, _ := i.(*Args)
+	defer this.release()
 	for _, v := range args.uid {
 		if err = this.loading(v); err != nil {
 			return nil, err
 		}
 	}
-	defer this.release()
 	return args.handle(this, args.args)
 }

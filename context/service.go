@@ -145,13 +145,16 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 			}
 			defer func() {
 				c.Player.Message.Id = rid
-				c.Player.Message.Data = reply.([]byte)
+				if b, ok := reply.([]byte); ok {
+					c.Player.Message.Data = b
+				}
 			}()
 		}
 		reply, err = c.handle(node)
 		return err
 	})
 	if err != nil {
+		// 业务错误作为 reply 返回，避免触发 RPC 系统级错误
 		return err, nil
 	}
 	c.Player = nil

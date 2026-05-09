@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
@@ -41,10 +40,6 @@ func (this *Module) Id() string {
 	return "yyds"
 }
 func (this *Module) Init() (err error) {
-	if t := time.Now(); t.IsZero() {
-		return errors.New("启动失败,无法获取系统时间")
-	}
-
 	if err = options.Initialize(); err != nil {
 		return err
 	}
@@ -98,7 +93,7 @@ func (this *Module) Init() (err error) {
 		if errors.Is(err, errors.ErrMasterEmpty) {
 			logger.Alert("配置项[master]为空,部分功能无法使用")
 		} else {
-			return fmt.Errorf(err.Error()+"，当前回调地址:%v", args["local"])
+			return fmt.Errorf("%s，当前回调地址:%v", err.Error(), args["local"])
 		}
 	}
 	//设置游戏Metadata
@@ -130,9 +125,15 @@ func autoServerId() (sid int32, err error) {
 		ip = ip[:i]
 	}
 	ips := strings.Split(ip, ".")
+	if len(ips) < 4 {
+		return 0, fmt.Errorf("invalid IPv4 address: %s", ip)
+	}
 	var pos uint = 8
 	for i := 2; i <= 3; i++ {
-		tempInt, _ := strconv.Atoi(ips[i])
+		tempInt, err := strconv.Atoi(ips[i])
+		if err != nil {
+			return 0, fmt.Errorf("invalid IPv4 segment: %s", ips[i])
+		}
 		sid += int32(tempInt << pos)
 		pos -= 8
 	}

@@ -41,12 +41,14 @@ func loading() (err error) {
 		v := &preloadPlayerDecode{}
 		if e := cursor.Decode(v); e != nil {
 			logger.Alert("preload error: %v", e)
+			progress.Add(1)
 		} else {
 			progress.c <- v.Id
 		}
 
 		return true
 	})
+	close(progress.c)
 	if tx.Error != nil {
 		return tx.Error
 	}

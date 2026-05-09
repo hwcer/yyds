@@ -40,6 +40,8 @@ func (f *Friend) BulkWrite(bw *cosmo.BulkWrite) {
 	up.SetOnInsert("uid", f.Uid)
 	up.SetOnInsert("fid", f.Fid)
 	up.SetOnInsert("create", now)
+	up.Set("relation", f.Relation)
+	up.Set("values", f.Values)
 	bw.Update(up, f.Id)
 }
 
