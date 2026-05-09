@@ -84,7 +84,7 @@ func disconnect(p *player.Player) bool {
 // Offline 业务逻辑层面掉线
 func offline(p *player.Player) bool {
 	status := atomic.LoadInt32(&p.Status)
-	if !(status == player.StatusNone || status == player.StatusDisconnect) {
+	if status != player.StatusDisconnect {
 		return false
 	}
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusOffline) {
@@ -95,6 +95,21 @@ func offline(p *player.Player) bool {
 	defer p.Unlock()
 	emitter.Events.Emit(p.Updater, EventOffline)
 	return true
+}
+
+// recycling 进入回收站，StatusNone 直接转为 StatusOffline 不触发事件
+func recycling(p *player.Player) {
+	status := atomic.LoadInt32(&p.Status)
+	if status == player.StatusNone {
+		if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusOffline) {
+			return
+		}
+	}
+	uid := p.Uid()
+	if _, ok := playersRecycling[uid]; !ok {
+		playersRecycling[uid] = p
+		logger.Debug("Players.Recycling uid:%v", uid)
+	}
 }
 
 // released 释放用户实例
@@ -117,6 +132,7 @@ func released(p *player.Player) (ok bool) {
 	}
 	return
 }
+
 func worker() {
 	defer func() {
 		if e := recover(); e != nil {
@@ -126,7 +142,6 @@ func worker() {
 	if playersRecycling == nil {
 		playersRecycling = map[string]*player.Player{}
 	}
-	//playersReleaseTime++
 	now := time.Now().Unix()
 	connectedTime := now - Options.ConnectedTime
 	disconnectTime := now - Options.DisconnectTime
@@ -135,15 +150,10 @@ func worker() {
 	var tot int32
 	ps.Range(func(uid string, p *player.Player) bool {
 		tot += 1
-		//检查掉线情况
-		//logger.Debug("uid:%v   status:%v   heartbeat:%v ", p.Uid(), p.status, p.heartbeat)
 		switch atomic.LoadInt32(&p.Status) {
 		case player.StatusNone, player.StatusOffline:
 			if p.Heartbeat() < offlineTime {
-				if _, ok := playersRecycling[uid]; !ok {
-					playersRecycling[uid] = p
-					logger.Debug("Players.Recycling uid:%v", uid)
-				}
+				recycling(p)
 			}
 		case player.StatusConnected:
 			if p.Heartbeat() <= connectedTime {
@@ -155,21 +165,13 @@ func worker() {
 				offline(p)
 				logger.Debug("Players.Offline uid:%v", uid)
 			}
-		default:
 		}
-
 		return true
 	})
 	playersMemory = tot
-	//var rm int
 	ct := tot
-	recycling := len(playersRecycling)
-	//defer func() {
-	//	//logger.Debug("当前在线人数:%d  缓存数量:%d  回收站人数:%d  本次清理:%d", playersOnline, tot, recycling, tot-ct)
-	//}()
-
-	//清理内存
-	if recycling == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
+	recyclingCount := len(playersRecycling)
+	if recyclingCount == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
 		return
 	}
 	var dict []*player.Player
@@ -184,7 +186,7 @@ func worker() {
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && released(p) {
 			ct--
-		} else if s := atomic.LoadInt32(&p.Status); s == player.StatusOffline || s == player.StatusNone {
+		} else if atomic.LoadInt32(&p.Status) == player.StatusOffline {
 			next[p.Uid()] = p
 		}
 	}
@@ -215,12 +217,16 @@ func shutdown() {
 	//关闭所有用户
 	var rel []*player.Player
 	ps.Range(func(uid string, p *player.Player) bool {
-		if atomic.LoadInt32(&p.Status) == player.StatusConnected {
+		switch atomic.LoadInt32(&p.Status) {
+		case player.StatusConnected:
 			disconnect(p)
-		}
-		if atomic.LoadInt32(&p.Status) == player.StatusDisconnect {
 			offline(p)
+		case player.StatusDisconnect:
+			offline(p)
+		case player.StatusOffline:
+		default:
 		}
+		atomic.StoreInt32(&p.Status, player.StatusOffline)
 		rel = append(rel, p)
 		return true
 	})
@@ -228,5 +234,4 @@ func shutdown() {
 	for _, p := range rel {
 		_ = released(p)
 	}
-	return
 }

@@ -16,7 +16,6 @@ var (
 	playersMemory    int32 //当前缓存总量
 	playersStarted   int32
 	playersRecycling map[string]*player.Player
-	//playersReleaseTime int //距离上次内存清理的事件间隔
 )
 
 var ps Players
@@ -26,7 +25,6 @@ func Start() error {
 	if !atomic.CompareAndSwapInt32(&playersStarted, 0, 1) {
 		return nil
 	}
-	//cosgo.On(cosgo.EventTypStarted, loading)
 	if Options.AsyncModel == AsyncModelLocker {
 		ps = locker.New()
 		newSyncer = locker.NewSyncer
@@ -42,11 +40,6 @@ func Start() error {
 func Online() int32 {
 	return playersOnline
 }
-
-// Try 获取在线玩家, 使用TryLock 尝试获得锁
-//func Try(uid string, handle player.Handle) error {
-//	return ps.Try(uid, handle)
-//}
 
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁
 // 不进行初始化，数据按需模式读写
