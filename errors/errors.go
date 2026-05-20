@@ -2,7 +2,16 @@ package errors
 
 import (
 	"github.com/hwcer/cosgo/values"
+	"github.com/hwcer/updater"
 )
+
+func init() {
+	updater.ErrCodeArgsIllegal = ErrArgEmpty.Code
+	updater.ErrCodeItemNotEnough = ErrItemNotEnough.Code
+	updater.ErrCodeItemNotExist = ErrItemNotExist.Code
+	updater.ErrCodeITypeNotExist = ErrITypeNotExist.Code
+	updater.ErrCodeObjectIdEmpty = ErrObjectIdEmpty.Code
+}
 
 var (
 	ErrLogin            = values.Errorf(1, "not login")         //请重新登录
@@ -24,17 +33,15 @@ var (
 	ErrPlayerMax     = values.Errorf(105, "player max")         //房间已满
 	ErrDataExists    = values.Errorf(106, "data exists")        //数据已经存在
 	ErrRoleIsBan     = values.Errorf(110, "user is ban")        //账号被封
-	ErrItemNotEnough = values.Errorf(202, "item not enough")    //道具,材料不足
-	ErrTargetLimit   = values.Errorf(203, "target limit")       //任务目标未达成
-	ErrPreTaskLimit  = values.Errorf(204, "pre task limit")     //前置任务没完成
-	ErrArgEmpty      = values.Errorf(600, "args empty")         //参数不能为空
-	ErrConfigEmpty   = values.Errorf(601, "config empty")
-	ErrActiveDisable = values.Errorf(602, "active disable") //活动未开始
-	ErrActiveExpired = values.Errorf(603, "active expired") //活动已经结束
+	ErrItemNotEnough = values.Errorf(120, "item not enough")    //道具,材料不足
+	ErrTargetLimit   = values.Errorf(121, "target limit")       //任务目标未达成
+	ErrPreTaskLimit  = values.Errorf(122, "pre task limit")     //前置任务没完成
+	ErrArgEmpty      = values.Errorf(123, "args empty")         //参数不能为空
+	ErrConfigEmpty   = values.Errorf(124, "config empty")
+	ErrActiveDisable = values.Errorf(125, "active disable") //活动未开始
+	ErrActiveExpired = values.Errorf(126, "active expired") //活动已经结束
+	ErrItemNotExist  = values.Errorf(127, "item not exist")
+	ErrITypeNotExist = values.Errorf(128, "itype not exist")
+	ErrObjectIdEmpty = values.Errorf(129, "oid empty")
 
 )
-
-//func init() {
-//	Register(ErrLogin, ErrLocked, ErrNotSelectRole, ErrServerLimit, ErrMasterEmpty, ErrRoleNotExist, ErrLoginWaiting, ErrNeedResetSession)
-//	Register(ErrLoginAgain, ErrLoginDisabled, ErrDataNotExists, ErrPlayerMax, ErrDataExists, ErrItemNotEnough, ErrTargetLimit, ErrPreTaskLimit, ErrArgEmpty, ErrActiveDisable, ErrActiveExpired, ErrConfigEmpty)
-//}
