@@ -4,14 +4,14 @@ go 1.25.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/hwcer/cosgo v1.8.1
-	github.com/hwcer/cosmo v1.3.0
+	github.com/hwcer/cosgo v1.8.3-0.20260521084936-0e89b20889fa
+	github.com/hwcer/cosmo v1.3.1
 	github.com/hwcer/cosnet v1.4.3
-	github.com/hwcer/cosrpc v1.4.1
-	github.com/hwcer/cosweb v1.4.1
-	github.com/hwcer/gateway v0.2.0
+	github.com/hwcer/cosrpc v1.4.2-0.20260522015324-ad3da29520b6
+	github.com/hwcer/cosweb v1.4.2-0.20260522015440-9cc3f031ec5f
+	github.com/hwcer/gateway v0.2.1-0.20260520064408-dfd00b5ff1fc
 	github.com/hwcer/logger v0.2.8
-	github.com/hwcer/updater v1.4.0
+	github.com/hwcer/updater v1.4.2-0.20260518105408-b4a9b30d6fc5
 	github.com/smallnest/rpcx v1.9.3
 )
 
