@@ -2,6 +2,7 @@ package verify
 
 import "github.com/hwcer/updater"
 
+// middleware 在 updater 提交前自动验证所有已注册的 Target 条件
 type middleware struct {
 	dict []Target
 }
