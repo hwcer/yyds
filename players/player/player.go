@@ -155,14 +155,16 @@ func (p *Player) Destroy() error {
 	p.Emitter = nil
 	return nil
 }
-func (p *Player) On(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
-	return p.Emitter.Listen(t, args, handle)
+func (p *Player) On(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
+	return p.Emitter.On(t, args, handle)
 }
 func (p *Player) Emit(t int32, v int32, args ...int32) {
 	p.Emitter.Emit(t, v, args...)
 }
-func (p *Player) Listen(t int32, args []int32, handle emitter.Handle) (r *emitter.Listener) {
-	return p.Emitter.Listen(t, args, handle)
+
+// Listen 使用name注册监听避免重复,同名覆盖参数和回调
+func (p *Player) Listen(name string, t int32, args []int32, handle emitter.Listener) (r *emitter.Context, err error) {
+	return p.Emitter.Listen(name, t, args, handle)
 }
 func (p *Player) Connected() bool {
 	return atomic.LoadInt32(&p.Status) == StatusConnected
