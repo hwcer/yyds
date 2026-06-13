@@ -4,12 +4,12 @@ go 1.25.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/hwcer/cosgo v1.8.3-0.20260604075126-0f2a31620eb1
+	github.com/hwcer/cosgo v1.8.3-0.20260613121924-d23364c61f6c
 	github.com/hwcer/cosmo v1.3.2-0.20260522083102-0962b204233c
 	github.com/hwcer/cosnet v1.4.4-0.20260604075229-8c824b1a4e1e
 	github.com/hwcer/cosrpc v1.4.2-0.20260604075459-f6db8e16b199
-	github.com/hwcer/cosweb v1.4.2-0.20260604075505-238843531094
-	github.com/hwcer/gateway v0.2.1-0.20260604075702-f640f025a352
+	github.com/hwcer/cosweb v1.4.2-0.20260613123507-91d756058c33
+	github.com/hwcer/gateway v0.2.1-0.20260613123829-8edfee9f3196
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.4.2-0.20260604083116-235b683d0b1f
 	github.com/smallnest/rpcx v1.9.3
@@ -52,7 +52,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/quic-go/quic-go v0.59.1 // indirect
+	github.com/quic-go/quic-go v0.60.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/rpcxio/libkv v0.5.1 // indirect
 	github.com/rs/cors v1.11.1 // indirect
@@ -84,14 +84,14 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/exp v0.0.0-20260603202125-055de637280b // indirect
-	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-	golang.org/x/tools v0.45.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
+	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/tools v0.46.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
