@@ -17,12 +17,13 @@ func (fs filters) Compare(t int32, tar, args []int32) bool {
 		f = v
 	}
 	if f == nil {
-		f = defaultFilter
+		f = Filter
 	}
 	return f(tar, args)
 }
 
-func defaultFilter(tar, args []int32) bool {
+// Filter 默认全局参数过滤
+var Filter = func(tar, args []int32) bool {
 	if len(tar) > len(args) {
 		return false
 	}
