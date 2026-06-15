@@ -8,8 +8,8 @@ require (
 	github.com/hwcer/cosmo v1.3.2-0.20260522083102-0962b204233c
 	github.com/hwcer/cosnet v1.4.4-0.20260604075229-8c824b1a4e1e
 	github.com/hwcer/cosrpc v1.4.2-0.20260604075459-f6db8e16b199
-	github.com/hwcer/cosweb v1.4.2-0.20260613123507-91d756058c33
-	github.com/hwcer/gateway v0.2.1-0.20260613123829-8edfee9f3196
+	github.com/hwcer/cosweb v1.4.2-0.20260615102912-5a824bef5f39
+	github.com/hwcer/gateway v0.2.1-0.20260615103539-54b4bf38a2a8
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.4.2-0.20260604083116-235b683d0b1f
 	github.com/smallnest/rpcx v1.9.3
