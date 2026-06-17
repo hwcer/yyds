@@ -9,7 +9,7 @@ require (
 	github.com/hwcer/cosnet v1.4.4-0.20260604075229-8c824b1a4e1e
 	github.com/hwcer/cosrpc v1.4.2-0.20260604075459-f6db8e16b199
 	github.com/hwcer/cosweb v1.4.2-0.20260615102912-5a824bef5f39
-	github.com/hwcer/gateway v0.2.1-0.20260615103539-54b4bf38a2a8
+	github.com/hwcer/gateway v0.2.1-0.20260617043247-43cdebb979f3
 	github.com/hwcer/logger v0.2.8
 	github.com/hwcer/updater v1.4.2-0.20260604083116-235b683d0b1f
 	github.com/smallnest/rpcx v1.9.3
@@ -35,10 +35,12 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/hwcer/coswss v0.4.2-0.20260604075347-da9531549f78 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect

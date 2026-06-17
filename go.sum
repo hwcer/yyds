@@ -104,6 +104,8 @@ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/uuid v1.2.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/grandcat/zeroconf v1.0.0 h1:uHhahLBKqwWBV6WZUDAT71044vwOTL+McW0mBJvo6kE=
 github.com/grandcat/zeroconf v1.0.0/go.mod h1:lTKmG1zh86XyCoUeIHSA4FJMBwCJiQmGfcP2PdzytEs=
 github.com/hashicorp/consul/api v1.8.1/go.mod h1:sDjTOq0yUyv5G4h+BqSea7Fn6BU+XbolEz1952UB+mk=
@@ -148,8 +150,12 @@ github.com/hwcer/cosrpc v1.4.2-0.20260604075459-f6db8e16b199 h1:N6y4ZRdZeCQ4G0Ju
 github.com/hwcer/cosrpc v1.4.2-0.20260604075459-f6db8e16b199/go.mod h1:jRQC3WuFl+ptc8/DHfawElTU+64blT0D4YGB1hY8/2g=
 github.com/hwcer/cosweb v1.4.2-0.20260615102912-5a824bef5f39 h1:wN5sae5OYvsQQfTGo9i5gCxihj07UJG20BPYWlwjak8=
 github.com/hwcer/cosweb v1.4.2-0.20260615102912-5a824bef5f39/go.mod h1:Jturx7mF2cJE7dVIJVR0upFt1dOzbXoPcQ9sae9bVFs=
+github.com/hwcer/coswss v0.4.2-0.20260604075347-da9531549f78 h1:Sj+Vac8C6BTOXO/qe46X+iki4ZXfq7Zo/UGxob9QDqE=
+github.com/hwcer/coswss v0.4.2-0.20260604075347-da9531549f78/go.mod h1:2eVRYcIcpF6MKr94HaCgNc+tgGA/6KOFcP3cLA7tO4s=
 github.com/hwcer/gateway v0.2.1-0.20260615103539-54b4bf38a2a8 h1:on5dKkdTuqdakeD1G/a1NbRLBq2Eq9ZFmzgRpmx2YTU=
 github.com/hwcer/gateway v0.2.1-0.20260615103539-54b4bf38a2a8/go.mod h1:4dmNNEm5Pw5k/fI1S7sQ7bs06EUrngb6oJIL41vtCFw=
+github.com/hwcer/gateway v0.2.1-0.20260617043247-43cdebb979f3 h1:8fQAxfVFTd06tq5wir17zScV5xk4PzpIuTm6vJypljI=
+github.com/hwcer/gateway v0.2.1-0.20260617043247-43cdebb979f3/go.mod h1:4dmNNEm5Pw5k/fI1S7sQ7bs06EUrngb6oJIL41vtCFw=
 github.com/hwcer/logger v0.2.8 h1:TjXr/MDNuMcM+kGADa0MnviY1fs9lSwb62cQOEeros8=
 github.com/hwcer/logger v0.2.8/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/updater v1.4.2-0.20260604083116-235b683d0b1f h1:MXqw8hjOqAvt/51/ClYGq9Vk5Uo9qa/E4vvE9OB1ZSM=
