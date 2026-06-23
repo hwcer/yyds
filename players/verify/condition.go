@@ -42,9 +42,10 @@ func (c Condition) GetGoal() (r int32) {
 	}
 	return
 }
-func (c Condition) GetArgs() (r []int32) {
-	if len(c) > 3 {
-		r = append(r, c[3:]...)
-	}
-	return
-}
+
+//func (c Condition) GetArgs() (r []int32) {
+//	if len(c) > 3 {
+//		r = append(r, c[3:]...)
+//	}
+//	return
+//}

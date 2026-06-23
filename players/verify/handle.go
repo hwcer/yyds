@@ -14,6 +14,7 @@ func init() {
 	Register(ConditionWeekly, taskTargetHandleWeekly)
 	Register(ConditionHistory, taskTargetHandleHistory)
 }
+
 // value 获取任务当前进度，若实现了 Judge 接口则对原始值与 ARGS 进行比较后返回
 func value(u *updater.Updater, target Value) (r int64) {
 	if f, ok := verifyCondition[target.GetCondition()]; ok {
@@ -22,7 +23,7 @@ func value(u *updater.Updater, target Value) (r int64) {
 		logger.Alert("Condition unknown,Condition:%v,Key:%v", target.GetCondition(), target.GetKey())
 	}
 	if j, ok := target.(Judge); ok && j.GetJudge() > JudgeNone {
-		r = taskJudgeCompare(j.GetJudge(), r, target.GetArgs())
+		r = taskJudgeCompare(j.GetJudge(), r, j.GetArgs())
 	}
 	return
 }

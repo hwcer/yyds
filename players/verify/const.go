@@ -21,8 +21,7 @@ const (
 
 // Value 根据条件获取对应计数
 type Value interface {
-	GetKey() int32      // 数据键，如 daily id, item id 等
-	GetArgs() []int32   // 附加参数，配合 Judge 使用
+	GetKey() int32       // 数据键，如 daily id, item id 等
 	GetCondition() int32 // 条件类型，决定取值方式
 }
 
@@ -35,7 +34,8 @@ type Target interface {
 // Judge ARGS参数判断方式
 // 实现此接口后，value() 会在获取原始值后根据 GetJudge() 类型对 val 与 ARGS 进行比较
 type Judge interface {
-	GetJudge() int32 // 判断类型，参见 Judge* 常量
+	GetArgs() []int32 // 附加参数，配合 Judge 使用
+	GetJudge() int32  // 判断类型，参见 Judge* 常量
 }
 
 // GetVal 获取即时任务当前进度
