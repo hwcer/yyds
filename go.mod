@@ -1,18 +1,18 @@
 module github.com/hwcer/yyds
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/hwcer/cosgo v1.8.3-0.20260613121924-d23364c61f6c
-	github.com/hwcer/cosmo v1.3.2-0.20260522083102-0962b204233c
-	github.com/hwcer/cosnet v1.4.4-0.20260604075229-8c824b1a4e1e
-	github.com/hwcer/cosrpc v1.4.2-0.20260604075459-f6db8e16b199
-	github.com/hwcer/cosweb v1.4.2-0.20260615102912-5a824bef5f39
-	github.com/hwcer/gateway v0.2.1-0.20260618080400-a13d7ce51635
+	github.com/hwcer/cosgo v1.8.3
+	github.com/hwcer/cosmo v1.4.1
+	github.com/hwcer/cosnet v1.4.4
+	github.com/hwcer/cosrpc v1.4.2
+	github.com/hwcer/cosweb v1.4.2
+	github.com/hwcer/gateway v0.2.2
 	github.com/hwcer/logger v0.2.8
-	github.com/hwcer/updater v1.4.2-0.20260617105555-9a20c2a1f3ff
-	github.com/smallnest/rpcx v1.9.3
+	github.com/hwcer/updater v1.5.1-0.20260625065851-c7934a5015b6
+	github.com/smallnest/rpcx v1.9.4
 )
 
 require (
@@ -35,12 +35,10 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hwcer/coswss v0.4.2-0.20260604075347-da9531549f78 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
@@ -61,8 +59,8 @@ require (
 	github.com/rubyist/circuitbreaker v2.2.1+incompatible // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
+	github.com/smallnest/gordma v0.3.0 // indirect
 	github.com/smallnest/quick v0.2.0 // indirect
-	github.com/smallnest/rsocket v0.0.0-20241130031020-4a72eb6ff62a // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect

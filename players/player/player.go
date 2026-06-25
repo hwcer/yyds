@@ -42,7 +42,6 @@ type Player struct {
 	Binder    binder.Binder    //当前端使用的序列化方式
 	Status    int32            //在线状态
 	Times     *Times           //时间控制器
-	Values    values.Values    //临时数据，仅仅记录在内存中
 	Verify    *verify.Verify   //全局条件验证
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
@@ -56,7 +55,6 @@ func (p *Player) initialize() {
 		return
 	}
 	p.Times = &Times{p: p}
-	p.Values = values.Values{}
 	p.Verify = verify.New(p.Updater)
 	p.Emitter = emitter.New(p.Updater)
 }
@@ -127,7 +125,7 @@ func (p *Player) Loading(init bool) (err error) {
 	if p.Updater == nil {
 		p.Updater = updater.New(p)
 	}
-	if err = p.Updater.Loading(init, p.initialize); err != nil {
+	if err = p.Updater.Loading(p.initialize); err != nil {
 		return err
 	}
 	return nil
@@ -150,7 +148,6 @@ func (p *Player) Destroy() error {
 	if p.Syncer != nil {
 		p.Syncer.Close()
 	}
-	p.Values = nil
 	p.Dirty = Dirty{}
 	p.Emitter = nil
 	return nil

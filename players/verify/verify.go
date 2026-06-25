@@ -15,7 +15,7 @@ type Verify struct {
 	u *updater.Updater
 }
 
-func (v *Verify) create() updater.Middleware {
+func (v *Verify) create(_ *updater.Updater) updater.Middleware {
 	return &middleware{}
 }
 
@@ -25,7 +25,7 @@ func (v *Verify) Auto(target Target) {
 		return
 	}
 	v.Target(target)
-	plug := v.u.Events.LoadOrCreate(updaterPlugName, v.create).(*middleware)
+	plug := v.u.Middleware.LoadOrCreate(v.u, updaterPlugName, v.create).(*middleware)
 	plug.dict = append(plug.dict, target)
 }
 
