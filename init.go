@@ -2,13 +2,11 @@ package yyds
 
 import (
 	"github.com/hwcer/cosgo/uuid"
-	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/config"
 )
 
 func init() {
-	logger.SetCallDepth(4)
 	updater.Config.IMax = config.GetIMax
 	updater.Config.IType = config.GetIType
 	updater.Config.ParseId = ParseId
