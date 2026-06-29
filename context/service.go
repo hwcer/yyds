@@ -114,9 +114,6 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		if p == nil {
 			return errors.ErrLogin
 		}
-		if p.Ban {
-			return errors.ErrRoleIsBan
-		}
 		if p.Error != nil {
 			return p.Error
 		}

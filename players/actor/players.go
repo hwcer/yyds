@@ -42,17 +42,17 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 }
 
 // Load 加载玩家并进入通道执行
-func (this *Players) Load(uid string, init bool, handle player.Handle) error {
-	r := newPlayer(uid)
-	if i, loaded := this.Manage.LoadOrStore(uid, r); loaded {
+func (this *Players) Load(uid string, test bool, handle player.Handle) error {
+	r := newPlayer(uid, test)
+	if i, loaded := this.Manage.LoadOrStore(r.Key(), r); loaded {
 		r = i
 		if atomic.LoadInt32(&r.Status) == player.StatusReleased {
 			return errors.ErrLoginWaiting
 		}
 	}
 	return invoke(r, func() error {
-		if err := r.Loading(init); err != nil {
-			this.Manage.Delete(uid)
+		if err := r.Loading(test); err != nil {
+			this.Manage.Delete(r.Key())
 			return err
 		}
 		r.Reset()

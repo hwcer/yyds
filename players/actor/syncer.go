@@ -8,8 +8,8 @@ import (
 	"github.com/hwcer/yyds/players/player"
 )
 
-func newPlayer(uid string) *player.Player {
-	p := player.New(uid)
+func newPlayer(uid string, test bool) *player.Player {
+	p := player.New(uid, test)
 	p.Syncer = NewSyncer()
 	return p
 }

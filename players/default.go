@@ -52,19 +52,20 @@ func Get(uid string, handle player.Handle) error {
 
 // Load 加载玩家数据,如果不在线则实时读写数据库
 // init 是否立即初始化所有数据
-func Load(uid string, init bool, handle player.Handle) (err error) {
+func Load(uid string, handle player.Handle) (err error) {
 	if playersStarted == 0 {
 		return errors.ErrServerClosed
 	}
-	return ps.Load(uid, init, handle)
+	return ps.Load(uid, false, handle)
 }
 
 // Login 登录成功,只能在登录时调用
-func Login(uid string, meta map[string]string, handle player.Handle) (err error) {
+// test 为 true 时以测试模式登录（不写库）
+func Login(uid string, test bool, meta map[string]string, handle player.Handle) (err error) {
 	if playersStarted == 0 {
 		return errors.ErrServerClosed
 	}
-	err = ps.Load(uid, true, func(p *player.Player) error {
+	err = ps.Load(uid, test, func(p *player.Player) error {
 		if e := Connected(p, meta); e != nil {
 			return e
 		}
@@ -84,8 +85,8 @@ func Range(f func(string, *player.Player) bool) {
 	ps.Range(f)
 }
 
-func NewPlayer(uid string) *player.Player {
-	p := player.New(uid)
+func NewPlayer(uid string, test bool) *player.Player {
+	p := player.New(uid, test)
 	p.Syncer = newSyncer()
 	return p
 }

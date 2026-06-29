@@ -76,14 +76,14 @@ func (this *Locker) loading(uid string) (err error) {
 	if i, ok := instance.Manage.Load(uid); ok {
 		r = i
 	} else {
-		r = newPlayer(uid)
+		r = newPlayer(uid, false)
 	}
 
 	if uid != this.self {
 		// 非自己：通过目标玩家的 channel 加载，确保数据安全
 		err = invoke(r, func() error {
 			if e := r.Loading(false); e != nil {
-				instance.Manage.Delete(uid)
+				instance.Manage.Delete(r.Key())
 				return e
 			}
 			r.Reset()
@@ -97,7 +97,7 @@ func (this *Locker) loading(uid string) (err error) {
 	} else {
 		// 自己：已在自己的 actor 协程内，直接操作
 		if err = r.Loading(false); err != nil {
-			instance.Manage.Delete(uid)
+			instance.Manage.Delete(r.Key())
 			return err
 		}
 		r.Reset()

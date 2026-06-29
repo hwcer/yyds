@@ -105,10 +105,10 @@ func recycling(p *player.Player) {
 			return
 		}
 	}
-	uid := p.Uid()
-	if _, ok := playersRecycling[uid]; !ok {
-		playersRecycling[uid] = p
-		logger.Debug("Players.Recycling uid:%v", uid)
+	key := p.Key()
+	if _, ok := playersRecycling[key]; !ok {
+		playersRecycling[key] = p
+		logger.Debug("Players.Recycling uid:%v", p.Uid())
 	}
 }
 
@@ -124,7 +124,7 @@ func released(p *player.Player) (ok bool) {
 	p.Reset()
 	if err := p.Destroy(); err == nil {
 		ok = true
-		ps.Delete(p.Uid())
+		ps.Delete(p.Key())
 	} else {
 		ok = false
 		atomic.StoreInt32(&p.Status, status)
@@ -187,7 +187,7 @@ func worker() {
 		if ct > Options.MemoryPlayer && released(p) {
 			ct--
 		} else if atomic.LoadInt32(&p.Status) == player.StatusOffline {
-			next[p.Uid()] = p
+			next[p.Key()] = p
 		}
 	}
 	playersRecycling = next

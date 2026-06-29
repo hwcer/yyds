@@ -43,15 +43,15 @@ func (this *Locker) loading(uid string) error {
 	if _, ok := this.dict[uid]; ok {
 		return nil
 	}
-	r := newPlayer(uid)
+	r := newPlayer(uid, false)
 	r.Lock()
-	if i, loaded := instance.Manage.LoadOrStore(uid, r); loaded {
+	if i, loaded := instance.Manage.LoadOrStore(r.Key(), r); loaded {
 		i.Lock()
 		r.Unlock()
 		r = i
 	} else if err := r.Loading(false); err != nil {
 		r.Unlock()
-		instance.Manage.Delete(uid)
+		instance.Manage.Delete(r.Key())
 		return err
 	}
 	r.Reset()

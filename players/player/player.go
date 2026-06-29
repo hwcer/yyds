@@ -28,13 +28,18 @@ type Message struct {
 }
 type Handle func(*Player) error
 
-func New(uid string) *Player {
-	return &Player{uid: uid}
+func New(uid string, test bool) *Player {
+	p := &Player{uid: uid}
+	if test {
+		p.key = "~" + uid
+	}
+	return p
 }
 
 type Player struct {
 	*updater.Updater
 	uid       string
+	key       string           //map key，空值时 Key() 返回 uid
 	heartbeat int64            //最后心跳时间
 	Dirty     Dirty            //短连接推送数据缓存
 	Login     int64            //登录时间
@@ -47,7 +52,6 @@ type Player struct {
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
 	ClientIp  string           //客户端IP
-	Ban       bool             //封号
 }
 
 func (p *Player) initialize() {
@@ -97,8 +101,8 @@ func (p *Player) Send(v any, req values.Metadata) {
 }
 
 // Loading 加载数据
-// init 是否立即加载玩家数据，true:是
-func (p *Player) Loading(init bool) (err error) {
+// test 是否测试模式
+func (p *Player) Loading(test bool) (err error) {
 	//验证UID是否合法
 	if uid := p.Uid(); !uuid.IsValid(uid) {
 		return fmt.Errorf("player uid(%s) is invalid", uid)
@@ -128,7 +132,17 @@ func (p *Player) Loading(init bool) (err error) {
 	if err = p.Updater.Loading(p.initialize); err != nil {
 		return err
 	}
-	return nil
+	if test {
+		err = p.Updater.Testing(true)
+	}
+	return
+}
+
+func (p *Player) Key() string {
+	if p.key != "" {
+		return p.key
+	}
+	return p.uid
 }
 
 func (p *Player) Uid() string {

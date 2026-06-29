@@ -33,7 +33,7 @@ func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) (err
 	}
 
 	if err = players.Get(uid, handle); err != nil && errors.Is(err, errors.ErrNotOnline) {
-		err = players.Load(uid, init, handle)
+		err = players.Load(uid, handle)
 	}
 	return
 }

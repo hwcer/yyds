@@ -45,17 +45,17 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	return handle(p)
 }
 
-func (this *Players) Load(uid string, init bool, handle player.Handle) (err error) {
-	r := newPlayer(uid)
+func (this *Players) Load(uid string, test bool, handle player.Handle) (err error) {
+	r := newPlayer(uid, test)
 	r.Lock()
-	if i, loaded := this.Manage.LoadOrStore(uid, r); loaded {
+	if i, loaded := this.Manage.LoadOrStore(r.Key(), r); loaded {
 		r.Unlock()
 		r = i
 		r.Lock()
 	}
 	defer r.Unlock()
-	if err = r.Loading(init); err != nil {
-		this.Manage.Delete(uid)
+	if err = r.Loading(test); err != nil {
+		this.Manage.Delete(r.Key())
 		return
 	}
 	r.Reset()

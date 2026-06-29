@@ -99,9 +99,9 @@ func (this *Progress) player(uid string) {
 		_ = recover()
 		this.Add(1)
 	}()
-	p := NewPlayer(uid)
+	p := NewPlayer(uid, false)
 	if e := p.Loading(true); e == nil {
-		ps.Store(uid, p)
+		ps.Store(p.Key(), p)
 		p.KeepAlive(time.Now().Unix())
 	}
 }
