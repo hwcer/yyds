@@ -4,12 +4,12 @@ go 1.26.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/hwcer/cosgo v1.8.4-0.20260626034135-f355bc098353
+	github.com/hwcer/cosgo v1.8.4-0.20260630030601-3b94a66c6bd5
 	github.com/hwcer/cosmo v1.4.2-0.20260625081214-d5ade11f90ad
 	github.com/hwcer/cosnet v1.4.4
-	github.com/hwcer/cosrpc v1.4.2
+	github.com/hwcer/cosrpc v1.4.3-0.20260630030621-d2d1166b2248
 	github.com/hwcer/cosweb v1.4.2
-	github.com/hwcer/gateway v0.2.3-0.20260629144351-3f98e67d6f27
+	github.com/hwcer/gateway v0.2.3-0.20260630030633-c6a069fc53f4
 	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
 	github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419
 	github.com/smallnest/rpcx v1.9.4
@@ -49,7 +49,7 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
-	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.2 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/quic-go/quic-go v0.60.0 // indirect
