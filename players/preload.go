@@ -100,7 +100,7 @@ func (this *Progress) player(uid string) {
 		this.Add(1)
 	}()
 	p := NewPlayer(uid, false)
-	if e := p.Loading(true); e == nil {
+	if e := p.Loading(false); e == nil {
 		ps.Store(p.Key(), p)
 		p.KeepAlive(time.Now().Unix())
 	}
