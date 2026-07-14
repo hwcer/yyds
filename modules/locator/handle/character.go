@@ -6,6 +6,7 @@ import (
 
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo/update"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/yyds/modules/locator/model"
@@ -47,24 +48,6 @@ func (this *character) Find(c *cosrpc.Context) interface{} {
 	return rows
 }
 
-// Invite 我邀请的人
-func (this *character) Invite(c *cosrpc.Context) interface{} {
-	uid := c.GetString("uid")
-	if uid == "" {
-		return c.Error("uid required")
-	}
-	size := c.GetInt32("size")
-	var rows []*model.Character
-	tx := db.Order("update", -1)
-	if size > 0 {
-		tx = tx.Limit(int(size))
-	}
-	if tx = tx.Find(&rows, "invite = ?", uid); tx.Error != nil {
-		return c.Error(tx.Error)
-	}
-	return rows
-}
-
 func (this *character) Create(c *cosrpc.Context) interface{} {
 	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
@@ -76,16 +59,15 @@ func (this *character) Create(c *cosrpc.Context) interface{} {
 	if v.Create == 0 {
 		v.Create = time.Now().Unix()
 	}
-	//邀请人信息
-	if v.Invite != "" {
-		var n int64
-		if tx := db.Model(&v).Count(&n, v.Invite); tx.Error != nil {
-			return tx.Error
-		} else if n == 0 {
-			return c.Error("invite not exist")
-		}
+	if v.Online == 0 {
+		v.Online = v.Create
 	}
-
+	if v.Update == 0 {
+		v.Update = v.Create
+	}
+	if len(v.Attach) == 0 {
+		v.Attach = values.Values{}
+	}
 	if tx := db.Create(v); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
@@ -105,19 +87,24 @@ func (this *character) Create(c *cosrpc.Context) interface{} {
 
 // Online 角色上线
 func (this *character) Online(c *cosrpc.Context) interface{} {
-	uid := c.GetString("uid")
-	if uid == "" {
-		return c.Error("uid required")
+
+	args := &model.Character{}
+	if err := c.Bind(args); err != nil {
+		return err
 	}
+
 	v := &model.Character{}
-	if tx := db.Select("online", "create").Find(v, uid); tx.Error != nil {
+	if tx := db.Select("create", "online", "sid").Find(v, args.Uid); tx.Error != nil {
 		return tx.Error
 	} else if tx.RowsAffected == 0 {
 		return c.Error("character not found")
 	}
-	now := time.Now().Unix()
 
-	if tx := db.Model(v).Where(v.Uid).Set("online", now); tx.Error != nil {
+	now := time.Now().Unix()
+	u := args.GetUpdate()
+	u["online"] = now
+
+	if tx := db.Model(v).Where(args.Uid).Update(u); tx.Error != nil {
 		return tx.Error
 	}
 
@@ -158,7 +145,7 @@ func (this *character) Update(c *cosrpc.Context) interface{} {
 	if v.Uid == "" {
 		return c.Error("uid or guid required")
 	}
-	if tx := db.Select(v.Fields()...).Update(v, v.Uid); tx.Error != nil {
+	if tx := db.Model(v).Update(v.GetUpdate(), v.Uid); tx.Error != nil {
 		return c.Error(tx.Error)
 	}
 	return true
