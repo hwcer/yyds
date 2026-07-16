@@ -156,6 +156,8 @@ github.com/hwcer/gateway v0.2.3-0.20260706114118-b6af730401c1 h1:PKFJDeYmUyPoivy
 github.com/hwcer/gateway v0.2.3-0.20260706114118-b6af730401c1/go.mod h1:Wd9n86bZARW4sb0bpJez/1ZfZn4yZ8C5PpwPO/JwcPc=
 github.com/hwcer/gateway v0.2.3-0.20260707031554-9a80c283300e h1:47oKRLSovAdqjy83tc2IfmeH7PD1nwryV7ahVDOG5Wo=
 github.com/hwcer/gateway v0.2.3-0.20260707031554-9a80c283300e/go.mod h1:Wd9n86bZARW4sb0bpJez/1ZfZn4yZ8C5PpwPO/JwcPc=
+github.com/hwcer/gateway v0.2.3-0.20260716060332-1198ef64ed69 h1:+Ivv1bhuLbN1gcKyfUMy0SFzvptO/H8PiPw1qdoI+yE=
+github.com/hwcer/gateway v0.2.3-0.20260716060332-1198ef64ed69/go.mod h1:Wd9n86bZARW4sb0bpJez/1ZfZn4yZ8C5PpwPO/JwcPc=
 github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245 h1:hsbI1UJ2Zsj2qG7a/3VSbkJ4RrPWSer/R1AV0TyBN/Y=
 github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419 h1:8BruYvlXLKAGxWpvDgmLUQzC0QyZJhaYJIBptnGOo0M=
