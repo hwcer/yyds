@@ -6,14 +6,14 @@ import (
 )
 
 // Get 获取排行榜
-func Get(name string) *Bucket {
+func Get(name any) *Bucket {
 	return Master.Get(name)
 }
 
 // ZAdd 设置排行榜积分,使用最终值,而不是增量
 //
 //	name 排行榜名称
-func ZAdd(name string, cycle int64, uid string, score int64) error {
+func ZAdd(name any, cycle int64, uid string, score int64) error {
 	if uid == "" {
 		return values.Error("uid empty")
 	}
@@ -27,7 +27,7 @@ func ZAdd(name string, cycle int64, uid string, score int64) error {
 	return nil
 }
 
-func ZCard(name string, cycle int64) (int64, error) {
+func ZCard(name any, cycle int64) (int64, error) {
 	w := Master.Get(name)
 	if w == nil {
 		return 0, values.Error("Rank not exist")
@@ -36,7 +36,7 @@ func ZCard(name string, cycle int64) (int64, error) {
 }
 
 // ZPage 区间数据 按分页逻辑
-func ZPage(name string, cycle int64, paging *cosmo.Paging) error {
+func ZPage(name any, cycle int64, paging *cosmo.Paging) error {
 	w := Master.Get(name)
 	if w == nil {
 		return values.Errorf(0, "Rank not exist")
@@ -45,7 +45,7 @@ func ZPage(name string, cycle int64, paging *cosmo.Paging) error {
 }
 
 // ZRank 返回个人名次
-func ZRank(name string, cycle int64, uid string, withScore bool) (*Player, error) {
+func ZRank(name any, cycle int64, uid string, withScore bool) (*Player, error) {
 	w := Master.Get(name)
 	if w == nil {
 		return nil, values.Errorf(0, "Rank not exist")
@@ -59,14 +59,14 @@ func ZRank(name string, cycle int64, uid string, withScore bool) (*Player, error
 }
 
 // ZRange 区间数据
-func ZRange(name string, cycle int64, s, e int64) (r []*Player, err error) {
+func ZRange(name any, cycle int64, s, e int64) (r []*Player, err error) {
 	w := Master.Get(name)
 	if w == nil {
 		return nil, values.Errorf(0, "Rank not exist")
 	}
 	return w.ZRange(cycle, s, e)
 }
-func ZPlayer(name string, cycle int64, rank int64) (r *Player, err error) {
+func ZPlayer(name any, cycle int64, rank int64) (r *Player, err error) {
 	w := Master.Get(name)
 	if w == nil {
 		return nil, values.Errorf(0, "Rank not exist")
@@ -75,7 +75,7 @@ func ZPlayer(name string, cycle int64, rank int64) (r *Player, err error) {
 }
 
 // Cycle 当前第几届
-func Cycle(name string, skip int64) int64 {
+func Cycle(name any, skip int64) int64 {
 	w := Master.Get(name)
 	if w == nil {
 		return 0
@@ -84,7 +84,7 @@ func Cycle(name string, skip int64) int64 {
 }
 
 // Expire 每一届界的开始结束时间
-func Expire(name string, cycle int64) (s, e int64) {
+func Expire(name any, cycle int64) (s, e int64) {
 	w := Master.Get(name)
 	if w == nil {
 		return 0, 0
@@ -92,7 +92,16 @@ func Expire(name string, cycle int64) (s, e int64) {
 	return w.handle.Expire(cycle)
 }
 
-func Writable(name string, cycle int64) (r bool) {
+// Submit 手动触发指定届结算,用于自动结算失败后的人工补偿
+func Submit(name any, cycle int64) error {
+	w := Master.Get(name)
+	if w == nil {
+		return values.Error("Rank not exist")
+	}
+	return w.Submit(cycle)
+}
+
+func Writable(name any, cycle int64) (r bool) {
 	w := Master.Get(name)
 	if w == nil {
 		return false
