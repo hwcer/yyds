@@ -162,6 +162,8 @@ github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245 h1:hsbI1UJ2Zsj2qG7a
 github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419 h1:8BruYvlXLKAGxWpvDgmLUQzC0QyZJhaYJIBptnGOo0M=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419/go.mod h1:BMdu02LgFebjzX2fldIdltUzWdAP8mVwkcMtfHMZgMw=
+github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4 h1:iz7H4VaMq3SVRYYXWSFnCKr6TCsdW2RG/1JeEGCTta4=
+github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4/go.mod h1:gjlTK56jJHi+X95NIQzruAvuDbG+OaGFqbkgz6HKvgU=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/juju/ratelimit v1.0.2 h1:sRxmtRiajbvrcLQT7S+JbqU0ntsb9W2yhSdNN8tWfaI=
