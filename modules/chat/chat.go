@@ -198,7 +198,7 @@ func (this *Chat) Read(t uint64, size int, filter Filter) (n uint64, r []Message
 //  2. 内部通过比较玩家存储的最后消息ID和当前最大ID来计算
 //  3. 此方法是无锁的，适用于高频调用场景
 func (this *Chat) Notify(p *player.Player) uint64 {
-	n := p.Values.GetInt64(NotifyName)
+	n := p.Cache.GetInt64(NotifyName)
 	return atomic.LoadUint64(&this.tail) - uint64(n)
 }
 
@@ -219,10 +219,10 @@ func (this *Chat) Notify(p *player.Player) uint64 {
 // 3. 如果获取到消息，更新玩家对象中的最后消息ID
 // 4. 返回符合条件的消息列表
 func (this *Chat) Getter(p *player.Player, size int, filter Filter) []Message {
-	n := p.Values.GetInt64(NotifyName)
+	n := p.Cache.GetInt64(NotifyName)
 	nw, rows := this.Read(uint64(n), size, filter)
 	if len(rows) > 0 {
-		p.Values.Set(NotifyName, nw)
+		p.Cache.Set(NotifyName, nw)
 	}
 	return rows
 }

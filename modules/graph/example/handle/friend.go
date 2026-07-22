@@ -25,7 +25,7 @@ func (this *Friend) Caller(node *registry.Node, handle *context.Context) interfa
 const recommendFriendProcessName = "friend_recommend_cache"
 
 func (this *Friend) RecommendReset(c *context.Context) any {
-	c.Player.Process.Set(recommendFriendProcessName, []string{})
+	c.Player.Cache.Set(recommendFriendProcessName, []string{})
 	return nil
 }
 
@@ -44,7 +44,7 @@ func (this *Friend) Recommend(c *context.Context) any {
 		num = 20
 	}
 	var arr []string
-	if i := c.Player.Process.Get(recommendFriendProcessName); i != nil {
+	if i := c.Player.Cache.Get(recommendFriendProcessName); i != nil {
 		arr = i.([]string)
 	}
 	if len(arr) > 50 {
@@ -52,7 +52,7 @@ func (this *Friend) Recommend(c *context.Context) any {
 	}
 	defer func() {
 		if c.Player.Updater.Error == nil {
-			c.Player.Process.Set(recommendFriendProcessName, arr)
+			c.Player.Cache.Set(recommendFriendProcessName, arr)
 		}
 	}()
 	his := map[string]struct{}{}
