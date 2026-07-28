@@ -162,6 +162,8 @@ github.com/hwcer/pubsub/cosnet v0.0.0-20260728074239-03b34fc3864c h1:Kwwl3h7if/C
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728074239-03b34fc3864c/go.mod h1:EJC3baG1AlaTAHELhi8LtqZ62rOICrHLDrq5Ak2O6Es=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728075619-7b4d4b9b05e2 h1:y/J/YSmhBmYoSwYjPMzWFCd4Qsw0TjHPnVAu7tAqqms=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728075619-7b4d4b9b05e2/go.mod h1:Zz9k+M3KExwhJ6KQipdZQriRfvttVa9AJQYWN1iyIBk=
+github.com/hwcer/pubsub/cosnet v0.0.0-20260728091219-a9cef2c29645 h1:8CG/6y0DgrUEME3YCS7dqnliEbY0aS4+kr1f7stGdiw=
+github.com/hwcer/pubsub/cosnet v0.0.0-20260728091219-a9cef2c29645/go.mod h1:Zz9k+M3KExwhJ6KQipdZQriRfvttVa9AJQYWN1iyIBk=
 github.com/hwcer/pubsub/redis v0.0.0-20260728074239-03b34fc3864c h1:R4gqK/qN0rH12Wp4dJpGsAYIum7UQgOVOcZbCHoPYlc=
 github.com/hwcer/pubsub/redis v0.0.0-20260728074239-03b34fc3864c/go.mod h1:TQXmwSceiKwfX1Hnq9DzOLUS3m1gWlfr9Jpo0OWq0u8=
 github.com/hwcer/pubsub/redis v0.0.0-20260728075619-7b4d4b9b05e2 h1:h9GGhv4ewuPVlb8GSBwtmST98Fb6s6qbcY2fWlcH13Y=
@@ -170,6 +172,8 @@ github.com/hwcer/pubsub/transport v0.0.0-20260728074402-5046c59482d7 h1:D9DLB/gs
 github.com/hwcer/pubsub/transport v0.0.0-20260728074402-5046c59482d7/go.mod h1:BKPw6X39R4gXWqtNCPnBW5lgdyNc2JzOvZQTNGZUmPk=
 github.com/hwcer/pubsub/transport v0.0.0-20260728075619-7b4d4b9b05e2 h1:mIcAOwUe2chgDCuF+s9Kp4UBKDYYgHBDhcoCPrcV94A=
 github.com/hwcer/pubsub/transport v0.0.0-20260728075619-7b4d4b9b05e2/go.mod h1:WHbNMCUICorbq66Eppcj5VVBz1vTUmnLfnrznRwH6jY=
+github.com/hwcer/pubsub/transport v0.0.0-20260728091219-a9cef2c29645 h1:VQzIWvXBDDmYV1Y9xNAv73wPq7zQuOvvkWLwrQZDfTg=
+github.com/hwcer/pubsub/transport v0.0.0-20260728091219-a9cef2c29645/go.mod h1:Mj7oHIn8XRgwSxMSyJV9Ozq8rk7SBVR5U9OgMn1dCDQ=
 github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4 h1:iz7H4VaMq3SVRYYXWSFnCKr6TCsdW2RG/1JeEGCTta4=
 github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4/go.mod h1:gjlTK56jJHi+X95NIQzruAvuDbG+OaGFqbkgz6HKvgU=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
