@@ -122,8 +122,13 @@ func forward(path string) pubsub.Handler {
 				send(sid, path, body)
 			}
 		case scopeAll, scopeIgnore:
-			//屏蔽名单只能由游戏服自己判断:locator 不掌握全部区服列表,
-			//统一广播并把 GZone 原样带过去,游戏服按 Scope 自行过滤。
+			//屏蔽名单(scopeIgnore)统一广播,把 GZone 原样带过去由游戏服自行过滤,
+			//而不是在这里排除掉黑名单里的区服:
+			//  1.rpcx 的 Broadcast 直接遍历自己的 servers 建连接群发,不经过 selector,
+			//    在 selector 上挂过滤函数对广播无效;
+			//  2.只有 discovery 模式才有 selector 实例(见 cosrpc client.selector),
+			//    local/process 模式下拿不到区服列表。
+			//游戏服侧的过滤本来也必须保留(防列表过期、防投递错服),放在那边是唯一出处。
 			broadcast(path, body)
 		}
 	}
