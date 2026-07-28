@@ -168,6 +168,8 @@ github.com/hwcer/pubsub v0.0.0-20260521024319-cb0b06ba342d h1:TZ9y73HPdHMst1rKB/
 github.com/hwcer/pubsub v0.0.0-20260521024319-cb0b06ba342d/go.mod h1:/l3n4wESbU7o8FCDmS17S9SkoOWFMWqagp3jp1m05NM=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d h1:Wam1UnpBlzjT6FCTrgqZ1cqoVLdLrVKYoDniYzAPKsU=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d/go.mod h1:Dph7zuTixH69g7Pj8sy77V9fk46DrqntjE1crHvSlCY=
+github.com/hwcer/pubsub/cosnet v0.0.0-20260728055541-81098935cf16 h1:7hxP2YKcvhbtrT0aJBRREScwH+o6zlSAaWQD0dyen+0=
+github.com/hwcer/pubsub/cosnet v0.0.0-20260728055541-81098935cf16/go.mod h1:Dph7zuTixH69g7Pj8sy77V9fk46DrqntjE1crHvSlCY=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419 h1:8BruYvlXLKAGxWpvDgmLUQzC0QyZJhaYJIBptnGOo0M=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419/go.mod h1:BMdu02LgFebjzX2fldIdltUzWdAP8mVwkcMtfHMZgMw=
 github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4 h1:iz7H4VaMq3SVRYYXWSFnCKr6TCsdW2RG/1JeEGCTta4=
