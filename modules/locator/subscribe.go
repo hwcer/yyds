@@ -81,8 +81,8 @@ func subscribe() error {
 	emitter = pubsub.New()
 	//订阅回调由 pubsub 在独立协程上串行投递，不会阻塞传输层的网络读协程，
 	//这里可以放心做同步 rpc；投递不出去时告警（队列满 / 回调 panic）
-	emitter.OnDropped(func(t string, _ []byte, reason error) {
-		logger.Alert("master 事件丢弃:topic=%v,reason=%v", t, reason)
+	emitter.OnDropped(func(e *pubsub.Event, reason error) {
+		logger.Alert("master 事件丢弃:topic=%v,reason=%v", e.Topic, reason)
 	})
 	//顺序不能反:Subscribe 只在已注册 transport 时才会把订阅同步到服务端
 	emitter.Use(tr)
