@@ -13,6 +13,7 @@ var db = cosmo.New()
 var Options = struct {
 	Address string `json:"address"` //管理地址
 	Mongodb string `json:"mongodb"`
+	Pubsub  string `json:"pubsub"` //master 事件总线地址，订阅其配置/服务器变更事件，空=不订阅
 }{}
 
 func DB() *cosmo.DB {

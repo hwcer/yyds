@@ -15,6 +15,7 @@ type MasterApiType string
 const (
 	MasterApiTypeGameServerStart = "/server/start"
 	MasterApiTypeGameServerClose = "/server/close"
+	MasterApiTypeGameServerInfo  = "/server/info" //查询本服状态,收到 master 变更事件后回拉
 	MasterApiTypeOrderCreate     = "/order/create"
 	MasterApiTypeOrderRefresh    = "/order/refresh" //重新拉起之前放弃的订单
 	MasterApiTypeOrderRestore    = "/order/restore"

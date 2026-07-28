@@ -34,7 +34,10 @@ func (this *Module) Init() (err error) {
 	return utils.Assert(model.Start)
 }
 func (this *Module) Start() (err error) {
-	return master.Start()
+	if err = master.Start(); err != nil {
+		return
+	}
+	return subscribe()
 }
 func (this *Module) Close() (err error) {
 	return nil

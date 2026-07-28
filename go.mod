@@ -11,6 +11,8 @@ require (
 	github.com/hwcer/cosweb v1.4.2
 	github.com/hwcer/gateway v0.2.3-0.20260723070447-efbf801997c1
 	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
+	github.com/hwcer/pubsub v0.0.0-20260521024319-cb0b06ba342d
+	github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d
 	github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4
 	github.com/smallnest/rpcx v1.9.4
 )
