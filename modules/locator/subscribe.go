@@ -64,6 +64,14 @@ type message struct {
 
 var emitter *pubsub.PubSub
 
+// pubsubLogger 把 pubsub 的内部错误接到本项目的 logger。
+// 不能直接用 logger.Alert：它的签名是 (any, ...any)，不满足 pubsub.Logger。
+type pubsubLogger struct{}
+
+func (pubsubLogger) Errorf(format string, args ...any) {
+	logger.Alert(format, args...)
+}
+
 // subscribe 启动对 master 事件总线的订阅
 func subscribe() error {
 	if model.Options.Pubsub == "" {
@@ -80,10 +88,8 @@ func subscribe() error {
 
 	emitter = pubsub.New()
 	//订阅回调由 pubsub 在独立协程上串行投递，不会阻塞传输层的网络读协程，
-	//这里可以放心做同步 rpc；投递不出去时告警（队列满 / 回调 panic）
-	emitter.OnDropped(func(e *pubsub.Event, reason error) {
-		logger.Alert("master 事件丢弃:topic=%v,reason=%v", e.Topic, reason)
-	})
+	//这里可以放心做同步 rpc；投递不出去（队列满 / 回调 panic）时由它打日志
+	emitter.SetLogger(pubsubLogger{})
 	//顺序不能反:Subscribe 只在已注册 transport 时才会把订阅同步到服务端
 	emitter.Use(tr)
 	emitter.Subscribe(topic(topicServer), forward(pathServerUpdate))
