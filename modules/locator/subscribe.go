@@ -9,7 +9,7 @@ import (
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/pubsub"
-	pscosnet "github.com/hwcer/pubsub/cosnet"
+	"github.com/hwcer/pubsub/transport"
 	"github.com/hwcer/yyds/modules/locator/model"
 	"github.com/hwcer/yyds/options"
 )
@@ -71,15 +71,12 @@ func subscribe() error {
 		logger.Alert("未配置 [locator] pubsub,不订阅 master 事件,服务器/配置变更将无法下发到游戏服")
 		return nil
 	}
-	tr := pscosnet.Connect(model.Options.Pubsub)
-	//默认重连 10 次(约 3 分钟)后彻底放弃、表现为永久静默失联，必须无限重连；
-	//退避默认封顶 30 秒，master 重启后最坏空档 30 秒，期间发布的事件全丢。
-	//这条连接平时零流量、重连成本极低，压到 0.5 秒起步、最多 3 秒。
-	opt := tr.Options()
-	opt.ClientReconnectMax = 0
-	opt.ClientReconnectTime = 500
-	opt.ClientReconnectMaxDelay = 3000
-
+	//地址按协议选择实现：tcp://（默认，可省略）走 cosnet，redis:// 走 redis pub/sub。
+	//重连参数由工厂固化，不需要在这里调。
+	tr, err := transport.Connect(model.Options.Pubsub)
+	if err != nil {
+		return err
+	}
 	//订阅回调由 pubsub 在独立协程上串行投递，不会阻塞传输层的网络读协程，
 	//所以 forward 里可以放心做同步 rpc；投递不出去（队列满 / 回调 panic）时 pubsub 自己会打日志
 	emitter = pubsub.New()
