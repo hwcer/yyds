@@ -21,11 +21,21 @@ import (
 所以这里不关心事件内容，只负责决定"发给谁"。
 */
 
-// topic 名与 master 侧 share.TopicXxx 对齐，改动需两边同步
+// topic 名与 master 侧 share.TopicXxx 对齐，改动需两边同步。
+// master 可以接入多款游戏，下发的事件按 appid 分区（"{topic}/{appid}"），
+// 这里只订本 appid 那一档，收不到别家游戏的事件。
 const (
 	topicServer = "server"
 	topicConfig = "config"
 )
+
+// topic 拼出本游戏的分区名，与 master 侧 share.Topic 保持一致
+func topic(name string) string {
+	if options.Options.Appid == "" {
+		return name
+	}
+	return name + "/" + options.Options.Appid
+}
 
 // 游戏服侧接收事件的私有路由
 const (
@@ -103,8 +113,8 @@ func subscribe() error {
 	emitter = pubsub.New()
 	//顺序不能反:Subscribe 只在已注册 transport 时才会把订阅同步到服务端
 	emitter.Use(tr)
-	emitter.Subscribe(topicServer, forward(pathServerUpdate))
-	emitter.Subscribe(topicConfig, forward(pathConfigUpdate))
+	emitter.Subscribe(topic(topicServer), forward(pathServerUpdate))
+	emitter.Subscribe(topic(topicConfig), forward(pathConfigUpdate))
 	go dispatcher()
 
 	//Connect 失败会一直重试并阻塞,不能拖住 locator 启动
@@ -112,7 +122,7 @@ func subscribe() error {
 		if err := emitter.Start(); err != nil {
 			logger.Alert("订阅 master 事件总线失败:%v,address:%v", err, model.Options.Pubsub)
 		} else {
-			logger.Trace("已订阅 master 事件总线:%v", model.Options.Pubsub)
+			logger.Trace("已订阅 master 事件总线:%v,appid:%v", model.Options.Pubsub, options.Options.Appid)
 		}
 	}()
 	return nil
