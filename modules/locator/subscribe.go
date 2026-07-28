@@ -64,17 +64,11 @@ type message struct {
 
 var emitter *pubsub.PubSub
 
-// pubsubLogger 把 pubsub 的内部错误接到本项目的 logger。
-// 不能直接用 logger.Alert：它的签名是 (any, ...any)，不满足 pubsub.Logger。
-type pubsubLogger struct{}
-
-func (pubsubLogger) Errorf(format string, args ...any) {
-	logger.Alert(format, args...)
-}
-
-// subscribe 启动对 master 事件总线的订阅
+// subscribe 启动对 master 事件总线的订阅。
+// 未配置地址即不启动，与 master.Start 对 Address 的处理保持一致。
 func subscribe() error {
 	if model.Options.Pubsub == "" {
+		logger.Alert("未配置 [locator] pubsub,不订阅 master 事件,服务器/配置变更将无法下发到游戏服")
 		return nil
 	}
 	tr := pscosnet.Connect(model.Options.Pubsub)
@@ -86,10 +80,9 @@ func subscribe() error {
 	opt.ClientReconnectTime = 500
 	opt.ClientReconnectMaxDelay = 3000
 
-	emitter = pubsub.New()
 	//订阅回调由 pubsub 在独立协程上串行投递，不会阻塞传输层的网络读协程，
-	//这里可以放心做同步 rpc；投递不出去（队列满 / 回调 panic）时由它打日志
-	emitter.SetLogger(pubsubLogger{})
+	//所以 forward 里可以放心做同步 rpc；投递不出去（队列满 / 回调 panic）时 pubsub 自己会打日志
+	emitter = pubsub.New()
 	//顺序不能反:Subscribe 只在已注册 transport 时才会把订阅同步到服务端
 	emitter.Use(tr)
 	emitter.Subscribe(topic(topicServer), forward(pathServerUpdate))

@@ -174,6 +174,8 @@ github.com/hwcer/pubsub v0.0.0-20260728065759-1fcbeaa8f991 h1:46jSzVvuXOU0zNcooz
 github.com/hwcer/pubsub v0.0.0-20260728065759-1fcbeaa8f991/go.mod h1:/l3n4wESbU7o8FCDmS17S9SkoOWFMWqagp3jp1m05NM=
 github.com/hwcer/pubsub v0.0.0-20260728072556-47508281b31c h1:U3ZJdB/Mduo2dJPVnGFusuFqL+00bgyDPA5edR0xZGs=
 github.com/hwcer/pubsub v0.0.0-20260728072556-47508281b31c/go.mod h1:/l3n4wESbU7o8FCDmS17S9SkoOWFMWqagp3jp1m05NM=
+github.com/hwcer/pubsub v0.0.0-20260728073641-b36524918c6e h1:xMXfjgqKt3MJ1STpOfotNdXY4pk7VAEhOQ7fh8WC9TA=
+github.com/hwcer/pubsub v0.0.0-20260728073641-b36524918c6e/go.mod h1:e9q1BQsSofqD1y5ooh0h9moRllyrJeOpY4snbtB9ImA=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d h1:Wam1UnpBlzjT6FCTrgqZ1cqoVLdLrVKYoDniYzAPKsU=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d/go.mod h1:Dph7zuTixH69g7Pj8sy77V9fk46DrqntjE1crHvSlCY=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728055541-81098935cf16 h1:7hxP2YKcvhbtrT0aJBRREScwH+o6zlSAaWQD0dyen+0=
