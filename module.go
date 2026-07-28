@@ -1,6 +1,7 @@
 package yyds
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/cosrpc/server"
@@ -89,11 +91,23 @@ func (this *Module) Init() (err error) {
 		"address": options.Game.Address,
 	}
 
-	if err = options.Master.Post(options.MasterApiTypeGameServerStart, args, nil); err != nil {
+	//reply 用 RawMessage 接收:老版本 master 回的是 true,此处不能因为格式不符导致启动失败
+	var reply json.RawMessage
+	if err = options.Master.Post(options.MasterApiTypeGameServerStart, args, &reply); err != nil {
 		if errors.Is(err, errors.ErrMasterEmpty) {
 			logger.Alert("配置项[master]为空,部分功能无法使用")
 		} else {
 			return fmt.Errorf("%s，当前回调地址:%v", err.Error(), args["local"])
+		}
+	} else if len(reply) > 0 {
+		vs := values.Values{}
+		if e := json.Unmarshal(reply, &vs); e != nil {
+			logger.Alert("master 下发的服务器参数格式无法识别,已忽略:%v", string(reply))
+		} else if len(vs) > 0 {
+			if options.Game.Values == nil {
+				options.Game.Values = values.Values{}
+			}
+			options.Game.Values.Merge(vs, true) //master 下发的同名键覆盖本地配置
 		}
 	}
 	//设置游戏Metadata
