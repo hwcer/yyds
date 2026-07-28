@@ -60,12 +60,13 @@ func subscribe() error {
 		return nil
 	}
 	tr := pscosnet.Connect(model.Options.Pubsub)
-	//默认 10 次重连(约 3 分钟)后彻底放弃,表现为永久静默失联,必须设成无限重连
-	tr.Options().ClientReconnectMax = 0
-	//退避默认封顶 30 秒,master 重启后最坏要空档 30 秒才恢复,期间发布的事件全丢。
-	//这条连接平时零流量、重连成本极低,压到 0.5 秒起步、最多 3 秒。
-	tr.Options().ClientReconnectTime = 500
-	tr.Options().ClientReconnectMaxDelay = 3000
+	//默认重连 10 次(约 3 分钟)后彻底放弃、表现为永久静默失联，必须无限重连；
+	//退避默认封顶 30 秒，master 重启后最坏空档 30 秒，期间发布的事件全丢。
+	//这条连接平时零流量、重连成本极低，压到 0.5 秒起步、最多 3 秒。
+	opt := tr.Options()
+	opt.ClientReconnectMax = 0
+	opt.ClientReconnectTime = 500
+	opt.ClientReconnectMaxDelay = 3000
 
 	emitter = pubsub.New()
 	//顺序不能反:Subscribe 只在已注册 transport 时才会把订阅同步到服务端
