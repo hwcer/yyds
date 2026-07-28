@@ -166,10 +166,14 @@ github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245 h1:hsbI1UJ2Zsj2qG7a
 github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/pubsub v0.0.0-20260521024319-cb0b06ba342d h1:TZ9y73HPdHMst1rKB/hZsRLVOE/DEivdtGUgcKuuVOI=
 github.com/hwcer/pubsub v0.0.0-20260521024319-cb0b06ba342d/go.mod h1:/l3n4wESbU7o8FCDmS17S9SkoOWFMWqagp3jp1m05NM=
+github.com/hwcer/pubsub v0.0.0-20260728063404-f6955958fd4d h1:fsm2n2tAJ37tiDMWLcfD7Fa6HecLnlxBSjwevrmjoOo=
+github.com/hwcer/pubsub v0.0.0-20260728063404-f6955958fd4d/go.mod h1:/l3n4wESbU7o8FCDmS17S9SkoOWFMWqagp3jp1m05NM=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d h1:Wam1UnpBlzjT6FCTrgqZ1cqoVLdLrVKYoDniYzAPKsU=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728052955-f8de74f61f4d/go.mod h1:Dph7zuTixH69g7Pj8sy77V9fk46DrqntjE1crHvSlCY=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728055541-81098935cf16 h1:7hxP2YKcvhbtrT0aJBRREScwH+o6zlSAaWQD0dyen+0=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260728055541-81098935cf16/go.mod h1:Dph7zuTixH69g7Pj8sy77V9fk46DrqntjE1crHvSlCY=
+github.com/hwcer/pubsub/cosnet v0.0.0-20260728063435-b34d4e3a5405 h1:815o34nMu6ZlGiIM5AKqynSp5dAonCArdexNSXUM7U4=
+github.com/hwcer/pubsub/cosnet v0.0.0-20260728063435-b34d4e3a5405/go.mod h1:EJC3baG1AlaTAHELhi8LtqZ62rOICrHLDrq5Ak2O6Es=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419 h1:8BruYvlXLKAGxWpvDgmLUQzC0QyZJhaYJIBptnGOo0M=
 github.com/hwcer/updater v1.5.1-0.20260629144331-7b14d23df419/go.mod h1:BMdu02LgFebjzX2fldIdltUzWdAP8mVwkcMtfHMZgMw=
 github.com/hwcer/updater v1.5.1-0.20260722015218-565fe1e5f4f4 h1:iz7H4VaMq3SVRYYXWSFnCKr6TCsdW2RG/1JeEGCTta4=

@@ -64,38 +64,6 @@ type message struct {
 
 var emitter *pubsub.PubSub
 
-// 事件转发队列。
-//
-// pubsub 的订阅回调是在 socket 的读协程里同步执行的
-// （readMsg → handle → clientHandler.Message → deliverLocal → handler），
-// 直接在回调里做 rpc 会把读循环卡住：心跳回包读不到，连接会被误判为掉线，
-// 后续事件也全堵在 TCP 缓冲里。所以回调只入队，投递交给单独的协程。
-//
-// 单消费者而不是每事件一个协程：游戏服收到信号后是回 master 拉最新值，
-// 并发投递会让两个事件的回拉乱序、旧值可能覆盖新值。
-var events = make(chan *event, 256)
-
-type event struct {
-	path string
-	body []byte
-	msg  *message
-}
-
-func dispatcher() {
-	for e := range events {
-		switch e.msg.Scope {
-		case scopeEnable:
-			for _, sid := range e.msg.GZone {
-				send(sid, e.path, e.body)
-			}
-		case scopeAll, scopeIgnore:
-			//屏蔽名单只能由游戏服自己判断:locator 不掌握全部区服列表,
-			//统一广播并把 GZone 原样带过去,游戏服按 Scope 自行过滤。
-			broadcast(e.path, e.body)
-		}
-	}
-}
-
 // subscribe 启动对 master 事件总线的订阅
 func subscribe() error {
 	if model.Options.Pubsub == "" {
@@ -111,11 +79,15 @@ func subscribe() error {
 	opt.ClientReconnectMaxDelay = 3000
 
 	emitter = pubsub.New()
+	//订阅回调由 pubsub 在独立协程上串行投递，不会阻塞传输层的网络读协程，
+	//这里可以放心做同步 rpc；队列满时告警
+	emitter.OnDropped(func(t string, _ []byte) {
+		logger.Alert("master 事件队列已满,已丢弃:topic=%v", t)
+	})
 	//顺序不能反:Subscribe 只在已注册 transport 时才会把订阅同步到服务端
 	emitter.Use(tr)
 	emitter.Subscribe(topic(topicServer), forward(pathServerUpdate))
 	emitter.Subscribe(topic(topicConfig), forward(pathConfigUpdate))
-	go dispatcher()
 
 	//Connect 失败会一直重试并阻塞,不能拖住 locator 启动
 	go func() {
@@ -144,11 +116,15 @@ func forward(path string) pubsub.Handler {
 			logger.Alert("master 事件序列化失败:topic=%v,err=%v", e.Topic, err)
 			return
 		}
-		//只入队，绝不在这里做 rpc：本回调跑在 socket 读协程上
-		select {
-		case events <- &event{path: path, body: body, msg: msg}:
-		default:
-			logger.Alert("master 事件队列已满,丢弃:topic=%v,id=%v", e.Topic, msg.Id)
+		switch msg.Scope {
+		case scopeEnable:
+			for _, sid := range msg.GZone {
+				send(sid, path, body)
+			}
+		case scopeAll, scopeIgnore:
+			//屏蔽名单只能由游戏服自己判断:locator 不掌握全部区服列表,
+			//统一广播并把 GZone 原样带过去,游戏服按 Scope 自行过滤。
+			broadcast(path, body)
 		}
 	}
 }
