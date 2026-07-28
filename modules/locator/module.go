@@ -40,5 +40,9 @@ func (this *Module) Start() (err error) {
 	return subscribe()
 }
 func (this *Module) Close() (err error) {
+	//必须关掉:pubsub 客户端是无限重连的,不关会一直重连、进程退不掉
+	if emitter != nil {
+		return emitter.Close()
+	}
 	return nil
 }
