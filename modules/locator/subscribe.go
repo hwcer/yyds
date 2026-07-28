@@ -22,11 +22,14 @@ import (
 */
 
 // topic 名与 master 侧 share.TopicXxx 对齐，改动需两边同步。
-// master 可以接入多款游戏，下发的事件按 appid 分区（"{topic}/{appid}"），
+// master 可以接入多款游戏，下发的事件按 appid 分区（"{topic}.{appid}"），
 // 这里只订本 appid 那一档，收不到别家游戏的事件。
 const (
 	topicServer = "server"
 	topicConfig = "config"
+	//分段符必须与 master 侧 share.TopicSeparator 一致：
+	//pubsub 的通配 * 编译为 [^.]+，按 "." 分段
+	topicSeparator = "."
 )
 
 // topic 拼出本游戏的分区名，与 master 侧 share.Topic 保持一致
@@ -34,7 +37,7 @@ func topic(name string) string {
 	if options.Options.Appid == "" {
 		return name
 	}
-	return name + "/" + options.Options.Appid
+	return name + topicSeparator + options.Options.Appid
 }
 
 // 游戏服侧接收事件的私有路由
