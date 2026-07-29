@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	playersOnline    int32 //在线人数
-	playersMemory    int32 //当前缓存总量
+	playersOnline    atomic.Int32 //在线人数
+	playersMemory    atomic.Int32 //当前缓存总量(含离线未释放),daemon 每 tick 刷新
 	playersStarted   int32
 	playersRecycling map[string]*player.Player
 )
@@ -37,8 +37,16 @@ func Start() error {
 	scc.CGO(daemon)
 	return loading()
 }
+
+// Online 在线人数(StatusConnected)
 func Online() int32 {
-	return playersOnline
+	return playersOnline.Load()
+}
+
+// Memory 内存中的玩家对象总数,含掉线未释放的缓存
+// 与 Options.MemoryPlayer / MemoryRelease 对照可判断回收站是否已开始清理
+func Memory() int32 {
+	return playersMemory.Load()
 }
 
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁

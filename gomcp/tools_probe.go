@@ -24,7 +24,7 @@ import (
 func registerProbe(s *mcp.Server) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "server_status",
-		Description: "获取游戏服务器运行状态:服务器编号/名称/网关地址/开服时间/在线人数/进程信息。排查任何问题的第一跳。",
+		Description: "获取游戏服务器运行状态:服务器编号/名称/网关地址/开服时间/在线人数/内存玩家数/进程信息。online 是连线中(StatusConnected)人数,memory 是内存里的玩家对象总数(含掉线未释放的缓存)。排查任何问题的第一跳。",
 	}, serverStatus)
 
 	mcp.AddTool(s, &mcp.Tool{
@@ -70,6 +70,7 @@ type statusReply struct {
 	OpenTime   string `json:"openTime"`
 	ServerTime string `json:"serverTime"`
 	Online     int32  `json:"online"`
+	Memory     int32  `json:"memory"`
 	Version    string `json:"version"`
 	Debug      bool   `json:"debug"`
 	Pid        int    `json:"pid"`
@@ -86,6 +87,7 @@ func serverStatus(ctx context.Context, req *mcp.CallToolRequest, args statusArgs
 		OpenTime:   options.Game.Time,
 		ServerTime: times.Format(),
 		Online:     players.Online(),
+		Memory:     players.Memory(),
 		Version:    cosgo.Version,
 		Debug:      cosgo.Debug(),
 		Pid:        os.Getpid(),

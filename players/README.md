@@ -38,7 +38,9 @@ StatusNone(0) → StatusConnected(2) → StatusDisconnect(3) → StatusOffline(4
 
 ### 守护协程
 
-`daemon` 协程随 `Start()` 启动，每 `Heartbeat`（默认 5s）执行一次 `worker` 扫描，负责检测玩家状态变化和内存回收。服务关闭时自动执行 `shutdown` 保存所有玩家数据。
+`daemon` 协程随 `Start()` 启动，每 `Heartbeat`（默认 5s）执行一次 `worker` 扫描，负责检测玩家状态变化和内存回收。定时器会扣除 `worker` 自身耗时，使扫描周期稳定在 `Heartbeat` 而非 `Heartbeat + worker 耗时`。服务关闭时自动执行 `shutdown` 保存所有玩家数据。
+
+`worker` 分两段：**先快照、后迁移**。`ps.Range` 内只做状态判定并把待迁移玩家收进切片，Range 返回、`Manage` 读锁释放之后才逐个执行 `disconnect` / `offline` / `recycling`。原因是后两者要抢玩家锁并触发业务事件（可能再抢其他全局锁），在持有 `Manage` 读锁时等细粒度锁，会把需要 `Manage` 写锁的登录路径整体挡住，批量掉线时形成全局停顿。快照与迁移之间状态变了不要紧——这几个函数内部都用 CAS 二次校验，会安全跳过。
 
 ### 状态流转
 
@@ -79,9 +81,17 @@ Connected ──(ConnectedTime 120s 无心跳)──→ Disconnect    触发 Eve
 触发条件: 缓存总数 >= MemoryPlayer(2000) + MemoryRelease(100)
 释放顺序: 按心跳时间升序，优先释放最久未活跃的玩家
 释放目标: 将缓存总数降至 MemoryPlayer 以下
+单次上限: 每个 tick 最多释放 MemoryRelease(100) 个，超出部分顺延到下个 tick
 ```
 
-释放过程：`Reset`（重置数据） → `Destroy`（销毁 Updater、关闭 Syncer、清理内存） → 从管理器中删除。如果 `Destroy` 失败，状态回退到 `StatusOffline`，下次重试。
+`MemoryRelease` 同时充当触发余量和单次释放上限——「超出 100 才清理，每次最多清 100」。加上限是因为释放要抢玩家锁，脏玩家还会产生一次 BulkWrite 往返；不限量的话大批量退潮会把 daemon 协程阻塞到秒级，连带拖慢状态机的判定精度。命中上限且仍有积压时会打一条 `logger.Trace`，避免从监控指标上看像是「清不动」。
+
+释放过程：**先取玩家锁**（等待在途业务调用结束）→ CAS 置 `StatusReleased` → `Reset`（重置数据）→ `Destroy`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除 → `Close`（关闭 Syncer）。如果 `Destroy` 失败，状态回退到 `StatusOffline`，下次重试。
+
+顺序上有两个约束不能调换：
+
+- **必须持锁才能 `Destroy`**：`Destroy` 会把 `Updater` 置空，不加锁就可能在业务协程执行 `handle` 期间抽走它，对端 `defer Release()` 直接 nil panic。相应地 `Get` 也必须**先判 `StatusReleased` 再 `Reset`**。
+- **`Close` 必须在解锁之后**：actor 模式下 `Syncer.Close` 关的是玩家通道，持锁（通道里挂着栅栏函数）时关闭会让通道 worker 永久阻塞。
 
 ### 优雅关闭
 

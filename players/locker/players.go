@@ -31,17 +31,18 @@ type Players struct {
 
 // Get 只获取在线玩家
 func (this *Players) Get(uid string, handle player.Handle) error {
-	var p *player.Player
-	if v, ok := this.Manage.Load(uid); ok {
-		p = v
-		p.Lock()
-		defer p.Unlock()
-		p.Reset()
-		defer p.Release()
-	}
-	if p == nil || atomic.LoadInt32(&p.Status) == player.StatusReleased {
+	p, ok := this.Manage.Load(uid)
+	if !ok {
 		return errors.ErrNotOnline
 	}
+	p.Lock()
+	defer p.Unlock()
+	//必须先判状态再 Reset:released 会在持锁期间把 Updater 置空,拿到锁时可能已经被释放
+	if atomic.LoadInt32(&p.Status) == player.StatusReleased {
+		return errors.ErrNotOnline
+	}
+	p.Reset()
+	defer p.Release()
 	return handle(p)
 }
 

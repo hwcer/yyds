@@ -154,17 +154,24 @@ func (p *Player) Guid() string {
 	return doc.Get(RoleFields.Guid).(string)
 }
 
+// Destroy 销毁玩家数据,调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater
+// 不在这里关闭 Syncer:关闭动作必须发生在 Unlock 之后,见 Close
 func (p *Player) Destroy() error {
 	if err := p.Updater.Destroy(); err != nil {
 		return err
 	}
 	p.Updater = nil
-	if p.Syncer != nil {
-		p.Syncer.Close()
-	}
 	p.Dirty = Dirty{}
 	p.Emitter = nil
 	return nil
+}
+
+// Close 关闭并发控制器,必须在 Unlock 之后调用
+// actor 模式下 Syncer.Close 会关掉玩家通道,持锁时关闭会让通道 worker 永久阻塞在 nil channel 上
+func (p *Player) Close() {
+	if p.Syncer != nil {
+		p.Syncer.Close()
+	}
 }
 func (p *Player) On(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
 	return p.Emitter.On(t, args, handle)

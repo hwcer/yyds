@@ -31,10 +31,14 @@ func invoke(p *player.Player, fn func() error) error {
 // Get 只获取在线玩家，进入玩家通道执行
 func (this *Players) Get(uid string, handle player.Handle) error {
 	p, ok := this.Manage.Load(uid)
-	if !ok || atomic.LoadInt32(&p.Status) == player.StatusReleased {
+	if !ok {
 		return errors.ErrNotOnline
 	}
 	return invoke(p, func() error {
+		//状态判定必须在通道内、Reset 之前:released 会在通道内把 Updater 置空
+		if atomic.LoadInt32(&p.Status) == player.StatusReleased {
+			return errors.ErrNotOnline
+		}
 		p.Reset()
 		defer p.Release()
 		return handle(p)

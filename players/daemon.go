@@ -59,7 +59,7 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 	if p.Message == nil {
 		p.Message = &player.Message{}
 	}
-	atomic.AddInt32(&playersOnline, 1)
+	playersOnline.Add(1)
 	emitter.Events.Emit(p.Updater, EventConnect)
 	return
 }
@@ -74,7 +74,7 @@ func disconnect(p *player.Player) bool {
 		return false
 	}
 	p.KeepAlive(0)
-	atomic.AddInt32(&playersOnline, -1)
+	playersOnline.Add(-1)
 	p.Lock()
 	defer p.Unlock()
 	emitter.Events.Emit(p.Updater, EventDisconnect)
@@ -113,24 +113,30 @@ func recycling(p *player.Player) {
 }
 
 // released 释放用户实例
+// 必须先拿玩家锁再翻状态:否则业务协程可能已经通过状态检查、正在 handle 里跑,
+// 这边把 Updater 置空,对端 defer Release() 直接 nil panic
 func released(p *player.Player) (ok bool) {
-	status := atomic.LoadInt32(&p.Status)
-	if status != player.StatusOffline {
+	if atomic.LoadInt32(&p.Status) != player.StatusOffline {
 		return false
 	}
-	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusReleased) {
+	//加锁等待在途业务调用结束,拿到锁后再 CAS,使状态翻转与 Get/Load 的状态检查互斥
+	p.Lock()
+	if !atomic.CompareAndSwapInt32(&p.Status, player.StatusOffline, player.StatusReleased) {
+		p.Unlock()
 		return false
 	}
 	p.Reset()
-	if err := p.Destroy(); err == nil {
-		ok = true
-		ps.Delete(p.Key())
-	} else {
-		ok = false
-		atomic.StoreInt32(&p.Status, status)
+	if err := p.Destroy(); err != nil {
+		atomic.StoreInt32(&p.Status, player.StatusOffline)
+		p.Unlock()
 		logger.Alert("Players.release uid:%v,err:%v", p.Uid(), err)
+		return false
 	}
-	return
+	p.Unlock()
+	//先摘出管理器再关通道,避免关闭后仍被 Load 到
+	ps.Delete(p.Key())
+	p.Close()
+	return true
 }
 
 func worker() {
@@ -147,28 +153,45 @@ func worker() {
 	disconnectTime := now - Options.DisconnectTime
 	offlineTime := now - Options.OfflineTime
 
+	//扫描阶段只做状态判定并收集,不在 Range 内做状态迁移:
+	//Range 持有 Manage 读锁,而 disconnect/offline 要抢玩家锁并触发业务事件(可能再抢其他全局锁),
+	//持全局读锁等细粒度锁会把登录路径(Manage 写锁)整体挡住,批量掉线时形成全局停顿
 	var tot int32
-	ps.Range(func(uid string, p *player.Player) bool {
+	var down, off, recy []*player.Player
+	ps.Range(func(_ string, p *player.Player) bool {
 		tot += 1
 		switch atomic.LoadInt32(&p.Status) {
 		case player.StatusNone, player.StatusOffline:
 			if p.Heartbeat() < offlineTime {
-				recycling(p)
+				recy = append(recy, p)
 			}
 		case player.StatusConnected:
 			if p.Heartbeat() <= connectedTime {
-				disconnect(p)
-				logger.Debug("Players.Disconnect uid:%v", uid)
+				down = append(down, p)
 			}
 		case player.StatusDisconnect:
 			if p.Heartbeat() < disconnectTime {
-				offline(p)
-				logger.Debug("Players.Offline uid:%v", uid)
+				off = append(off, p)
 			}
 		}
 		return true
 	})
-	playersMemory = tot
+	playersMemory.Store(tot)
+
+	//以下均已脱离 Manage 读锁;三者内部都用 CAS 二次校验状态,快照期间状态变了会被安全跳过
+	for _, p := range down {
+		if disconnect(p) {
+			logger.Debug("Players.Disconnect uid:%v", p.Uid())
+		}
+	}
+	for _, p := range off {
+		if offline(p) {
+			logger.Debug("Players.Offline uid:%v", p.Uid())
+		}
+	}
+	for _, p := range recy {
+		recycling(p)
+	}
 	ct := tot
 	recyclingCount := len(playersRecycling)
 	if recyclingCount == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
@@ -182,15 +205,23 @@ func worker() {
 		return dict[i].Heartbeat() < dict[j].Heartbeat()
 	})
 
+	//单次 tick 最多释放 MemoryRelease 个:释放要拿玩家锁,脏玩家还会产生一次 BulkWrite 往返,
+	//不限量的话大批量退潮会把 daemon 协程阻塞到秒级,拖慢整个状态机的判定精度。
+	//超出上限的玩家自然落进下面的 else if 留在回收站,下个 tick 继续
+	var freed int32
 	next := map[string]*player.Player{}
 	for _, p := range dict {
-		if ct > Options.MemoryPlayer && released(p) {
+		if ct > Options.MemoryPlayer && freed < Options.MemoryRelease && released(p) {
 			ct--
+			freed++
 		} else if atomic.LoadInt32(&p.Status) == player.StatusOffline {
 			next[p.Key()] = p
 		}
 	}
 	playersRecycling = next
+	if freed >= Options.MemoryRelease && ct > Options.MemoryPlayer {
+		logger.Trace("Players.release 达到单次上限 %d,剩余 %d 待清理", freed, ct-Options.MemoryPlayer)
+	}
 }
 
 func daemon(ctx context.Context) {
@@ -203,8 +234,15 @@ func daemon(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
+			//扣除 worker 自身耗时,让扫描周期稳定在 t,而不是 t+worker 耗时;
+			//worker 超时也不 back-to-back 连跑,留一个调度间隙
+			start := time.Now()
 			worker()
-			timer.Reset(t)
+			if d := t - time.Since(start); d > 0 {
+				timer.Reset(d)
+			} else {
+				timer.Reset(time.Millisecond)
+			}
 		}
 	}
 }
