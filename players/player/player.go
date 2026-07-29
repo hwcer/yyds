@@ -40,7 +40,7 @@ type Player struct {
 	*updater.Updater
 	uid       string
 	key       string           //map key，空值时 Key() 返回 uid
-	heartbeat int64            //最后心跳时间
+	heartbeat atomic.Int64     //最后心跳时间,daemon 与业务协程并发读写,必须原子操作
 	Dirty     Dirty            //短连接推送数据缓存
 	Login     int64            //登录时间
 	Syncer    Syncer           //并发控制器
@@ -183,19 +183,20 @@ func (p *Player) Connected() bool {
 
 // Heartbeat 获取最后心跳时间
 func (p *Player) Heartbeat() int64 {
-	return p.heartbeat
+	return p.heartbeat.Load()
 }
 
-// KeepAlive 保持在线
+// KeepAlive 保持在线,t 为 0 时取当前时间
+//
+// 注意:t==0 时不能退化到 Updater.Unix(),那是"本次请求的开始时间",只在 Reset() 时刷新。
+// 玩家空闲(不再发包)时该值冻结在最后一次请求上,daemon 里 disconnect/offline
+// 想借 KeepAlive(0) 重置状态机计时就会失效,导致 Connected→Disconnect→Offline
+// 在相邻几个 tick 内一路走完,120s 的断线重连宽限期形同虚设。
 func (p *Player) KeepAlive(t int64) {
 	if t == 0 {
-		if p.Updater != nil {
-			t = p.Updater.Unix()
-		} else {
-			t = time.Now().Unix()
-		}
+		t = time.Now().Unix()
 	}
-	p.heartbeat = t
+	p.heartbeat.Store(t)
 }
 
 // AddItems  无脑添加道具
