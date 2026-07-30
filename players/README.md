@@ -23,6 +23,7 @@ StatusNone(0) → StatusConnected(2) → StatusDisconnect(3) → StatusOffline(4
 | StatusDisconnect | 3 | 连接断开，等待重连 |
 | StatusOffline | 4 | 掉线，进入回收队列，此时上线还能抢救 |
 | StatusReleased | 5 | 正在释放资源，无法进行任何操作 |
+| StatusTerminated | 6 | 被强制下线（`Terminate`），拒绝一切请求，等 daemon 释放 |
 
 ## 生命周期事件
 
@@ -40,7 +41,7 @@ StatusNone(0) → StatusConnected(2) → StatusDisconnect(3) → StatusOffline(4
 
 `daemon` 协程随 `Start()` 启动，每 `Heartbeat`（默认 5s）执行一次 `worker` 扫描，负责检测玩家状态变化和内存回收。定时器会扣除 `worker` 自身耗时，使扫描周期稳定在 `Heartbeat` 而非 `Heartbeat + worker 耗时`。服务关闭时自动执行 `shutdown` 保存所有玩家数据。
 
-`worker` 分两段：**先快照、后迁移**。`ps.Range` 内只做状态判定并把待迁移玩家收进切片，Range 返回、`Manage` 读锁释放之后才逐个执行 `disconnect` / `offline` / `recycling`。原因是后两者要抢玩家锁并触发业务事件（可能再抢其他全局锁），在持有 `Manage` 读锁时等细粒度锁，会把需要 `Manage` 写锁的登录路径整体挡住，批量掉线时形成全局停顿。快照与迁移之间状态变了不要紧——这几个函数内部都用 CAS 二次校验，会安全跳过。
+`worker` 分两段：**先快照、后迁移**。`ps.Range` 内只做状态判定并把待迁移玩家收进切片，Range 返回、`Manage` 读锁释放之后才逐个执行 `disconnect` / `offline` / `recycling` / `released`。原因是后两者要抢玩家锁并触发业务事件（可能再抢其他全局锁），在持有 `Manage` 读锁时等细粒度锁，会把需要 `Manage` 写锁的登录路径整体挡住，批量掉线时形成全局停顿。快照与迁移之间状态变了不要紧——这几个函数内部都用 CAS 二次校验，会安全跳过。
 
 ### 状态流转
 
@@ -69,6 +70,22 @@ Connected ──(ConnectedTime 120s 无心跳)──→ Disconnect    触发 Eve
 
 在此期间玩家随时可以重新连接，状态会跳回 `Connected`。
 
+### 强制下线（Terminate）
+
+`players.Terminate(p)` 把玩家迁入 `StatusTerminated`，这是**拒绝态**——`player.Denied` 会把它和 `StatusLocked` / `StatusReleased` 一起判为拒绝访问，接入层据此拒绝该玩家的一切请求，`Connected()` 也不再让他上线。欠着的 `EventDisconnect` / `EventOffline` 当场按原状态补发（`Connected` 欠两个、`Disconnect` 只欠 `Offline`、`None` / `Offline` 不欠），`worker` 下一个 tick 直接 `released`，**不走 `Disconnect` / `Offline` 的宽限期**。
+
+```text
+任意可上线状态(None/Connected/Disconnect/Offline) ──Terminate──→ Terminated ──(下一个 tick)──→ Released
+```
+
+三个要点：
+
+- **必须用状态，不能只改心跳**。接入层在任何判断之前就会 `KeepAlive` 刷新心跳，只改心跳的话玩家发一个包就把踢人无声撤销了。
+- **必须覆盖所有可上线状态**，不能只踢 `Connected`。`Connected()` 允许从 `None` / `Disconnect` / `Offline` 复活，掉线但仍在内存里的玩家会顶回来。
+- **调用方必须持有玩家锁**，与 `player.Send` 同一契约——补发事件要碰 `Updater`。业务层操作 `c.Player` 时天然满足；踢别人套一层 `Get(uid, func(p){ Terminate(p); return nil })`。不要改成调 `disconnect()`，它内部还会 `p.Lock()` 一次，mutex 不可重入。
+
+`Terminate` 只终结当前会话，释放完成后重新登录是允许的。永久封禁要靠业务侧的落库标记（如 `role.ban`）在登录路径上拦。
+
 ### StatusNone 特殊处理
 
 `StatusNone` 是从未上线的玩家（启动预加载或异步读取到内存），不走 `disconnect → offline` 流程，不触发任何事件。心跳超时后由 `recycling()` 直接将状态设为 `StatusOffline` 并加入回收站。
@@ -86,11 +103,13 @@ Connected ──(ConnectedTime 120s 无心跳)──→ Disconnect    触发 Eve
 
 `MemoryRelease` 同时充当触发余量和单次释放上限——「超出 100 才清理，每次最多清 100」。加上限是因为释放要抢玩家锁，脏玩家还会产生一次 BulkWrite 往返；不限量的话大批量退潮会把 daemon 协程阻塞到秒级，连带拖慢状态机的判定精度。命中上限且仍有积压时会打一条 `logger.Trace`，避免从监控指标上看像是「清不动」。
 
-释放过程：**先取玩家锁**（等待在途业务调用结束）→ CAS 置 `StatusReleased` → `Reset`（重置数据）→ `Destroy`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除 → `Close`（关闭 Syncer）。如果 `Destroy` 失败，状态回退到 `StatusOffline`，下次重试。
+释放过程：CAS 置 `StatusReleased`（接受 `StatusOffline` / `StatusTerminated`）→ 取玩家锁（等待在途业务调用结束）→ `Reset`（重置数据）→ `Destroy`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除 → `Close`（关闭 Syncer）。如果 `Destroy` 失败，状态还原成进来时那个，下次重试。
 
 顺序上有两个约束不能调换：
 
-- **必须持锁才能 `Destroy`**：`Destroy` 会把 `Updater` 置空，不加锁就可能在业务协程执行 `handle` 期间抽走它，对端 `defer Release()` 直接 nil panic。相应地 `Get` 也必须**先判 `StatusReleased` 再 `Reset`**。
+- **必须持锁才能 `Destroy`**：`Destroy` 会把 `Updater` 置空，不加锁就可能在业务协程执行 `handle` 期间抽走它，对端 `defer Release()` 直接 nil panic。相应地 `Get` 也必须**先判 `Denied` 再 `Reset`**。
+- **CAS 放在取锁之前**：状态提前翻成 `StatusReleased`，后来的 `Get` 拿到锁就能立刻按拒绝态返回，不必排队等一把注定用不上的锁；而 `Destroy` 仍在锁内，不会和正在跑的业务协程撞上。
+- **失败时不能硬编码还原成 `StatusOffline`**：`StatusTerminated` 退化成 `Offline` 会被 `Connected()` 复活，踢/封标记就丢了。
 - **`Close` 必须在解锁之后**：actor 模式下 `Syncer.Close` 关的是玩家通道，持锁（通道里挂着栅栏函数）时关闭会让通道 worker 永久阻塞。
 
 ### 优雅关闭

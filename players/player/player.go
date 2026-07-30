@@ -36,6 +36,28 @@ func New(uid string, test bool) *Player {
 	return p
 }
 
+// Player 玩家对象
+//
+// # 加锁契约
+//
+// 除下列方法外,**所有导出方法(含从 *updater.Updater 提升上来的 Add/Sub/Set/Get/Val/
+// Select/Data/Submit/Verify/Document/Collection 等)都必须在持有玩家锁时调用**。
+// 它们会读写 Updater 及其 dataset,而 released() 会在锁内把 Updater 置空:
+// 不持锁轻则读到残值,重则撞上 dataset 里 map 的并发读写 —— 那是 fatal error,
+// recover 拦不住,直接打挂进程。
+//
+// 无需持锁的(只碰不可变字段或原子字段):
+//
+//	Uid / Key                 创建后不再变
+//	Status 相关: Denied / Connected / Terminate
+//	心跳:       Heartbeat / KeepAlive
+//	锁本身:     Lock / Unlock
+//
+// 反过来必须在**锁外**调用的只有 Close —— actor 模式下它关的是玩家通道,
+// 持锁关闭会让通道 worker 永久阻塞。
+//
+// 例外:对象尚未进入 Manage(其他协程拿不到指针)时不必加锁,预加载
+// (players/preload.go)就是先 Loading 再 Store。
 type Player struct {
 	*updater.Updater
 	uid       string
@@ -65,6 +87,12 @@ func (p *Player) initialize() {
 
 // Send 推送消息
 // rp  req |  path
+//
+// 调用方必须持有玩家锁。开头那次状态判定是锁外快筛,后面读 Binder/Gateway 和调 Guid()
+// (要碰 Updater 的 dataset)都没有复查:不持锁时 released() 可能刚好在这中间跑完 Destroy,
+// 读到的是残值,并发改 dataset 更可能撞上 concurrent map read and write 这种 fatal error。
+// 目前调用方都在 players.Get 回调里(context.Send / master.Send),天然满足;
+// 若要从 daemon、定时器或别的玩家协程里推消息,请套 players.Get(uid, func(p){ p.Send(...) })。
 func (p *Player) Send(v any, req values.Metadata) {
 	if atomic.LoadInt32(&p.Status) != StatusConnected {
 		logger.Debug("player disconnected:%s", p.Uid())
@@ -107,11 +135,11 @@ func (p *Player) Loading(test bool) (err error) {
 	if uid := p.Uid(); !uuid.IsValid(uid) {
 		return fmt.Errorf("player uid(%s) is invalid", uid)
 	}
-
 	status := atomic.LoadInt32(&p.Status)
-	if status == StatusLocked || status == StatusReleased {
+	if p.Denied(status) {
 		return fmt.Errorf("player status disable")
 	}
+
 	if !atomic.CompareAndSwapInt32(&p.Status, status, StatusLocked) {
 		return fmt.Errorf("player status change")
 	}

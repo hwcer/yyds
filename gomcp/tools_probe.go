@@ -139,15 +139,22 @@ func playersOnline(ctx context.Context, req *mcp.CallToolRequest, args onlineArg
 	//会 Emit 事件并推进 u.last(影响跨天重置判定),调试工具不该有这种副作用。
 	r := make([]*onlineItem, 0, len(ps))
 	for _, p := range ps {
+		//锁外快筛:Locked 的锁被 Loading 持着(含 DB 读),Released 的锁被 Destroy 持着
+		//(脏玩家含一次 BulkWrite),都可能几十毫秒。先跳过就不必排队等一把注定用不上的锁
+		if p.Denied() {
+			continue
+		}
 		p.Lock()
-		if atomic.LoadInt32(&p.Status) == player.StatusReleased {
+		//锁内复查:等锁期间 released() 可能已经跑完 Destroy,此时读到的是残值
+		status := atomic.LoadInt32(&p.Status)
+		if p.Denied(status) {
 			p.Unlock()
-			continue //已释放,数据已销毁,跳过
+			continue
 		}
 		r = append(r, &onlineItem{
 			Uid:       p.Uid(),
 			Guid:      p.Guid(),
-			Status:    atomic.LoadInt32(&p.Status),
+			Status:    status,
 			Connected: p.Connected(),
 			Gateway:   p.Gateway,
 			Login:     unix(p.Login),

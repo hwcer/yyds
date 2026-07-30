@@ -37,8 +37,8 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	}
 	p.Lock()
 	defer p.Unlock()
-	//必须先判状态再 Reset:released 会在持锁期间把 Updater 置空,拿到锁时可能已经被释放
-	if atomic.LoadInt32(&p.Status) == player.StatusReleased {
+	//必须先判状态再 Reset:拿到锁时可能已经被 released 销毁
+	if p.Denied(atomic.LoadInt32(&p.Status)) {
 		return errors.ErrNotOnline
 	}
 	p.Reset()

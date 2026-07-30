@@ -117,26 +117,25 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		if p.Error != nil {
 			return p.Error
 		}
+		//Status 是无锁 CAS 状态机(disconnect/offline/recycling 的 CAS 都在玩家锁之外),
+		//持有玩家锁也不能裸读;只读一次存局部变量,两次读之间 daemon 可能已经翻了状态
+		status := atomic.LoadInt32(&p.Status)
+		//拒绝态必须在 KeepAlive 之前判,否则刷新心跳会把踢下线无声撤销
+		if p.Denied(status) {
+			return errors.ErrLoginAgain
+		}
 		c.Player = p
 		c.Player.KeepAlive(c.Unix())
 		meta := c.Metadata()
-		//Status 是无锁 CAS 状态机(disconnect/offline/recycling 的 CAS 都在玩家锁之外),
-		//持有玩家锁也不能裸读,必须原子读且只读一次:两次读之间 daemon 可能已经翻了状态
-		switch status := atomic.LoadInt32(&p.Status); {
-		case status == player.StatusReleased || status == player.StatusLocked:
-			//资源已释放/正在加载,不可再服务任何请求,让客户端重新登录
-			return errors.ErrLoginAgain
-		case status != player.StatusConnected:
+		if status != player.StatusConnected {
 			//尝试重新上线,具体的状态判定在 Connected 内部用 CAS 完成
 			if e := players.Connected(p, meta); e != nil {
 				return e
 			}
-		default:
+		} else if gate := meta.GetUint64(gwcfg.ServiceMetadataGateway); gate != p.Gateway {
 			//已在线:逐请求校验网关,拦住被顶号后仍在发包的旧连接
 			//(不能合并进 Connected —— 它对异网关是 EventReplace 顶号接受,语义相反)
-			if gate := meta.GetUint64(gwcfg.ServiceMetadataGateway); gate != p.Gateway {
-				return errors.ErrReplaced
-			}
+			return errors.ErrReplaced
 		}
 		if options.Setting.Renewal != "" && c.Player.Login < times.Daily(0).Now().Unix() && path != options.Setting.Renewal {
 			return errors.ErrNeedResetSession

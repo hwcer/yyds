@@ -36,7 +36,7 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	}
 	return invoke(p, func() error {
 		//状态判定必须在通道内、Reset 之前:released 会在通道内把 Updater 置空
-		if atomic.LoadInt32(&p.Status) == player.StatusReleased {
+		if p.Denied(atomic.LoadInt32(&p.Status)) {
 			return errors.ErrNotOnline
 		}
 		p.Reset()
@@ -50,7 +50,7 @@ func (this *Players) Load(uid string, test bool, handle player.Handle) error {
 	r := newPlayer(uid, test)
 	if i, loaded := this.Manage.LoadOrStore(r.Key(), r); loaded {
 		r = i
-		if atomic.LoadInt32(&r.Status) == player.StatusReleased {
+		if r.Denied(atomic.LoadInt32(&r.Status)) {
 			return errors.ErrLoginWaiting
 		}
 	}

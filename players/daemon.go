@@ -19,6 +19,11 @@ import (
 // Connected 连线，不包括断线重连等
 func Connected(p *player.Player, meta values.Metadata) (err error) {
 	status := atomic.LoadInt32(&p.Status)
+	//拒绝态一律不许上线。下面的 else 本来也会挡住,这里显式判一次,新增拒绝态时不会漏
+	if p.Denied(status) {
+		return errors.ErrLoginWaiting
+	}
+
 	gateway := uint64(meta.GetInt64(gwcfg.ServiceMetadataGateway))
 	if gateway == 0 {
 		return errors.New("gateway is empty")
@@ -112,22 +117,25 @@ func recycling(p *player.Player) {
 	}
 }
 
-// released 释放用户实例
-// 必须先拿玩家锁再翻状态:否则业务协程可能已经通过状态检查、正在 handle 里跑,
-// 这边把 Updater 置空,对端 defer Release() 直接 nil panic
+// released 释放用户实例,接受 StatusOffline / StatusTerminated
+//
+// 先 CAS 翻状态再抢玩家锁:翻早一点能让新来的 Get 立刻按拒绝态返回而不必排队等锁,
+// 而 Destroy 置空 Updater 仍然在锁内,不会与正在 handle 里跑的业务协程撞上
 func released(p *player.Player) (ok bool) {
-	if atomic.LoadInt32(&p.Status) != player.StatusOffline {
+	status := atomic.LoadInt32(&p.Status)
+	if status != player.StatusOffline && status != player.StatusTerminated {
 		return false
 	}
 	//加锁等待在途业务调用结束,拿到锁后再 CAS,使状态翻转与 Get/Load 的状态检查互斥
-	p.Lock()
-	if !atomic.CompareAndSwapInt32(&p.Status, player.StatusOffline, player.StatusReleased) {
-		p.Unlock()
+	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusReleased) {
 		return false
 	}
+
+	//不能用 defer:成功路径要在解锁之后才能 Delete/Close(Close 关 Syncer 必须在锁外)
+	p.Lock()
 	p.Reset()
 	if err := p.Destroy(); err != nil {
-		atomic.StoreInt32(&p.Status, player.StatusOffline)
+		atomic.StoreInt32(&p.Status, status) //还原成进来时的状态,Terminated 不能退化成 Offline 被复活
 		p.Unlock()
 		logger.Alert("Players.release uid:%v,err:%v", p.Uid(), err)
 		return false
@@ -157,7 +165,7 @@ func worker() {
 	//Range 持有 Manage 读锁,而 disconnect/offline 要抢玩家锁并触发业务事件(可能再抢其他全局锁),
 	//持全局读锁等细粒度锁会把登录路径(Manage 写锁)整体挡住,批量掉线时形成全局停顿
 	var tot int32
-	var down, off, recy []*player.Player
+	var down, off, recy, terminate []*player.Player
 	ps.Range(func(_ string, p *player.Player) bool {
 		tot += 1
 		switch atomic.LoadInt32(&p.Status) {
@@ -173,12 +181,15 @@ func worker() {
 			if p.Heartbeat() < disconnectTime {
 				off = append(off, p)
 			}
+		case player.StatusTerminated:
+			terminate = append(terminate, p) //踢下线不等超时
+		default:
 		}
 		return true
 	})
 	playersMemory.Store(tot)
 
-	//以下均已脱离 Manage 读锁;三者内部都用 CAS 二次校验状态,快照期间状态变了会被安全跳过
+	//以下均已脱离 Manage 读锁;各函数内部都用 CAS 二次校验状态,快照期间状态变了会被安全跳过
 	for _, p := range down {
 		if disconnect(p) {
 			logger.Debug("Players.Disconnect uid:%v", p.Uid())
@@ -191,6 +202,11 @@ func worker() {
 	}
 	for _, p := range recy {
 		recycling(p)
+	}
+	for _, p := range terminate {
+		if released(p) {
+			logger.Debug("Players.Terminated uid:%v", p.Uid())
+		}
 	}
 	ct := tot
 	recyclingCount := len(playersRecycling)
