@@ -36,8 +36,8 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 		}
 	}()
 
-	if ip := meta.GetString(gwcfg.ServiceMetadataClientIp); ip != "" {
-		p.ClientIp = ip
+	if ip := meta.GetString(gwcfg.ServiceMetadataAddress); ip != "" {
+		p.Address = ip
 	}
 
 	oldGateway := p.Gateway

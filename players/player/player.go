@@ -73,7 +73,7 @@ type Player struct {
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
-	ClientIp  string           //客户端IP
+	Address   string           //客户端地址(ip)
 }
 
 func (p *Player) initialize() {
