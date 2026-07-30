@@ -81,6 +81,14 @@ func (m *master) Post(api MasterApiType, args interface{}, reply interface{}) (e
 	if msg.Code != 0 {
 		return msg
 	}
+	//reply 是 *values.Message 时直接整体交出去,不在这一层解析 Data。
+	//给的是调用方自行决定怎么解的余地:master 各接口回包格式并不统一
+	//(同一个接口老版本回 true、新版本回对象),塞进固定结构会解析失败,
+	//而 Data 此时是 json.RawMessage,调用方拿到后再 Unmarshal 到自己的类型即可
+	if v, ok := reply.(*values.Message); ok {
+		*v = *msg
+		return
+	}
 	if reply != nil {
 		err = msg.Unmarshal(reply)
 	}

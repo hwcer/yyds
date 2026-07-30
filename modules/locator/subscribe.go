@@ -90,7 +90,7 @@ func subscribe() error {
 
 	//Connect 失败会一直重试并阻塞,不能拖住 locator 启动
 	go func() {
-		if err := emitter.Start(); err != nil {
+		if err = emitter.Start(); err != nil {
 			logger.Alert("订阅 master 事件总线失败:%v,address:%v", err, model.Options.Pubsub)
 		} else {
 			logger.Trace("已订阅 master 事件总线:%v,appid:%v", model.Options.Pubsub, options.Options.Appid)

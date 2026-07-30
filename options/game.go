@@ -1,8 +1,8 @@
 package options
 
-import "github.com/hwcer/cosgo/values"
-
-var Game = &game{Values: values.Values{}}
+// Creatable 默认 true:新服开出来就该能创角;Maintain 零值 false 即正常提供服务。
+// 配置里没写这两个键时 mapstructure 不会清零,预设值得以保留
+var Game = &game{Creatable: true}
 
 type game = struct {
 	Sid     int32  `json:"sid"`
@@ -13,8 +13,10 @@ type game = struct {
 	Redis   string `json:"redis"`   //排行榜
 	Mongodb string `json:"mongodb"` //数据库
 	Address string `json:"address"` //网关地址
-	//扩展参数,业务层自定义键名。本地可在 config.toml 的 [game.values] 中配置,
-	//向 master 上报启动(/server/start)后,master 下发的同名键会覆盖本地值。
-	Values values.Values `json:"values"`
+	//运营开关的初值,启动时(向 master 上报之前)灌进 players。
+	//运行期由 master 推送或 GM 指令改,改的是 players 里的原子量,不回写这里 ——
+	//这里只是"开机默认值",不是运行期的权威值,别拿它当状态读
+	Maintain  bool `json:"maintain"`  //是否以维护状态启动
+	Creatable bool `json:"creatable"` //是否允许创建新角色
 	//Developer bool   `json:"developer"`
 }

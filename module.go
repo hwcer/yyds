@@ -1,7 +1,6 @@
 package yyds
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -35,7 +34,27 @@ func New() *Module {
 	return mod
 }
 
+// ServerStartHandle master /server/start 回包处理器,业务层赋值给 Module.ServerStartHandle
+//
+// master 在启动上报的回包里下发本服的权威运营状态(可见性、维护、是否开放注册等),
+// 业务层用它覆盖 [game] 里配的开机默认值 —— 启动路径上只此一次往返,
+// 不必再单独拉一次 /server/info。
+//
+// 回包不在框架层解析,原样递过去,业务层 reply.Unmarshal(&v) 解到自己的结构即可:
+// 字段是业务概念,yyds 不该认识它们。两件事业务层必须自己扛:
+//   - 回包格式历来不统一(老版本 master 回的是 true),Unmarshal 失败属正常情况,
+//     应当降级为沿用配置默认值而不是让启动失败;
+//   - 回包可能没有 data(msg 只有 code),此时 Unmarshal 不报错、目标结构保持零值,
+//     直接拿去覆盖开关就会把默认值抹成零 —— 业务层要按自己的字段(如 sid)校验有效性。
+//
+// 时机:Module.Init 内、开机默认值已灌进 players 之后,早于 players.Start,
+// 因此回调里改运营开关不会有"按默认值裸奔"的窗口。回调返回 error 会中断启动。
+// master 未配置或上报失败时不触发,业务层保持 [game] 的默认值。
+
+type ServerStartHandle func(*values.Message) error
+
 type Module struct {
+	ServerStartHandle ServerStartHandle
 }
 
 func (this *Module) Id() string {
@@ -84,6 +103,12 @@ func (this *Module) Init() (err error) {
 		logger.Alert("游戏服务器网关地址为空,客户端无法通过游戏平台获取游戏服务器地址")
 	}
 
+	//运营开关先按本地配置置位,再向 master 上报 —— 上报可能失败、也可能耗时,
+	//这期间开关必须已经是确定值,否则会有一段"按零值裸奔"的窗口。
+	//master 的权威值随上报回包一起下来,由业务层在 ServerStartHandle 里覆盖
+	players.Maintain(options.Game.Maintain)
+	players.Creatable(options.Game.Creatable)
+
 	args := map[string]any{
 		"sid":     options.Game.Sid,
 		"name":    options.Game.Name,
@@ -91,23 +116,21 @@ func (this *Module) Init() (err error) {
 		"address": options.Game.Address,
 	}
 
-	//reply 用 RawMessage 接收:老版本 master 回的是 true,此处不能因为格式不符导致启动失败
-	var reply json.RawMessage
-	if err = options.Master.Post(options.MasterApiTypeGameServerStart, args, &reply); err != nil {
+	//回包在这一层不解析:老版本 master 回的是 true,新版本回的是服务器状态对象,
+	//格式不统一,用 *values.Message 原样兜住再交给业务层(见 OnServerStart)。
+	//原先把回包 merge 进 options.Game.Values 那套已移除:那是个普通 map,
+	//master 推送写与玩家请求读并发访问会直接触发 Go 的并发读写 fatal,
+	//而它承载的两个开关(维护/是否开放注册)现在都由 players 提供并发安全的接口
+	reply := &values.Message{}
+	if err = options.Master.Post(options.MasterApiTypeGameServerStart, args, reply); err != nil {
 		if errors.Is(err, errors.ErrMasterEmpty) {
 			logger.Alert("配置项[master]为空,部分功能无法使用")
 		} else {
 			return fmt.Errorf("%s，当前回调地址:%v", err.Error(), args["local"])
 		}
-	} else if len(reply) > 0 {
-		vs := values.Values{}
-		if e := json.Unmarshal(reply, &vs); e != nil {
-			logger.Alert("master 下发的服务器参数格式无法识别,已忽略:%v", string(reply))
-		} else if len(vs) > 0 {
-			if options.Game.Values == nil {
-				options.Game.Values = values.Values{}
-			}
-			options.Game.Values.Merge(vs, true) //master 下发的同名键覆盖本地配置
+	} else if this.ServerStartHandle != nil {
+		if err = this.ServerStartHandle(reply); err != nil {
+			return err
 		}
 	}
 	//设置游戏Metadata

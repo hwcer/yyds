@@ -32,9 +32,10 @@ func registerProbe(s *mcp.Server) {
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name: "server_maintain",
-		Description: "查询或切换服务器维护状态。不传 enable 只查询;传 true 进入维护、false 解除。" +
-			"维护期间所有客户端请求一律被拒(错误码 server maintain),内网 RPC 与本调试服务不受影响。" +
-			"这是会影响线上所有玩家的开关,确认清楚再传 enable。",
+		Description: "查询或切换服务器运营开关(维护 / 是否开放创角)。两个参数都不传则只查询。" +
+			"维护期间所有客户端请求一律被拒(错误码 server maintain),内网 RPC 与本调试服务不受影响;" +
+			"创角开关只影响新角色创建,老角色照常登录。" +
+			"这是会影响线上所有玩家的开关,确认清楚再传参。",
 	}, serverMaintain)
 
 	mcp.AddTool(s, &mcp.Tool{
@@ -112,12 +113,16 @@ func serverStatus(ctx context.Context, req *mcp.CallToolRequest, args statusArgs
 // ------------------------------------------------------------------ server_maintain
 
 type maintainArgs struct {
-	Enable *bool `json:"enable,omitempty" jsonschema:"true 进入维护,false 解除维护;不传则只查询当前状态"`
+	Enable    *bool `json:"enable,omitempty" jsonschema:"维护开关:true 进入维护,false 解除;不传则不改"`
+	Creatable *bool `json:"creatable,omitempty" jsonschema:"创角开关(是否开放注册):true 开放,false 关闭;不传则不改"`
 }
 
 func serverMaintain(ctx context.Context, req *mcp.CallToolRequest, args maintainArgs) (*mcp.CallToolResult, any, error) {
 	if args.Enable != nil {
 		players.Maintain(*args.Enable)
+	}
+	if args.Creatable != nil {
+		players.Creatable(*args.Creatable)
 	}
 	return jsonResult(serviceState())
 }
@@ -125,8 +130,9 @@ func serverMaintain(ctx context.Context, req *mcp.CallToolRequest, args maintain
 // serviceState 服务器可服务性快照,server_status 与 server_maintain 共用
 func serviceState() map[string]any {
 	r := map[string]any{
-		"started":  players.Started(),
-		"maintain": players.Maintained(),
+		"started":   players.Started(),
+		"maintain":  players.Maintain(),
+		"creatable": players.Creatable(),
 	}
 	if err := players.Serviceable(); err != nil {
 		r["serviceable"] = false
