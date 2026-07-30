@@ -26,6 +26,7 @@ var (
 	ErrNeedGameMaster   = values.Errorf(13, "GM permission is required") //需要GM权限
 	ErrNotOnline        = values.Errorf(14, "user not online")           //不在线
 	ErrServerClosed     = values.Errorf(15, "server closed")
+	ErrServerMaintain   = values.Errorf(16, "server maintain") //服务器维护中,由业务层置位
 
 	ErrLoginAgain    = values.Errorf(101, "please login again") //需要重新登录
 	ErrLoginDisabled = values.Errorf(102, "disabled")           //账号禁用

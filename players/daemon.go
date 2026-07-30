@@ -264,7 +264,8 @@ func daemon(ctx context.Context) {
 }
 
 func shutdown() {
-	if !atomic.CompareAndSwapInt32(&playersStarted, 1, 0) {
+	//翻状态兼作幂等守卫:停服后 Serviceable 即刻拒绝一切请求,重复调用直接返回
+	if !playersState.CompareAndSwap(stateRunning, stateStopped) {
 		return
 	}
 	logger.Alert("收到退出信号，正在保存所有玩家数据")

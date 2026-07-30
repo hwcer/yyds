@@ -46,6 +46,12 @@ func (this *Context) Async(ctx context.Context, servicePath, serviceMethod strin
 	return client.Async(ctx, servicePath, serviceMethod, args)
 }
 
+// AsyncWithPlayer 按 uid 路由到对应游戏服异步调用
+//
+// 两个隐含约束:
+//   - 用的是 context.Background(),**不继承本次请求的 ctx**,取消与超时都传不下去
+//   - metadata 只带 ServerId,不带 UID/GUID,所以目标服拿到的请求没有玩家身份,
+//     只能调 OAuthTypeNone 级别的接口
 func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any) (call *client.Caller, err error) {
 	u := &uuid.UUID{}
 	if err = u.Parse(uid, uuid.BaseSize); err != nil {
@@ -58,24 +64,37 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 }
 
 // Send 推送消息，必须长连接在线
+//
+// 有 Player 时交给 player.Send(它自己校验在线状态/网关/Binder/GUID);
+// 没有 Player 时(未选角的接口)在这里手工组装,校验项与 player.Send 保持一致 ——
+// 两条路径下发的 metadata 和失败时的可观测性必须一样,否则线上只有一条路会出问题、
+// 另一条却查不出来。
 func (this *Context) Send(path string, v any, req values.Metadata) {
 	req = this.NewSender(path, req)
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return
 	}
-	if _, ok := req[gwcfg.ServiceMetadataGUID]; !ok {
-		req[gwcfg.ServiceMetadataGUID] = this.GUid()
+	//网关按 GUID 或 SocketId 定位会话,两者都空就投递不出去 ——
+	//必须在这里拦掉而不是发出去等它静默丢弃
+	guid, ok := req[gwcfg.ServiceMetadataGUID]
+	if !ok {
+		if guid = this.GUid(); guid != "" {
+			req[gwcfg.ServiceMetadataGUID] = guid
+		}
 	}
-
+	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
+		logger.Alert("消息推送失败,GUID 与 SocketId 均为空,path:%v", path)
+		return
+	}
 	gateway := this.Gateway()
 	if gateway == "" {
-		logger.Alert("gateway is nil")
+		logger.Alert("消息推送失败,网关地址为空,guid:%v,path:%v", guid, path)
 		return
 	}
 	req.Set(selector.MetaDataAddress, gateway)
-	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, "send", v, nil); err != nil {
-		logger.Error(err)
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, gwcfg.MessageSend, v, nil); err != nil {
+		logger.Error("消息推送失败,guid:%v,path:%v,err:%v", guid, path, err)
 	}
 }
 

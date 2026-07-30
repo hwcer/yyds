@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 
 	"github.com/hwcer/cosgo/scc"
-	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/actor"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/locker"
@@ -15,7 +14,6 @@ import (
 var (
 	playersOnline    atomic.Int32 //在线人数
 	playersMemory    atomic.Int32 //当前缓存总量(含离线未释放),daemon 每 tick 刷新
-	playersStarted   int32
 	playersRecycling map[string]*player.Player
 )
 
@@ -23,7 +21,7 @@ var ps Players
 var newSyncer func() player.Syncer
 
 func Start() error {
-	if !atomic.CompareAndSwapInt32(&playersStarted, 0, 1) {
+	if !playersState.CompareAndSwap(stateStopped, stateRunning) {
 		return nil
 	}
 	if Options.AsyncModel == AsyncModelLocker {
@@ -101,8 +99,8 @@ func Terminate(p *player.Player) bool {
 // Get 获取在线玩家, 注意返回NIL时,加锁失败或者玩家未登录,已经对Player加锁
 // 不进行初始化，数据按需模式读写
 func Get(uid string, handle player.Handle) error {
-	if playersStarted == 0 {
-		return errors.ErrServerClosed
+	if err := available(); err != nil {
+		return err
 	}
 	return ps.Get(uid, handle)
 }
@@ -110,8 +108,8 @@ func Get(uid string, handle player.Handle) error {
 // Load 加载玩家数据,如果不在线则实时读写数据库
 // init 是否立即初始化所有数据
 func Load(uid string, handle player.Handle) (err error) {
-	if playersStarted == 0 {
-		return errors.ErrServerClosed
+	if err := available(); err != nil {
+		return err
 	}
 	return ps.Load(uid, false, handle)
 }
@@ -119,8 +117,8 @@ func Load(uid string, handle player.Handle) (err error) {
 // Login 登录成功,只能在登录时调用
 // test 为 true 时以测试模式登录（不写库）
 func Login(uid string, test bool, meta map[string]string, handle player.Handle) (err error) {
-	if playersStarted == 0 {
-		return errors.ErrServerClosed
+	if err := available(); err != nil {
+		return err
 	}
 	err = ps.Load(uid, test, func(p *player.Player) error {
 		if e := Connected(p, meta); e != nil {
@@ -132,8 +130,8 @@ func Login(uid string, test bool, meta map[string]string, handle player.Handle) 
 }
 
 func Locker(self string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
-	if playersStarted == 0 {
-		return nil, errors.ErrServerClosed
+	if err := available(); err != nil {
+		return nil, err
 	}
 	return ps.Locker(self, uid, args, handle, done...)
 }

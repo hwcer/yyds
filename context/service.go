@@ -87,6 +87,14 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		return c.handle(node) //内网通信不启用玩家数据
 	}
 
+	//到这里说明是客户端请求(内网 RPC 已在上面 return),先判服务器能否提供服务:
+	//未启动/正在关闭 -> ErrServerClosed,维护中 -> ErrServerMaintain。
+	//一律拒绝而不是放进业务里 —— 关闭过程中放进来的请求会一边加载玩家、一边被
+	//shutdown 释放掉。内网 RPC 不做此判断,否则维护一开就没法再关掉了
+	if err = players.Serviceable(); err != nil {
+		return err, nil
+	}
+
 	path = gwcfg.TrimServiceMethod(path)
 	auth := c.Permission()
 

@@ -10,7 +10,21 @@ import (
 )
 
 // GetPlayer 操作其他玩家
-func (this *Context) GetPlayer(uid string, init bool, handle player.Handle) (err error) {
+//
+// 目标就是自己时直接回调,不做任何锁操作。
+//
+// 目标是别人时,**会先把自己这一侧结清并让出锁**再去锁对方,这是防死锁的关键:
+// 两个请求互相操作对方时,若各自攥着自己的锁去抢对方的,就是标准的 ABBA。
+// 让出前必须 Submit,否则本次请求已产生的改动会丢;产生的 Operator 转存进 Dirty,
+// 等回到自己这边时随回包一起下发。
+//
+// 代价是一次 GetPlayer 会让自己的 Updater 走完整的 Submit → Release → Reset 周期:
+// **中途会真的提交一次数据库**,并重新 Emit EventTypeReset。调用方要清楚这一点 ——
+// 它不是一次轻量的"顺便看一眼别人"。
+//
+// defer 里 p.Lock() 之后**故意不解锁**:锁要还给调用方,handler 后续还要继续用
+// c.Player,由最外层的 players.Get 统一释放。
+func (this *Context) GetPlayer(uid string, handle player.Handle) (err error) {
 	if this.Player != nil && this.Player.Uid() == uid {
 		return handle(this.Player)
 	}

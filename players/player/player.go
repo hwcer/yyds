@@ -114,9 +114,11 @@ func (p *Player) Send(v any, req values.Metadata) {
 		return
 	}
 
+	//网关按 GUID 或 SocketId 定位会话,两者都空才是真的投不出去。
+	//Guid 取不到通常意味着角色数据不可读(见 Guid 的说明),但只要请求带了 SocketId 仍能投递
 	guid := p.Guid()
-	if guid == "" {
-		logger.Debug("player gateway empty:%s", p.Uid())
+	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
+		logger.Debug("player guid empty and no socket id:%s", p.Uid())
 		return
 	}
 	if _, ok := req[binder.HeaderContentType]; !ok {
@@ -124,8 +126,13 @@ func (p *Player) Send(v any, req values.Metadata) {
 	}
 	req.Set(selector.MetaDataAddress, utils.IPv4Decode(p.Gateway))
 	req.Set(gwcfg.ServiceMetadataUID, p.uid)
-	req.Set(gwcfg.ServiceMetadataGUID, guid)
-	_ = client.CallWithMetadata(req, nil, gwcfg.ServiceName, gwcfg.MessageSend, v, nil)
+	if guid != "" {
+		req.Set(gwcfg.ServiceMetadataGUID, guid) //空值别写进去,免得网关拿它当有效标识
+	}
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, gwcfg.MessageSend, v, nil); err != nil {
+		//不能吞掉:推送失败在客户端表现为"没收到",服务端不留痕就完全查不出来
+		logger.Error("消息推送失败,uid:%v,guid:%v,path:%v,err:%v", p.uid, guid, req[gwcfg.ServiceMessagePath], err)
+	}
 }
 
 // Loading 加载数据

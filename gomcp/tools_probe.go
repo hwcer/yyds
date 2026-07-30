@@ -24,9 +24,18 @@ import (
 
 func registerProbe(s *mcp.Server) {
 	mcp.AddTool(s, &mcp.Tool{
-		Name:        "server_status",
-		Description: "获取游戏服务器运行状态:服务器编号/名称/网关地址/开服时间/在线人数/内存玩家数/进程信息。online 是连线中(StatusConnected)人数,memory 是内存里的玩家对象总数(含掉线未释放的缓存)。排查任何问题的第一跳。",
+		Name: "server_status",
+		Description: "获取游戏服务器运行状态:服务器编号/名称/网关地址/开服时间/在线人数/内存玩家数/可服务性/进程信息。" +
+			"online 是连线中(StatusConnected)人数,memory 是内存里的玩家对象总数(含掉线未释放的缓存)," +
+			"service.serviceable 为 false 时客户端请求会被一律拒绝(见 reason)。排查任何问题的第一跳。",
 	}, serverStatus)
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name: "server_maintain",
+		Description: "查询或切换服务器维护状态。不传 enable 只查询;传 true 进入维护、false 解除。" +
+			"维护期间所有客户端请求一律被拒(错误码 server maintain),内网 RPC 与本调试服务不受影响。" +
+			"这是会影响线上所有玩家的开关,确认清楚再传 enable。",
+	}, serverMaintain)
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "players_online",
@@ -64,19 +73,20 @@ func registerProbe(s *mcp.Server) {
 type statusArgs struct{}
 
 type statusReply struct {
-	Sid        int32  `json:"sid"`
-	Name       string `json:"name"`
-	Local      string `json:"local"`
-	Address    string `json:"address"`
-	OpenTime   string `json:"openTime"`
-	ServerTime string `json:"serverTime"`
-	Online     int32  `json:"online"`
-	Memory     int32  `json:"memory"`
-	Version    string `json:"version"`
-	Debug      bool   `json:"debug"`
-	Pid        int    `json:"pid"`
-	Goroutine  int    `json:"goroutine"`
-	GoVersion  string `json:"goVersion"`
+	Sid        int32          `json:"sid"`
+	Name       string         `json:"name"`
+	Local      string         `json:"local"`
+	Address    string         `json:"address"`
+	OpenTime   string         `json:"openTime"`
+	ServerTime string         `json:"serverTime"`
+	Online     int32          `json:"online"`
+	Memory     int32          `json:"memory"`
+	Service    map[string]any `json:"service"` //可服务性:started/maintain/serviceable
+	Version    string         `json:"version"`
+	Debug      bool           `json:"debug"`
+	Pid        int            `json:"pid"`
+	Goroutine  int            `json:"goroutine"`
+	GoVersion  string         `json:"goVersion"`
 }
 
 func serverStatus(ctx context.Context, req *mcp.CallToolRequest, args statusArgs) (*mcp.CallToolResult, any, error) {
@@ -89,6 +99,7 @@ func serverStatus(ctx context.Context, req *mcp.CallToolRequest, args statusArgs
 		ServerTime: times.Format(),
 		Online:     players.Online(),
 		Memory:     players.Memory(),
+		Service:    serviceState(),
 		Version:    cosgo.Version,
 		Debug:      cosgo.Debug(),
 		Pid:        os.Getpid(),
@@ -96,6 +107,34 @@ func serverStatus(ctx context.Context, req *mcp.CallToolRequest, args statusArgs
 		GoVersion:  runtime.Version(),
 	}
 	return jsonResult(r)
+}
+
+// ------------------------------------------------------------------ server_maintain
+
+type maintainArgs struct {
+	Enable *bool `json:"enable,omitempty" jsonschema:"true 进入维护,false 解除维护;不传则只查询当前状态"`
+}
+
+func serverMaintain(ctx context.Context, req *mcp.CallToolRequest, args maintainArgs) (*mcp.CallToolResult, any, error) {
+	if args.Enable != nil {
+		players.Maintain(*args.Enable)
+	}
+	return jsonResult(serviceState())
+}
+
+// serviceState 服务器可服务性快照,server_status 与 server_maintain 共用
+func serviceState() map[string]any {
+	r := map[string]any{
+		"started":  players.Started(),
+		"maintain": players.Maintained(),
+	}
+	if err := players.Serviceable(); err != nil {
+		r["serviceable"] = false
+		r["reason"] = err.Error()
+	} else {
+		r["serviceable"] = true
+	}
+	return r
 }
 
 // ------------------------------------------------------------------ players_online
