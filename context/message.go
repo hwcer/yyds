@@ -13,17 +13,17 @@ type Message struct {
 	Notify values.Byte          `json:"notify,omitempty"` //消息通知
 }
 
-func Error(err interface{}, args ...interface{}) *Message {
+func Error(err any, args ...any) *Message {
 	return Errorf(0, err, args...)
 }
 
-func Errorf(code int32, err interface{}, args ...interface{}) *Message {
+func Errorf(code int32, err any, args ...any) *Message {
 	msg := &Message{}
 	msg.Message = values.Errorf(code, err, args...)
 	return msg
 }
 
-func Parse(v interface{}) *Message {
+func Parse(v any) *Message {
 	if r, ok := v.(*Message); ok {
 		return r
 	}

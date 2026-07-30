@@ -91,15 +91,12 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	//未启动/正在关闭 -> ErrServerClosed,维护中 -> ErrServerMaintain。
 	//一律拒绝而不是放进业务里 —— 关闭过程中放进来的请求会一边加载玩家、一边被
 	//shutdown 释放掉。内网 RPC 不做此判断,否则维护一开就没法再关掉了
+	//这里不做 developer 放行:网关只在 OAuth(账号登录)阶段往 metadata 里塞
+	//ServiceMetadataDeveloper,Player(已选角)这一级根本不带,而绝大多数游戏接口都走后者 ——
+	//按 metadata 判开发者对日常请求恒为假,是死逻辑。真要维护期间留后门,
+	//得走内网 RPC(不经过本函数)或另加显式标记,别拿 dev 凑合
 	if err = players.Serviceable(); err != nil {
-		//维护期间放行 developer:维护往往就是为了让开发者进去验证
-		//(网关自带的那道闸 gwcfg.Options.Maintenance 也是同样的策略)。
-		//关服(ErrServerClosed)则谁都不放 —— 那时玩家表正在被 shutdown 拆掉,放谁进来都是错的
-		if !errors.Is(err, errors.ErrServerMaintain) || c.Metadata().GetInt32(gwcfg.ServiceMetadataDeveloper) <= 0 {
-			//必须走 Serialize 把错误码打进回包,不能像下面业务错误那样直接 return err ——
-			//那样返回的是裸 error 对象,没经过序列化,客户端拿不到 code,只会退化成默认错误码
-			return Serialize(c, Error(err))
-		}
+		return c.reject(err)
 	}
 
 	path = gwcfg.TrimServiceMethod(path)
@@ -112,14 +109,14 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	}
 	if auth == gwcfg.OAuthTypeOAuth {
 		if guid := c.GetMetadata(gwcfg.ServiceMetadataGUID); guid == "" {
-			return nil, errors.ErrLogin
+			return c.reject(errors.ErrLogin)
 		}
 		return c.handle(node)
 	}
 
 	uid := c.Uid()
 	if uid == "" {
-		return nil, errors.ErrNotSelectRole
+		return c.reject(errors.ErrNotSelectRole)
 	}
 	if auth == gwcfg.OAuthTypeSelect {
 		return c.handle(node)
@@ -175,8 +172,9 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		return err
 	})
 	if err != nil {
-		// 业务错误作为 reply 返回，避免触发 RPC 系统级错误
-		return err, nil
+		//全是"请求没进 handler 就被拒"的情况:ErrLogin / 拒绝态 / Connected 失败 /
+		//ErrReplaced(顶号) / ErrNeedResetSession(跨天) 以及 players.Get 自身的错误
+		return c.reject(err)
 	}
 	c.Player = nil
 	if c.Next != nil {
@@ -184,6 +182,20 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	}
 
 	return
+}
+
+// reject 统一处理 handlerCaller 里的早退(请求还没进 handler 就被拒)
+//
+// 必须在这里就把错误序列化成回包,两种想当然的写法都不行:
+//
+//	return nil, err  错误落在 RPC 的 error 槽,会被当成系统级错误,客户端收不到业务码
+//	return err, nil  裸 error 对象没经过 Serialize —— 而 Serialize 才是把 code 打进
+//	                 协议回包(如 S2CConfirm)的地方,客户端按协议解就只能得到默认错误码
+//
+// 实测:维护拦截用 return err, nil 时客户端收到的是默认码,改走 Serialize 才拿到真实码。
+// 新增早退分支一律用本方法,别再自己拼返回值。
+func (c *Context) reject(err error) (any, error) {
+	return Serialize(c, Error(err))
 }
 
 func serializeDefault(c *Context, r *Message) ([]byte, error) {
@@ -207,9 +219,9 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 		}
 	}()
 
-	var v interface{}
+	var v any
 	if node.IsFunc() {
-		m := node.Method().(func(*Context) interface{})
+		m := node.Method().(func(*Context) any)
 		v = m(c)
 	} else if s, ok := node.Binder().(filterCaller); ok {
 		v = s.Caller(node, c)
