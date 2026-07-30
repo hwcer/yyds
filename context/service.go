@@ -92,7 +92,14 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 	//一律拒绝而不是放进业务里 —— 关闭过程中放进来的请求会一边加载玩家、一边被
 	//shutdown 释放掉。内网 RPC 不做此判断,否则维护一开就没法再关掉了
 	if err = players.Serviceable(); err != nil {
-		return err, nil
+		//维护期间放行 developer:维护往往就是为了让开发者进去验证
+		//(网关自带的那道闸 gwcfg.Options.Maintenance 也是同样的策略)。
+		//关服(ErrServerClosed)则谁都不放 —— 那时玩家表正在被 shutdown 拆掉,放谁进来都是错的
+		if !errors.Is(err, errors.ErrServerMaintain) || c.Metadata().GetInt32(gwcfg.ServiceMetadataDeveloper) <= 0 {
+			//必须走 Serialize 把错误码打进回包,不能像下面业务错误那样直接 return err ——
+			//那样返回的是裸 error 对象,没经过序列化,客户端拿不到 code,只会退化成默认错误码
+			return Serialize(c, Error(err))
+		}
 	}
 
 	path = gwcfg.TrimServiceMethod(path)
