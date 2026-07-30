@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/hwcer/cosgo"
@@ -128,7 +129,7 @@ func playersOnline(ctx context.Context, req *mcp.CallToolRequest, args onlineArg
 		r = append(r, &onlineItem{
 			Uid:       p.Uid(),
 			Guid:      p.Guid(),
-			Status:    p.Status,
+			Status:    atomic.LoadInt32(&p.Status), //Range 内不持玩家锁,且 Status 由 daemon 无锁 CAS
 			Connected: p.Connected(),
 			Gateway:   p.Gateway,
 			Login:     unix(p.Login),
@@ -165,7 +166,7 @@ func playerDump(ctx context.Context, req *mcp.CallToolRequest, args dumpArgs) (*
 	r := &dumpReply{Uid: args.Uid}
 	fill := func(p *player.Player) error {
 		r.Guid = p.Guid()
-		r.Status = p.Status
+		r.Status = atomic.LoadInt32(&p.Status)
 		r.Gateway = p.Gateway
 		r.Login = unix(p.Login)
 		r.Heartbeat = unix(p.Heartbeat())
