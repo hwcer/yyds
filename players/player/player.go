@@ -149,9 +149,19 @@ func (p *Player) Uid() string {
 	return p.uid
 }
 
+// Guid 角色的全局唯一标识,取不到时返回空串,调用方按空串处理(参考 Send)
+// 不做裸类型断言:Updater 已销毁(released)、handle 未注册、字段未加载都会让上一版直接 panic,
+// 而本函数在 gomcp / Send 等路径上会被非业务协程调用
 func (p *Player) Guid() string {
+	if p.Updater == nil {
+		return ""
+	}
 	doc := p.Document(RoleIType)
-	return doc.Get(RoleFields.Guid).(string)
+	if doc == nil {
+		return ""
+	}
+	guid, _ := doc.Get(RoleFields.Guid).(string)
+	return guid
 }
 
 // Destroy 销毁玩家数据,调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater

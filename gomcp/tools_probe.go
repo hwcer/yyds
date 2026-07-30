@@ -119,24 +119,42 @@ func playersOnline(ctx context.Context, req *mcp.CallToolRequest, args onlineArg
 	if limit <= 0 {
 		limit = 100
 	}
+	//两段式:Range 只持有 Manage 读锁,不持玩家锁,回调里只能碰不可变字段(uid)。
+	//Guid 要读 Updater 的 dataset,而业务协程正持锁改它,released() 又会在
+	//Destroy(Updater=nil) 之后、ps.Delete 之前留下窗口(Delete 还被本次 Range 的读锁挡着,
+	//窗口反而被撑大)。裸读轻则空指针 panic,重则撞上 dirty map 的
+	//concurrent map read and write —— 那是 fatal error,recover 拦不住,直接打挂进程。
+	//另外不能在 Range 内加玩家锁:持 Manage 读锁去抢玩家锁就是 worker() 刚拆掉的锁序倒置。
 	var total int
-	r := make([]*onlineItem, 0, limit)
+	ps := make([]*player.Player, 0, limit)
 	players.Range(func(_ string, p *player.Player) bool {
 		total++
-		if len(r) >= limit {
-			return true //继续计数,但不再收集
+		if len(ps) < limit {
+			ps = append(ps, p) //超出上限只继续计数
+		}
+		return true
+	})
+	//已脱离 Manage 读锁,逐个持玩家锁取详情。
+	//这里直接用 p.Lock 而不是 players.Get:后者会走 Updater 的 Reset/Release 周期,
+	//会 Emit 事件并推进 u.last(影响跨天重置判定),调试工具不该有这种副作用。
+	r := make([]*onlineItem, 0, len(ps))
+	for _, p := range ps {
+		p.Lock()
+		if atomic.LoadInt32(&p.Status) == player.StatusReleased {
+			p.Unlock()
+			continue //已释放,数据已销毁,跳过
 		}
 		r = append(r, &onlineItem{
 			Uid:       p.Uid(),
 			Guid:      p.Guid(),
-			Status:    atomic.LoadInt32(&p.Status), //Range 内不持玩家锁,且 Status 由 daemon 无锁 CAS
+			Status:    atomic.LoadInt32(&p.Status),
 			Connected: p.Connected(),
 			Gateway:   p.Gateway,
 			Login:     unix(p.Login),
 			Heartbeat: unix(p.Heartbeat()),
 		})
-		return true
-	})
+		p.Unlock()
+	}
 	return jsonResult(map[string]any{"total": total, "online": players.Online(), "players": r})
 }
 
