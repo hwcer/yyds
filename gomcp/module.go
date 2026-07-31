@@ -7,6 +7,13 @@
 // 业务项目注册自己的工具直接用 SDK 的泛型函数:
 //
 //	mcp.AddTool(gomcp.Server, &mcp.Tool{Name: "config_query", ...}, handler)
+//
+// 配套的 Claude Code skill(把服务器地址注册进 AI 会话、或不注册直接调工具)
+// 不必每个项目自己写,在项目根目录跑一次即可生成:
+//
+//	go run github.com/hwcer/yyds/gomcp/cmd/skill -appid <本项目appid>
+//
+// 生成的 connect.py 只用 Python 标准库,不需要虚拟环境;模板见 gomcp/skill。
 package gomcp
 
 import (
