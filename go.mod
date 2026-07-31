@@ -14,7 +14,7 @@ require (
 	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
 	github.com/hwcer/pubsub v0.0.0-20260731031827-7640c645c73c
 	github.com/hwcer/pubsub/transport v0.0.0-20260731031827-7640c645c73c
-	github.com/hwcer/updater v1.5.1-0.20260731092809-2e150c478a48
+	github.com/hwcer/updater v1.5.1-0.20260731101259-6c1c9669b2ff
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
