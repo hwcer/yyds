@@ -6,7 +6,7 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/client"
-	"github.com/hwcer/gateway/gwcfg"
+	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/pubsub"
 	"github.com/hwcer/pubsub/transport"
@@ -22,7 +22,7 @@ import (
 */
 
 // topic 名与 master 侧 share.TopicXxx 对齐，改动需两边同步。
-// master 可以接入多款游戏，下发的事件按 appid 分区（"{topic}.{appid}"），
+// master 可以接入多款游戏，下发的事件以 appid 为前缀段（"{appid}.{topic}"），
 // 这里只订本 appid 那一档，收不到别家游戏的事件。
 const (
 	topicServer = "server"
@@ -30,14 +30,18 @@ const (
 	//分段符必须与 master 侧 share.TopicSeparator 一致：
 	//pubsub 的通配 * 编译为 [^.]+，按 "." 分段
 	topicSeparator = "."
+	//频道命名空间,必须与 master 侧 share.PubsubPrefix 一致。
+	//仅对 redis 传输生效(频道名为 "{prefix}:{topic}"),tcp 传输忽略本设置。
+	//两边配不一致时频道名对不上,表现为收不到任何事件且没有任何报错。
+	pubsubPrefix = "master"
 )
 
-// topic 拼出本游戏的分区名，与 master 侧 share.Topic 保持一致
+// topic 拼出本游戏的分区名，与 master 侧 share.Topic 保持一致：appid 在前
 func topic(name string) string {
 	if options.Options.Appid == "" {
 		return name
 	}
-	return name + topicSeparator + options.Options.Appid
+	return options.Options.Appid + topicSeparator + name
 }
 
 // 游戏服侧接收事件的私有路由
@@ -76,7 +80,8 @@ func subscribe() error {
 	}
 	//地址按协议选择实现：tcp://（默认，可省略）走 cosnet，redis:// 走 redis pub/sub。
 	//重连参数由工厂固化，不需要在这里调。
-	tr, err := transport.Connect(model.Options.Pubsub)
+	//Prefix 只在 redis 传输下生效，与 master 侧 share.PubsubPrefix 必须同值。
+	tr, err := transport.Connect(model.Options.Pubsub, transport.Prefix(pubsubPrefix))
 	if err != nil {
 		return err
 	}
@@ -135,7 +140,7 @@ func forward(path string) pubsub.Handler {
 
 func send(sid int32, path string, body []byte) {
 	req := values.Metadata{}
-	req[gwcfg.ServiceMetadataServerId] = values.Sprintf("%d", sid)
+	req.Set(selector.MetaDataServerId, sid)
 	req[binder.HeaderContentType] = binder.Json.Name()
 	if err := client.CallWithMetadata(req, nil, options.ServiceTypeGame, path, body, nil); err != nil {
 		logger.Alert("转发 master 事件失败:sid=%v,path=%v,err=%v", sid, path, err)

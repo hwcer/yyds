@@ -57,8 +57,9 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 	if err = u.Parse(uid, uuid.BaseSize); err != nil {
 		return nil, err
 	}
-	req := map[string]string{}
-	req[gwcfg.ServiceMetadataServerId] = strconv.FormatUint(u.GetShard(), 10)
+	req := values.Metadata{}
+	sid := strconv.FormatUint(u.GetShard(), 10)
+	req.Set(selector.MetaDataServerId, sid)
 	ctx := context.WithValue(context.Background(), share.ReqMetaDataKey, req)
 	return client.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
 }

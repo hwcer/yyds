@@ -4,6 +4,7 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosrpc/client"
+	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/cosweb"
 	"github.com/hwcer/cosweb/middleware"
 	"github.com/hwcer/gateway/gwcfg"
@@ -45,7 +46,7 @@ func proxy(c *cosweb.Context) any {
 		return c.JSON(values.Error("sid is empty"))
 	}
 	req := values.Metadata{}
-	req[gwcfg.ServiceMetadataServerId] = sid
+	req.Set(selector.MetaDataServerId, sid)
 	reply := make([]byte, 0)
 	buffer, err := c.Buffer()
 	if err != nil {
@@ -61,7 +62,7 @@ func proxy(c *cosweb.Context) any {
 
 // request rpc转发,返回实际转发的servicePath
 func request(sid, path string, args []byte, req, res values.Metadata, reply any) (err error) {
-	req[gwcfg.ServiceMetadataServerId] = sid
+	req.Set(selector.MetaDataServerId, sid)
 	req[binder.HeaderContentType] = binder.Json.Name()
 	err = client.CallWithMetadata(req, res, options.ServiceTypeGame, path, args, reply)
 	return
