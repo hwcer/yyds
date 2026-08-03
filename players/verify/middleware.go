@@ -8,6 +8,13 @@ type middleware struct {
 }
 
 func (this *middleware) Emit(u *updater.Updater, t updater.EventType) bool {
+	//Release 每次请求结束必定触发（无论成功失败），在这里注销自己。
+	//请求在 Auto 之后、Submit 之前中断时（如扣道具不足直接置 u.Error），
+	//本中间件走不到下面的 Submit 分支，若不在此处返回 false 就会残留到
+	//同一 Updater 的下一个请求，把毫不相干的请求判成"条件未达成"。
+	if t == updater.EventTypeRelease {
+		return false
+	}
 	if t != updater.EventTypeSubmit {
 		return true
 	}
@@ -16,9 +23,5 @@ func (this *middleware) Emit(u *updater.Updater, t updater.EventType) bool {
 			return false
 		}
 	}
-	return false
-}
-
-func (this *middleware) Release(u *updater.Updater) bool {
 	return false
 }
