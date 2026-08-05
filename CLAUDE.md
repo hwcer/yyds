@@ -430,6 +430,15 @@ func (doc *Document) Set(k string, v any) {
 同理 `update.Transform` 里 `LookUpField` 找不到的 key 会被悄悄剔出更新语句。
 **即写错字段名才是那个"看起来成功、其实没写"的场景**，与子键 handle 无关。
 
+> ✅ **updater `76be8e1` 起，走 handle 的那条路已经堵上**：`Document.Field()` 对含 `.` 的
+> 子键路径也会校验根字段（此前直接放行），写错字段名现在会置 `Updater.Error`、整个请求失败。
+> `dataset.Document.Set` 里的静默返回保留为**直接操作 dataset 时的兜底**，业务经
+> `Document.Set` / `doc.Set` 写入不会再遇到。
+>
+> ⚠ 那次修复只校验、**不改写 key**：`Name()` 返回的是 `JSName()`（PascalCase），拼回子键会把
+> `soulrelics.1` 变成 `SoulRelics.1`，而 `update.Transform` 对含 `.` 的 key 原样下发，
+> 等于往库里写一个大小写不符的野字段。改这段代码前先看那两条单测。
+
 ---
 
 ## 条件验证（players/verify）
