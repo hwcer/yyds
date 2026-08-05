@@ -386,22 +386,49 @@ c.Player.Updater.Verify()  // 正确
 给 `Player` 加新字段时要意识到：**与 Updater 方法同名的字段会让所有调用点在编译期炸开**
 （好在是编译期）。
 
-## 业务自建"子键 handle"时：整字段写入可能被静默丢弃
+## 🔴 `ModelSet.Set` 返回 `ok=false` **不是拒绝**，而是"转反射"
 
-业务常把 Document 上的 map 字段做成子键 handle，用 `Set("字段名", v, key)` 按子键读写。
-这类字段**没有整字段写入的路径**——传一个不含子键的 key 进去，路由函数直接返回 false，
-**写入被丢弃而调用方以为成功了**。
-
-防御：写之前用同名 Get 探一次可达性（Get/Set 路由通常对称），不可达就报错：
+业务 model 实现 `dataset.ModelSet`（`Set(k string, v any) (any, bool)`）来接管字段写入。
+很容易以为返回 `false` 等于"这个 key 我不认、别写"，**事实相反**：
 
 ```go
-if _, reachable := doc.Get(key); !reachable {
-    return fmt.Errorf("字段 %q 不支持整字段写入，请改用子键写法 %q", key, name+".<子键>")
+// dataset/document.go: setter
+if m, ok := doc.data.(ModelSet); ok {
+    if r, ok = m.Set(k, v); ok {
+        return                       // 业务处理了 → 用业务的结果
+    }
+}
+sch, err := doc.Schema()             // ← ok==false 落到这里
+logger.Debug("建议给%v.%v添加Set接口提升性能", sch.Name, k)
+return v, sch.SetValue(doc.data, v, k)   // 按字段名反射写入，照样生效
+```
+
+所以 `Set` 的 switch **漏写一个 case 不会导致写入失败**，只是从"类型断言直写"降级成
+"反射写入"外加一条 Debug 日志。落库同样正常：cosmo 的 `update.Transform` 会按 schema 把
+Go 字段名映射成 DBName（`SpiritFormations` → `spiritformations`），不会写出大小写不一致的
+野字段；含 `.` 的 key 则原样下发。
+
+**推论——想真正否决一次写入，`return false` 是没用的**，必须在 `Set` 里 panic
+或置 `u.Error`。
+
+> 📌 这条是纠正来的：曾据"`setFromHandle` 对不含 `.` 的 key return false"推断
+> "只有子键 handle 的 map 字段整字段写入会被静默丢弃"，并据此在 GM 工具里加了一道
+> 可达性守卫。**推断错了**——写探针测试实测：整字段 `Set` 之后内存与 dirty 都正确，
+> 那道守卫只是拦下了本可成功的写入。**读到 `return false` 别停在这一层，要跟到
+> 框架拿它做什么。**
+
+真正会被**静默丢弃**的是另一处——`dataset.Document.Set` 的前置检查：
+
+```go
+func (doc *Document) Set(k string, v any) {
+    if !doc.Has(k) { return }        // 字段不在 schema 里 → 直接返回
+    ...
 }
 ```
 
-这条守卫是写 GM 调试工具时补的：工具直接 `Set("SpiritFormations", {...})` 返回成功，
-但一个字节都没写进去。
+`Has` 按 schema 查字段（`a.b` 只查 `a`），查不到打一条 `logger.Alert` 就返回。
+同理 `update.Transform` 里 `LookUpField` 找不到的 key 会被悄悄剔出更新语句。
+**即写错字段名才是那个"看起来成功、其实没写"的场景**，与子键 handle 无关。
 
 ---
 
