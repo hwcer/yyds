@@ -126,6 +126,9 @@ func taskJudgeCompare(judge int32, val int64, args []int32) int64 {
 	case JudgeRange:
 		ok = len(args) > 1 && val >= int64(args[0]) && val <= int64(args[1])
 	default:
+		//与上面 value() 对未知 Condition 的处理对称：fail-closed 之后表现是"条件永远不达成"，
+		//不打日志就只能靠猜。绝大多数是配表 Judge 列填错。
+		logger.Alert("Judge unknown,Judge:%v,Val:%v,Args:%v", judge, val, args)
 		return 0 // 未知的 Judge 类型直接返回0
 	}
 	if ok {
