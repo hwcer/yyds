@@ -19,7 +19,7 @@ import (
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
 	"github.com/hwcer/yyds/players/emitter"
-	"github.com/hwcer/yyds/players/verify"
+	"github.com/hwcer/yyds/players/condition"
 )
 
 type Message struct {
@@ -69,7 +69,7 @@ type Player struct {
 	Binder    binder.Binder    //当前端使用的序列化方式
 	Status    int32            //在线状态
 	Times     *Times           //时间控制器
-	Condition *verify.Verify   //全局条件验证器
+	Condition *condition.Verifier //全局条件验证器
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
@@ -81,7 +81,7 @@ func (p *Player) initialize() {
 		return
 	}
 	p.Times = &Times{p: p}
-	p.Condition = verify.New(p.Updater)
+	p.Condition = condition.New(p.Updater)
 	p.Emitter = emitter.New(p.Updater)
 }
 

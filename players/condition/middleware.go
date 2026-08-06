@@ -1,4 +1,4 @@
-package verify
+package condition
 
 import "github.com/hwcer/updater"
 

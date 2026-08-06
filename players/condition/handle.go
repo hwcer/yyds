@@ -1,4 +1,4 @@
-package verify
+package condition
 
 import (
 	"github.com/hwcer/cosgo/times"
@@ -7,17 +7,17 @@ import (
 )
 
 func init() {
-	Register(ConditionNone, taskTargetHandleNone)
-	Register(ConditionData, taskTargetHandleData)
-	Register(ConditionEvents, taskTargetHandleEvents)
-	Register(ConditionMethod, taskTargetHandleMethod)
-	Register(ConditionWeekly, taskTargetHandleWeekly)
-	Register(ConditionHistory, taskTargetHandleHistory)
+	Register(TypeNone, taskTargetHandleNone)
+	Register(TypeData, taskTargetHandleData)
+	Register(TypeEvents, taskTargetHandleEvents)
+	Register(TypeMethod, taskTargetHandleMethod)
+	Register(TypeWeekly, taskTargetHandleWeekly)
+	Register(TypeHistory, taskTargetHandleHistory)
 }
 
 // value 获取任务当前进度，若实现了 Judge 接口则对原始值与 ARGS 进行比较后返回
 func value(u *updater.Updater, target Value) (r int64) {
-	if f, ok := verifyCondition[target.GetCondition()]; ok {
+	if f, ok := handles[target.GetCondition()]; ok {
 		r = f(u, target)
 	} else {
 		logger.Alert("Condition unknown,Condition:%v,Key:%v", target.GetCondition(), target.GetKey())
@@ -33,7 +33,7 @@ func verify(u *updater.Updater, target Target) error {
 	var ok bool
 	var val int64
 	switch target.GetCondition() {
-	case ConditionNone:
+	case TypeNone:
 		ok = true
 	default:
 		val = value(u, target)

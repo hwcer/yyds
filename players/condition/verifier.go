@@ -1,27 +1,29 @@
-package verify
+package condition
 
 import (
 	"github.com/hwcer/updater"
 )
 
-const updaterPlugName = "_updater_verify_plug"
+const updaterPlugName = "_updater_condition_plug"
 
-func New(u *updater.Updater) *Verify {
-	return &Verify{u: u}
+func New(u *updater.Updater) *Verifier {
+	return &Verifier{u: u}
 }
 
-// Verify 全系统统一验证实现
-type Verify struct {
+// Verifier 全系统统一条件验证实现，挂在 player.Player.Condition 上。
+//
+// 注意别和 updater.Updater.Verify() 混了：那是提交前的 data→verify 收敛，与条件校验无关。
+type Verifier struct {
 	u *updater.Updater
 }
 
-func (v *Verify) create(_ *updater.Updater) updater.Middleware {
+func (v *Verifier) create(_ *updater.Updater) updater.Middleware {
 	return &middleware{}
 }
 
 // Auto 自动验证失败时 返回错误,不需要配合Verify使用
-func (v *Verify) Auto(target Target) {
-	if target.GetCondition() == ConditionNone {
+func (v *Verifier) Auto(target Target) {
+	if target.GetCondition() == TypeNone {
 		return
 	}
 	v.Target(target)
@@ -30,12 +32,12 @@ func (v *Verify) Auto(target Target) {
 }
 
 // Target 预读数据,手动验证
-func (v *Verify) Target(target Value) {
+func (v *Verifier) Target(target Value) {
 	switch target.GetCondition() {
-	case ConditionData:
+	case TypeData:
 		v.u.Select(target.GetKey())
-	case ConditionEvents:
-	case ConditionMethod:
+	case TypeEvents:
+	case TypeMethod:
 		if i := GetMethod(target.GetKey()); i != nil {
 			i.Target(v.u, target)
 		}
@@ -43,14 +45,14 @@ func (v *Verify) Target(target Value) {
 }
 
 // Value 查询值
-func (v *Verify) Value(target Value) int64 {
+func (v *Verifier) Value(target Value) int64 {
 	return value(v.u, target)
 }
 
 // Verify 检查Target中加入的所有条件是否符合
 // 必须已经使用过 Target
 // 必须手动执行过 updater.Data()
-func (v *Verify) Verify(target Target) (err error) {
+func (v *Verifier) Verify(target Target) (err error) {
 	if err = v.u.Data(); err != nil {
 		return err
 	}

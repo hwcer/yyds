@@ -1,4 +1,4 @@
-package verify
+package condition
 
 // Compare 目标比较方式
 const (

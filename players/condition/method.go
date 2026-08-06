@@ -1,8 +1,8 @@
-package verify
+package condition
 
 import "github.com/hwcer/updater"
 
-// MethodHandle 自定义取值方法接口，用于 ConditionMethod 类型
+// MethodHandle 自定义取值方法接口，用于 TypeMethod 类型
 type MethodHandle interface {
 	Value(u *updater.Updater, value Value) int64
 	Target(u *updater.Updater, value Value)

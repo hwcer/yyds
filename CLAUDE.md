@@ -446,13 +446,18 @@ func (doc *Document) Set(k string, v any) {
 
 ---
 
-## 条件验证（players/verify）
+## 条件验证（players/condition）
 
-通用条件校验系统，用于任务完成判定、解锁条件检查。配置结构实现 `verify.Target`
+通用条件校验系统，用于任务完成判定、解锁条件检查。配置结构实现 `condition.Target`
 （`GetCondition()`/`GetKey()`/`GetGoal()`），默认比较方式 `>=`。
 
-入口是 **`Player.Condition`** 字段（`*verify.Verify`）；注意别和 `Player.Verify()`
+入口是 **`Player.Condition`** 字段（`*condition.Verifier`）；注意别和 `Player.Verify()`
 方法混了——后者是 `Updater.Verify()`，跑的是提交前的 data→verify 收敛，两者无关。
+
+> 📌 本包早先叫 `players/verify`、类型叫 `verify.Verify`，常量叫 `verify.ConditionData`——
+> 包名与 `Updater.Verify()` 撞词、常量与包名结巴，且游戏侧 `game/verify` 自己也是
+> `package verify` 正 import 它。已整体改名，接口方法 `GetCondition()` **保持不变**
+> （配置表生成代码在实现它，改了会波及导表链路）。
 
 ```go
 if cfg.GetCondition() > 0 {
@@ -463,19 +468,21 @@ if cfg.GetCondition() > 0 {
 c.Player.Condition.Auto(cfg)  // 自动版：内部含预读登记，失败时置 u.Error 让整个请求回退
 ```
 
-框架内置条件类型（`players/verify/condition.go`）：
+框架内置条件类型（`players/condition/condition.go`）：
 
 | 值 | 常量 | 取值方式 |
 |----|------|---------|
-| 0 | `ConditionNone` | 无条件，直接通过 |
-| 1 | `ConditionData` | 基础数据 / 日常 / 成就记录 |
-| 2 | `ConditionEvents` | 即时监听事件（仅任务系统） |
-| 9 | `ConditionMethod` | 调用注册的 Method 函数 |
-| 101 | `ConditionWeekly` | 周数据（基于 daily） |
-| 102 | `ConditionHistory` | 历史数据 |
+| 0 | `condition.TypeNone` | 无条件，直接通过 |
+| 1 | `condition.TypeData` | 基础数据 / 日常 / 成就记录 |
+| 2 | `condition.TypeEvents` | 即时监听事件（仅任务系统） |
+| 9 | `condition.TypeMethod` | 调用注册的 Method 函数 |
+| 101 | `condition.TypeWeekly` | 周数据（基于 daily） |
+| 102 | `condition.TypeHistory` | 历史数据 |
 
-业务可用 `verify.Register(key, handle)` 注册自己的条件类型，**也可以覆盖内置的**
-（项目里常把 `ConditionData` 重注册成查自己的角色字段）。
+配置里直接写 `[条件类型, 数据键, 目标值]` 三元组的，用 `condition.Array` 包一层即得 `Target`。
+
+业务可用 `condition.Register(key, handle)` 注册自己的条件类型，**也可以覆盖内置的**
+（项目里常把 `TypeData` 重注册成查自己的角色字段）。
 
 ## 事件监听（players/emitter）
 
