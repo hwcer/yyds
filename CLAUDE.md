@@ -86,7 +86,7 @@ cosgo.EventTypLoaded             → players.Start（预加载活跃玩家）
      ↓
 [业务 handler]  func(*context.Context) interface{}
      ↓ 返回后由框架统一收尾（caller）
-     Player.Submit() → Dirty.Pull() → Serialize → 回包
+     Player.Submit() → Pending.Pull() → Serialize → 回包
 ```
 
 **收尾是框架做的**：handler 返回后框架自动 `Submit()` 并把数据变更塞进回包。
@@ -253,7 +253,7 @@ func (r *Role) GetPurchase(p *Player, id int32, rule []int64) (*pb.ShopShelf, er
 
 1. grep `+=`、`++`、`.Value =`、`[k] =` 出现在 `.Set(`/`.Save(` **之前**、且左值来自
    `Get(`/`.All()`/`.Any()`/`role.` 的地方；
-2. **先按第 3 问反向扫最省力**：直接搜 `Sub(`/`Add(`/`Verify.Auto(` 的调用点，看同一函数里
+2. **先按第 3 问反向扫最省力**：直接搜 `Sub(`/`Add(`/`Condition.Auto(` 的调用点，看同一函数里
    前后有没有对 store 指针的直接赋值——交易链路上的赋值不管长什么样都得改，
    这样扫既快又不会被"看着很幂等"骗过去；
 3. **错误分支尤其查**："校验没过时改完再 `return err`"；
@@ -284,8 +284,8 @@ func (r *Role) GetPurchase(p *Player, id int32, rule []int64) (*pb.ShopShelf, er
 `RAMTypeNone` 不缓存。**读非常驻字段前必须先 `u.Select(...)` 登记、经 `Data()` 拉取**，
 否则 `u.Val()` 取到零值且不报错。
 
-同理，条件验证前要用 `Verify.Target(...)` 登记预读、必要时 `Player.Data()` 拉取，
-再 `Verify.Verify(...)`——`Verify.Auto()` 内部含预读登记，所以业务层不必手动 `Data()`。
+同理，条件验证前要用 `Condition.Target(...)` 登记预读、必要时 `Player.Data()` 拉取，
+再 `Condition.Verify(...)`——`Condition.Auto()` 内部含预读登记，所以业务层不必手动 `Data()`。
 
 ## 🔴 手动 `Submit()` 与 `u.Dirty` 是配套的一对
 
@@ -356,12 +356,13 @@ u.Dirty(ops...)          // ← 把推送放回去，否则客户端收不到本
 策划改配置全服立刻生效，老号不需要任何数据迁移（真实案例：初始法阵始终不落库，
 老号库里没有该字段也能正常使用）。想要这个性质就别在 `Init` 里写 `Set`。
 
-## 提前拿到"这次发放的最终结果"：优先用 `Updater.Verify()`
+## 提前拿到"这次发放的最终结果"：优先用 `Player.Verify()`
 
 溢出截断、重复自动分解这类信息在 **Parse 期**才产生，而 Parse 默认发生在 handler 返回
 **之后**框架那次 `Submit()` 里，handler 读不到。要在 handler 内读：
 
-- 调 `c.Player.Updater.Verify()`——跑同一个 `data→verify` 循环、overflow 照常触发，
+- 调 `c.Player.Verify()`（即 `Updater.Verify()`，Player 内嵌提升上来）——跑同一个
+  `data→verify` 循环、overflow 照常触发，
   但**不落库、不清 dirty、不发成功事件**，读完让框架照常收尾即可，没有"忘了把推送放回去"
   的风险（库注释明写「Verify 之后再 Submit 是安全的」：status 已被消耗，
   Submit 的收敛循环直接跳过）；
@@ -450,13 +451,16 @@ func (doc *Document) Set(k string, v any) {
 通用条件校验系统，用于任务完成判定、解锁条件检查。配置结构实现 `verify.Target`
 （`GetCondition()`/`GetKey()`/`GetGoal()`），默认比较方式 `>=`。
 
+入口是 **`Player.Condition`** 字段（`*verify.Verify`）；注意别和 `Player.Verify()`
+方法混了——后者是 `Updater.Verify()`，跑的是提交前的 data→verify 收敛，两者无关。
+
 ```go
 if cfg.GetCondition() > 0 {
-    if err := c.Player.Verify.Verify(cfg); err != nil {
+    if err := c.Player.Condition.Verify(cfg); err != nil {
         return err   // 条件不满足
     }
 }
-c.Player.Verify.Auto(cfg)  // 自动版：内部含预读登记，失败时置 u.Error 让整个请求回退
+c.Player.Condition.Auto(cfg)  // 自动版：内部含预读登记，失败时置 u.Error 让整个请求回退
 ```
 
 框架内置条件类型（`players/verify/condition.go`）：
