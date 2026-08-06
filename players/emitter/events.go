@@ -31,7 +31,6 @@ func (e events) Listen(t int32, handle EventsFunc) {
 	} else {
 		e[t] = append(e[t], handle)
 	}
-	return
 }
 
 func (e events) Emit(u *updater.Updater, t int32, args ...int32) {

@@ -22,7 +22,7 @@ func value(u *updater.Updater, target Value) (r int64) {
 	} else {
 		logger.Alert("Condition unknown,Condition:%v,Key:%v", target.GetCondition(), target.GetKey())
 	}
-	if j, ok := target.(Judge); ok && j.GetJudge() > JudgeNone {
+	if j, ok := target.(Judge); ok {
 		r = taskJudgeCompare(j.GetJudge(), r, j.GetArgs())
 	}
 	return
@@ -108,6 +108,8 @@ func taskTargetHandleHistory(u *updater.Updater, target Value) (r int64) {
 func taskJudgeCompare(judge int32, val int64, args []int32) int64 {
 	var ok bool
 	switch judge {
+	case JudgeNone:
+		return val // JudgeNone 直接返回原始值，绝大多数查询值并不使用Judge来比较
 	case JudgeEqual:
 		ok = len(args) > 0 && val == int64(args[0])
 	case JudgeGte:
@@ -124,7 +126,7 @@ func taskJudgeCompare(judge int32, val int64, args []int32) int64 {
 	case JudgeRange:
 		ok = len(args) > 1 && val >= int64(args[0]) && val <= int64(args[1])
 	default:
-		return val
+		return 0 // 未知的 Judge 类型直接返回0
 	}
 	if ok {
 		return 1
