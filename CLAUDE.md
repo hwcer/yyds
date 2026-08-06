@@ -340,10 +340,11 @@ u.Dirty(ops...)          // ← 把推送放回去，否则客户端收不到本
 > `Insert(op, before=true)` 前插用于"本次结算必须排在业务扣量之前"的场景，
 > 否则"先扣后回"会拿旧值判定不足。
 
-> ⚠ **两个 Dirty 不是一回事**：`updater.Updater` 内部的 `dirty`（operator 列表，
-> Submit 返回、进回包的 `Cache`）与 `player.Player.Dirty`（字段，短连接推送缓存，
-> 进回包的 `Dirty`）。且后者**遮蔽**了嵌入的 `Updater.Dirty` 方法——
-> 要调 updater 那个必须写 `c.Player.Updater.Dirty(...)`。
+> ⚠ **两条 operator 通道不是一回事**：`updater.Updater` 内部的 `dirty`（Submit 返回、
+> 进回包的 `Cache`）与 `player.Player.Pending`（跨玩家场景让出锁前 Submit 出来、
+> 暂存待发，进回包的 `Dirty` 字段）。
+>
+> `Pending` 早先叫 `Dirty`，与 `Updater.Dirty` 方法重名造成遮蔽，已改名。
 
 ## 🔴 dataset model 的 `Init` 每次加载都会跑，必须幂等
 
@@ -373,18 +374,21 @@ u.Dirty(ops...)          // ← 把推送放回去，否则客户端收不到本
   `op.OType` 即可**精确到具体是哪一次发放**（按 iid 事后反查在"同一请求内多次发放同一 iid"
   时分不清是第几次）。
 
-## 🔴 `Player.Verify` / `Player.Dirty` 是字段，遮蔽了嵌入 Updater 的同名方法
+## 🔴 给 `Player` 加字段前，先确认不与 `Updater` 的导出成员重名
 
-`Player` 内嵌 `*updater.Updater` 之后又定义了 `Verify *verify.Verify`（全局条件验证器）
-和 `Dirty Dirty`（推送缓存）：
+`Player` 内嵌 `*updater.Updater`，**同名字段会遮蔽嵌入类型的方法**。历史上踩过两次：
 
-```go
-c.Player.Verify()          // 编译失败：*verify.Verify is not a function
-c.Player.Updater.Verify()  // 正确
-```
+| 旧字段名 | 遮蔽了 | 现名 |
+|---|---|---|
+| `Verify *verify.Verify` | `Updater.Verify()` | **`Condition`** |
+| `Dirty Dirty` | `Updater.Dirty(...)` | **`Pending`** |
 
-给 `Player` 加新字段时要意识到：**与 Updater 方法同名的字段会让所有调用点在编译期炸开**
-（好在是编译期）。
+当时的症状是 `c.Player.Verify()` 编译失败（`*verify.Verify is not a function`），
+所有调用点被迫写 `c.Player.Updater.Verify()` 绕开——注释里到处是「必须写 .Updater.」。
+改名后遮蔽消失，`c.Player.Verify()` / `c.Player.Dirty(...)` 直接可用。
+
+好在这类冲突是**编译期**炸，不会静默出错。加字段时对一眼 `Updater` 的导出方法表即可
+（`Add/Sub/Get/Val/Set/Select/Submit/Verify/Dirty/Release/Reset/Emit/On/Cache/Error/...`）。
 
 ## 🔴 `ModelSet.Set` 返回 `ok=false` **不是拒绝**，而是"转反射"
 

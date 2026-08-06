@@ -63,13 +63,13 @@ type Player struct {
 	uid       string
 	key       string           //map key，空值时 Key() 返回 uid
 	heartbeat atomic.Int64     //最后心跳时间,daemon 与业务协程并发读写,必须原子操作
-	Dirty     Dirty            //短连接推送数据缓存
+	Pending   Pending          //待发送的 Operator 暂存区(跨玩家场景让出锁前 Submit 出来的)
 	Login     int64            //登录时间
 	Syncer    Syncer           //并发控制器
 	Binder    binder.Binder    //当前端使用的序列化方式
 	Status    int32            //在线状态
 	Times     *Times           //时间控制器
-	Verify    *verify.Verify   //全局条件验证
+	Condition *verify.Verify   //全局条件验证器
 	Emitter   *emitter.Emitter //全局事件
 	Message   *Message         //最后一次发包的 MESSAGE
 	Gateway   uint64           //网关地址
@@ -81,7 +81,7 @@ func (p *Player) initialize() {
 		return
 	}
 	p.Times = &Times{p: p}
-	p.Verify = verify.New(p.Updater)
+	p.Condition = verify.New(p.Updater)
 	p.Emitter = emitter.New(p.Updater)
 }
 
@@ -206,7 +206,7 @@ func (p *Player) Destroy() error {
 		return err
 	}
 	p.Updater = nil
-	p.Dirty = Dirty{}
+	p.Pending = Pending{}
 	p.Emitter = nil
 	return nil
 }

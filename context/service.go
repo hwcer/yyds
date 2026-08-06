@@ -245,7 +245,7 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 	r.Time = c.Now().UnixMilli()
 	if r.Code == 0 && c.Player != nil {
 		if r.Cache, err = c.Player.Submit(); err == nil {
-			r.Dirty = c.Player.Dirty.Pull()
+			r.Dirty = c.Player.Pending.Pull()
 		} else {
 			r = Error(err)
 		}

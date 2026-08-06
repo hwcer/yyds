@@ -15,15 +15,15 @@ import (
 //
 // 目标是别人时,**会先把自己这一侧结清并让出锁**再去锁对方,这是防死锁的关键:
 // 两个请求互相操作对方时,若各自攥着自己的锁去抢对方的,就是标准的 ABBA。
-// 让出前必须 Submit,否则本次请求已产生的改动会丢;产生的 Operator 转存进 Player.Dirty,
+// 让出前必须 Submit,否则本次请求已产生的改动会丢;产生的 Operator 转存进 Player.Pending,
 // 等回到自己这边时随回包一起下发。
 //
-// 🔴 必须是 p.Dirty.Push 而不是 p.Updater.Dirty:后者是把 op 放回 Updater.dirty,
-// 而紧接着的 p.Release() 会 `for _, op := range u.dirty { op.Release() }` 把它们
-// 归还 sync.Pool 并置 nil —— 改动当场丢失,且 op 可能被后续请求取走复用导致串数据。
-// Player.Dirty 是独立切片,不受 Updater.Release() 影响,由 context/service.go 的
-// Dirty.Pull() 收走。对照 players/actor/channel.go 与 players/locker/locker.go,
-// 那两处平行实现用的都是 Dirty.Push。
+// 🔴 必须是 p.Pending.Push 而不是 p.Dirty(...):后者是 Updater 的方法,把 op 放回
+// Updater.dirty,而紧接着的 p.Release() 会 `for _, op := range u.dirty { op.Release() }`
+// 把它们归还 sync.Pool 并置 nil —— 改动当场丢失,且 op 可能被后续请求取走复用导致串数据。
+// Player.Pending 是独立切片,不受 Updater.Release() 影响,由 context/service.go 的
+// Pending.Pull() 收走。对照 players/actor/channel.go 与 players/locker/locker.go,
+// 那两处平行实现用的都是 Pending.Push。
 //
 // 代价是一次 GetPlayer 会让自己的 Updater 走完整的 Submit → Release → Reset 周期:
 // **中途会真的提交一次数据库**,并重新 Emit EventTypeReset。调用方要清楚这一点 ——
@@ -41,7 +41,7 @@ func (this *Context) GetPlayer(uid string, handle player.Handle) (err error) {
 		if cs, e := p.Submit(); e != nil {
 			return e
 		} else {
-			p.Dirty.Push(cs...)
+			p.Pending.Push(cs...)
 		}
 		p.Release()
 		p.Unlock()

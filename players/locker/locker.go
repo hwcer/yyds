@@ -88,7 +88,7 @@ func (this *Locker) Range(f func(player *player.Player) bool) {
 
 func (this *Locker) Verify() error {
 	for _, p := range this.dict {
-		if err := p.Updater.Verify(); err != nil {
+		if err := p.Verify(); err != nil {
 			return err
 		}
 	}
@@ -101,7 +101,7 @@ func (this *Locker) Submit() error {
 		if cc, err := p.Updater.Submit(); err != nil {
 			return err
 		} else {
-			p.Dirty.Push(cc...)
+			p.Pending.Push(cc...)
 		}
 	}
 	return nil
