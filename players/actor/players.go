@@ -65,6 +65,29 @@ func (this *Players) Load(uid string, test bool, handle player.Handle) error {
 	})
 }
 
+// Lock 独占该玩家但**不加载任何数据**,详见 players.Lock 的说明。
+func (this *Players) Lock(uid string, handle player.Handle) error {
+	r := newPlayer(uid, false)
+	i, loaded := this.Manage.LoadOrStore(r.Key(), r)
+	if loaded {
+		r = i
+	} else {
+		//空壳用完即摘,理由同 locker 版;Delete/Close 必须在通道外做
+		//(Close 关的是玩家通道,持有时关会让 worker 卡死),故放 defer
+		defer func() {
+			this.Manage.Delete(r.Key())
+			r.Close()
+		}()
+	}
+	return invoke(r, func() error {
+		if loaded && r.Denied(atomic.LoadInt32(&r.Status)) {
+			return errors.ErrNotOnline
+		}
+		//不调 Reset/Release,见 locker 版注释
+		return handle(r)
+	})
+}
+
 func (this *Players) Locker(self string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
 	return NewLocker(self, uid, args, handle, done...)
 }

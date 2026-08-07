@@ -105,10 +105,29 @@ func Get(uid string, handle player.Handle) error {
 	return ps.Get(uid, handle)
 }
 
+// Lock 独占该玩家,但**不加载任何数据**。
+//
+// 与 Get/Load 的区别只有一条:它不初始化 Updater。玩家不在内存时只放一个空壳进管理器
+// 占住锁位,回调里拿到的 p.Updater 是 **nil**;用完立刻把空壳摘掉。
+//
+// 用途是「数据不经 Updater、但仍要与玩家的其它操作互斥」的场景:运营后台/GM 工具直连
+// 数据库改档、离线数据修复等。这类操作本来就不读内存数据,走 Load 等于白白从库里
+// 拉一遍全量数据、还把离线玩家长期驻留进内存。
+//
+// 回调里能安全做的事:判 p.Connected()、Terminate(p)、以及在 p.Updater 非 nil 时调
+// p.Updater.Reload() 让内存跟上库。**不要**用 p.Updater 读写业务数据 —— 玩家不在内存时
+// 它是 nil,在内存时也没有为本次调用 Reset 过;要读写数据请用 Get/Load。
+func Lock(uid string, handle player.Handle) error {
+	if err := available(); err != nil {
+		return err
+	}
+	return ps.Lock(uid, handle)
+}
+
 // Load 加载玩家数据,如果不在线则实时读写数据库
 // init 是否立即初始化所有数据
 func Load(uid string, handle player.Handle) (err error) {
-	if err := available(); err != nil {
+	if err = available(); err != nil {
 		return err
 	}
 	return ps.Load(uid, false, handle)
@@ -117,7 +136,7 @@ func Load(uid string, handle player.Handle) (err error) {
 // Login 登录成功,只能在登录时调用
 // test 为 true 时以测试模式登录（不写库）
 func Login(uid string, test bool, meta map[string]string, handle player.Handle) (err error) {
-	if err := available(); err != nil {
+	if err = available(); err != nil {
 		return err
 	}
 	err = ps.Load(uid, test, func(p *player.Player) error {

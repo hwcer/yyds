@@ -64,6 +64,32 @@ func (this *Players) Load(uid string, test bool, handle player.Handle) (err erro
 	return handle(r)
 }
 
+// Lock 独占该玩家但**不加载任何数据**,详见 players.Lock 的说明。
+func (this *Players) Lock(uid string, handle player.Handle) error {
+	r := newPlayer(uid, false)
+	r.Lock()
+	i, loaded := this.Manage.LoadOrStore(r.Key(), r)
+	if loaded {
+		r.Unlock()
+		r = i
+		r.Lock()
+	}
+	defer r.Unlock()
+	if loaded {
+		//已在内存:与 Get 同一口径,拒绝态不再交出去
+		if r.Denied(atomic.LoadInt32(&r.Status)) {
+			return errors.ErrNotOnline
+		}
+	} else {
+		//我们建的空壳 Updater==nil,绝不能留在 Manage 里:
+		//后续 Get/Load 会对它 Reset(),那是 p.Updater.Reset(),直接空指针
+		defer this.Manage.Delete(r.Key())
+	}
+	//不调 Reset/Release:两者都直接解引用 Updater,空壳上必崩;
+	//已在内存的那条也不 Reset,本方法只保证互斥,不提供数据访问
+	return handle(r)
+}
+
 func (this *Players) Locker(_ string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
 	return NewLocker(uid, args, handle, done...)
 }
