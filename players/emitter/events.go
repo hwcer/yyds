@@ -34,6 +34,11 @@ func (e events) Listen(t int32, handle EventsFunc) {
 }
 
 func (e events) Emit(u *updater.Updater, t int32, args ...int32) {
+	//没有数据的玩家(Load init=false 留下的空壳)不产生事件:框架侧虽然不解引用 u,
+	//但业务注册的监听几乎一定会,把 nil 交出去等于让业务崩
+	if u == nil {
+		return
+	}
 	if len(e[t]) == 0 {
 		return
 	}

@@ -49,49 +49,42 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	})
 }
 
-// Load 加载玩家并进入通道执行
-func (this *Players) Load(uid string, test bool, handle player.Handle) error {
+// Load 加载玩家并进入通道执行;init=false 时只占锁位不加载数据,详见 players.Load
+func (this *Players) Load(uid string, test, init bool, handle player.Handle) error {
 	r := newPlayer(uid, test)
-	if i, loaded := this.Manage.LoadOrStore(r.Key(), r); loaded {
+	i, loaded := this.Manage.LoadOrStore(r.Key(), r)
+	if loaded {
 		r = i
-		if r.Denied(atomic.LoadInt32(&r.Status)) {
+		if r.Denied() {
 			return errors.ErrLoginWaiting
 		}
+	} else if !init {
+		//空壳必须补一次心跳:player.New 不设 heartbeat(恒 0),而 daemon 按
+		//Heartbeat()<offlineTime 判回收、内存压力下又按 heartbeat 升序先放谁——
+		//不刷的话它是全场最先被释放的对象,等不到有人来自愈。preload 同款做法。
+		r.KeepAlive(0)
 	}
 	return invoke(r, func() error {
+		if !init {
+			//只占锁位:不 Loading。空壳留在 Manage 里等人自愈,不删不打拒绝态——处理期间
+			//别人可能已经拿到同一个指针正在等锁,删掉等于让它在 Manage 之外操作孤儿对象,
+			//打拒绝态则会拒掉合法登录。
+			if r.Denied() {
+				return errors.ErrNotOnline
+			}
+			//Reset/Release 照做(两者对空壳是空操作):玩家本就在内存时,少了这一步会给出
+			//一个"非 nil 但 now 是零值"的 Updater——能用、不报错、时间全错。
+			//init=false 的语义是"不预加载数据",不是"对象处于半初始化状态"。
+			r.Reset()
+			defer r.Release()
+			return handle(r)
+		}
 		if err := r.Loading(test); err != nil {
 			this.Manage.Delete(r.Key())
 			return err
 		}
 		r.Reset()
 		defer r.Release()
-		return handle(r)
-	})
-}
-
-// Lock 独占该玩家但**不加载任何数据**,详见 players.Lock 的说明。
-func (this *Players) Lock(uid string, handle player.Handle) error {
-	r := newPlayer(uid, false)
-	i, loaded := this.Manage.LoadOrStore(r.Key(), r)
-	if loaded {
-		r = i
-	} else {
-		//空壳留在 Manage 里,**不要**用完就删:处理期间别人(登录/Get/Load)可能已经
-		//LoadOrStore 拿到同一个指针、正堵在通道外等,删掉等于让它在 Manage 之外操作
-		//一个孤儿对象;打拒绝态更糟,会把一次合法登录直接拒了。
-		//正确的归宿是自愈:谁需要数据谁调 Loading 把它补全(Load/Login 已经这么做),
-		//没人来就由 daemon 正常回收(Reset/Destroy 已对空壳 nil-safe)。
-		//
-		//必须补一次心跳:player.New 不设 heartbeat(恒 0),而 daemon 按
-		//Heartbeat()<offlineTime 判回收、内存压力下又按 heartbeat 升序先放谁——
-		//不刷的话空壳是全场最先被释放的对象,等不到有人来自愈。preload 同款做法。
-		r.KeepAlive(0)
-	}
-	return invoke(r, func() error {
-		if loaded && r.Denied(atomic.LoadInt32(&r.Status)) {
-			return errors.ErrNotOnline
-		}
-		//不调 Reset/Release,见 locker 版注释
 		return handle(r)
 	})
 }

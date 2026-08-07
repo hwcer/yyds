@@ -18,8 +18,8 @@ import (
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/condition"
+	"github.com/hwcer/yyds/players/emitter"
 )
 
 type Message struct {
@@ -61,22 +61,22 @@ func New(uid string, test bool) *Player {
 type Player struct {
 	*updater.Updater
 	uid       string
-	key       string           //map key，空值时 Key() 返回 uid
-	heartbeat atomic.Int64     //最后心跳时间,daemon 与业务协程并发读写,必须原子操作
-	Pending   Pending          //待发送的 Operator 暂存区(跨玩家场景让出锁前 Submit 出来的)
-	Login     int64            //登录时间
-	Syncer    Syncer           //并发控制器
-	Binder    binder.Binder    //当前端使用的序列化方式
-	Status    int32            //在线状态
-	Times     *Times           //时间控制器
+	key       string              //map key，空值时 Key() 返回 uid
+	heartbeat atomic.Int64        //最后心跳时间,daemon 与业务协程并发读写,必须原子操作
+	Pending   Pending             //待发送的 Operator 暂存区(跨玩家场景让出锁前 Submit 出来的)
+	Login     int64               //登录时间
+	Syncer    Syncer              //并发控制器
+	Binder    binder.Binder       //当前端使用的序列化方式
+	Status    int32               //在线状态
+	Times     *Times              //时间控制器
 	Condition *condition.Verifier //全局条件验证器
-	Emitter   *emitter.Emitter //全局事件
-	Message   *Message         //最后一次发包的 MESSAGE
-	Gateway   uint64           //网关地址
-	Address   string           //客户端地址(ip)
+	Emitter   *emitter.Emitter    //全局事件
+	Message   *Message            //最后一次发包的 MESSAGE
+	Gateway   uint64              //网关地址
+	Address   string              //客户端地址(ip)
 }
 
-func (p *Player) initialize() {
+func (p *Player) createComponents() {
 	if p.Times != nil {
 		return
 	}
@@ -164,7 +164,7 @@ func (p *Player) Loading(test bool) (err error) {
 	if p.Updater == nil {
 		p.Updater = updater.New(p)
 	}
-	if err = p.Updater.Loading(p.initialize); err != nil {
+	if err = p.Updater.Loading(p.createComponents); err != nil {
 		return err
 	}
 	if test {
@@ -216,6 +216,25 @@ func (p *Player) Destroy() error {
 	p.Updater = nil
 	p.Pending = Pending{}
 	p.Emitter = nil
+	return nil
+}
+
+// Initialize 把玩家初始化到可用状态,供 Load(init=false) 的回调「中途发现需要数据」时调用。
+//
+// 它把 Loading 与 Reset 一次做完 —— 单调 Loading 是不够的:Updater 由 New 创建时
+// now 是零值,只有 Reset 会设,漏掉就得到一个"能用但时间基准是 1 年"的 Updater,
+// 不报错也不 panic,是最难查的那类问题。
+//
+// 幂等:Updater 已就绪(init=true,或 init=false 时玩家本就在内存、框架已 Reset 过)
+// 直接返回。Release 由框架的 defer 负责,调用方不必管。
+func (p *Player) Initialize() error {
+	if p.Updater != nil {
+		return nil
+	}
+	if err := p.Loading(false); err != nil {
+		return err
+	}
+	p.Reset()
 	return nil
 }
 

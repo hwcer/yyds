@@ -266,7 +266,7 @@ func playerDump(ctx context.Context, req *mcp.CallToolRequest, args dumpArgs) (*
 		return fill(p)
 	}); err != nil {
 		r.Online = false
-		if e := players.Load(args.Uid, fill); e != nil {
+		if e := players.Load(args.Uid, true, fill); e != nil {
 			return nil, nil, e
 		}
 	}

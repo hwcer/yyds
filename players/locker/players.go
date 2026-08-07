@@ -47,47 +47,35 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	return handle(p)
 }
 
-func (this *Players) Load(uid string, test bool, handle player.Handle) (err error) {
+// Load 加载玩家;init=false 时只占锁位不加载数据,详见 players.Load
+func (this *Players) Load(uid string, test, init bool, handle player.Handle) (err error) {
 	r := newPlayer(uid, test)
-	r.Lock()
-	if i, loaded := this.Manage.LoadOrStore(r.Key(), r); loaded {
-		r.Unlock()
-		r = i
-		r.Lock()
-	}
-	defer r.Unlock()
-	if err = r.Loading(test); err != nil {
-		this.Manage.Delete(r.Key())
-		return
-	}
-	r.Reset()
-	defer r.Release()
-	return handle(r)
-}
-
-// Lock 独占该玩家但**不加载任何数据**,详见 players.Lock 的说明。
-func (this *Players) Lock(uid string, handle player.Handle) error {
-	r := newPlayer(uid, false)
 	r.Lock()
 	i, loaded := this.Manage.LoadOrStore(r.Key(), r)
 	if loaded {
 		r.Unlock()
 		r = i
 		r.Lock()
-	}
-	defer r.Unlock()
-	if loaded {
-		//已在内存:与 Get 同一口径,拒绝态不再交出去
-		if r.Denied(atomic.LoadInt32(&r.Status)) {
-			return errors.ErrNotOnline
-		}
-	} else {
-		//空壳留在 Manage 里等人自愈,不删不打拒绝态,理由见 actor 版同处注释。
-		//KeepAlive 也别省:不刷心跳的空壳是全场最先被 daemon 释放的对象。
+	} else if !init {
+		//空壳必须补一次心跳,理由见 actor 版同处注释
 		r.KeepAlive(0)
 	}
-	//不调 Reset/Release:两者都直接解引用 Updater,空壳上必崩;
-	//已在内存的那条也不 Reset,本方法只保证互斥,不提供数据访问
+	defer r.Unlock()
+	if !init {
+		//只占锁位:不 Loading。理由与 Reset/Release 仍照做的原因见 actor 版同处注释。
+		if r.Denied() {
+			return errors.ErrNotOnline
+		}
+		r.Reset()
+		defer r.Release()
+		return handle(r)
+	}
+	if err = r.Loading(test); err != nil {
+		this.Manage.Delete(r.Key())
+		return
+	}
+	r.Reset()
+	defer r.Release()
 	return handle(r)
 }
 

@@ -29,6 +29,17 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 		return errors.New("gateway is empty")
 	}
 
+	//上线前先确保数据就绪。Connected 只管"算不算在线",数据一向由 Loading 负责;
+	//正常登录路径(Login = Load(init=true) + Connected)早已加载过,Loading 幂等、零成本。
+	//这里兜的是 Load(init=false) 留下的空壳被直接激活的情况——没有这一步就会出现
+	//"在线却没有数据"的玩家:它在在线数里占一个、Send 也会尝试发包,却要等第一个业务
+	//请求经「Get 失败 → 退回 Load(init=true)」降级链才把数据补上。
+	//放在 gateway 校验之后:那是纯内存判断,不该为一个注定失败的上线去读一次库。
+	if e := p.Loading(false); e != nil {
+		logger.Debug("player loading failed on connected:%v,%v", p.Uid(), e)
+		return errors.ErrLoginWaiting
+	}
+
 	defer func() {
 		if err == nil {
 			p.KeepAlive(0)

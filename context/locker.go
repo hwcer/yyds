@@ -54,7 +54,7 @@ func (this *Context) GetPlayer(uid string, handle player.Handle) (err error) {
 	}
 
 	if err = players.Get(uid, handle); err != nil && errors.Is(err, errors.ErrNotOnline) {
-		err = players.Load(uid, handle)
+		err = players.Load(uid, true, handle)
 	}
 	return
 }

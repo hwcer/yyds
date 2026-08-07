@@ -105,37 +105,35 @@ func Get(uid string, handle player.Handle) error {
 	return ps.Get(uid, handle)
 }
 
-// Lock 独占该玩家,但**不加载任何数据**。
+// Load 加载玩家数据,如果不在线则实时读写数据库。
 //
-// 与 Get/Load 的区别只有一条:它不初始化 Updater。玩家不在内存时只放一个空壳进管理器
-// 占住锁位,回调里拿到的 p.Updater 是 **nil**。
+// init 传 **false** 表示「只占锁位,不加载数据」:玩家不在内存时只放一个
+// 空壳进管理器占住锁位,回调里拿到的 p.Updater 是 **nil**。用于「数据不经 Updater、但仍要
+// 与玩家其它操作互斥」的场景——运营后台 / GM 工具直连数据库改档、离线数据修复等。这类操作
+// 本来就不读内存数据,按默认走一遍等于白白从库里拉一遍全量、还把离线玩家长期驻留进内存。
 //
-// 空壳**留在管理器里**,不会用完就删——处理期间别人(登录/Get/Load)可能已经拿到同一个
-// 指针正在等锁,删掉等于让它在管理器之外操作孤儿对象。空壳的归宿是自愈:谁需要数据谁调
-// Loading 把它补全(Load/Login 天然如此),没人来就由 daemon 正常回收。Get 会把空壳
-// 认作"不在线"返回 ErrNotOnline,于是既有的"Get 失败退回 Load"降级链自动完成自愈。
+// 空壳**留在管理器里**,不会用完就删——处理期间别人(登录 / Get / Load)可能已经拿到同一个
+// 指针正在等锁,删掉等于让它在管理器之外操作孤儿对象,打拒绝态则会把一次合法登录拒了。
+// 空壳的归宿是**自愈**:谁需要数据谁调 Loading 把它补全(本方法 init=true 时天然如此),
+// 没人来就由 daemon 正常回收。Get 把空壳认作"不在线"返回 ErrNotOnline,于是既有的
+// 「Get 失败 → 退回 Load」降级链会自动完成这次自愈。
 //
-// 用途是「数据不经 Updater、但仍要与玩家的其它操作互斥」的场景:运营后台/GM 工具直连
-// 数据库改档、离线数据修复等。这类操作本来就不读内存数据,走 Load 等于白白从库里
-// 拉一遍全量数据、还把离线玩家长期驻留进内存。
+// init=false 与 init=true 的唯一差别是**不预加载数据**,不是"对象处于半初始化状态":
+// Reset/Release 照常执行(对空壳是空操作)。所以回调里:
+//   - p.Updater == nil 表示玩家不在内存 —— 用它就是当场 nil panic,不会静默出错
+//   - p.Updater != nil 表示玩家本就在内存,且**已为本次调用 Reset 过**,可以正常使用
+//   - 中途发现需要数据 → 调 **p.Initialize()**(Loading + Reset 一次做完,幂等),
+//     别只调 Loading:Updater 由 New 创建时 now 是零值,漏了 Reset 会得到一个
+//     "能用但时间基准是 1 年"的对象,不报错也不 panic
 //
-// 回调里能安全做的事:判 p.Connected()、Terminate(p)、以及在 p.Updater 非 nil 时调
-// p.Updater.Reload() 让内存跟上库。**不要**用 p.Updater 读写业务数据 —— 玩家不在内存时
-// 它是 nil,在内存时也没有为本次调用 Reset 过;要读写数据请用 Get/Load。
-func Lock(uid string, handle player.Handle) error {
-	if err := available(); err != nil {
-		return err
-	}
-	return ps.Lock(uid, handle)
-}
-
-// Load 加载玩家数据,如果不在线则实时读写数据库
-// init 是否立即初始化所有数据
-func Load(uid string, handle player.Handle) (err error) {
+// **不要**用 Connected 去"补数据":它是登录入口,会把玩家标成在线(在线数 +1、发
+// EventConnect),GM / 后台场景下那是一次假上线。它内部确实也会先 Loading,但那是为了
+// 保证"凡是 Connected 的玩家一定有数据"这条不变式,不是给别人当自愈入口用的。
+func Load(uid string, init bool, handle player.Handle) (err error) {
 	if err = available(); err != nil {
 		return err
 	}
-	return ps.Load(uid, false, handle)
+	return ps.Load(uid, false, init, handle)
 }
 
 // Login 登录成功,只能在登录时调用
@@ -144,7 +142,7 @@ func Login(uid string, test bool, meta map[string]string, handle player.Handle) 
 	if err = available(); err != nil {
 		return err
 	}
-	err = ps.Load(uid, test, func(p *player.Player) error {
+	err = ps.Load(uid, test, true, func(p *player.Player) error {
 		if e := Connected(p, meta); e != nil {
 			return e
 		}
