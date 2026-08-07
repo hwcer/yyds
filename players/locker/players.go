@@ -83,7 +83,14 @@ func (this *Players) Lock(uid string, handle player.Handle) error {
 	} else {
 		//我们建的空壳 Updater==nil,绝不能留在 Manage 里:
 		//后续 Get/Load 会对它 Reset(),那是 p.Updater.Reset(),直接空指针
-		defer this.Manage.Delete(r.Key())
+		//
+		//摘除前先打拒绝态:此刻可能已经有 Get 拿到了这个指针、正堵在锁上,
+		//只 Delete 拦不住它们——它们手里的指针依然有效,解锁后照样往下走 Reset()。
+		//置 Released 后那些等待者会在状态检查处返回 ErrNotOnline。
+		defer func() {
+			atomic.StoreInt32(&r.Status, player.StatusReleased)
+			this.Manage.Delete(r.Key())
+		}()
 	}
 	//不调 Reset/Release:两者都直接解引用 Updater,空壳上必崩;
 	//已在内存的那条也不 Reset,本方法只保证互斥,不提供数据访问

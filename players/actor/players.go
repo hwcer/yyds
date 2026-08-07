@@ -73,8 +73,11 @@ func (this *Players) Lock(uid string, handle player.Handle) error {
 		r = i
 	} else {
 		//空壳用完即摘,理由同 locker 版;Delete/Close 必须在通道外做
-		//(Close 关的是玩家通道,持有时关会让 worker 卡死),故放 defer
+		//(Close 关的是玩家通道,持有时关会让 worker 卡死),故放 defer。
+		//先打拒绝态再摘:通道里可能已排着别人的 Get,close 后缓冲区里的 fn 仍会执行,
+		//置 Released 能让它们在状态检查处返回 ErrNotOnline 而不是 Reset 空指针。
 		defer func() {
+			atomic.StoreInt32(&r.Status, player.StatusReleased)
 			this.Manage.Delete(r.Key())
 			r.Close()
 		}()
