@@ -202,6 +202,14 @@ func (p *Player) Guid() string {
 // Destroy 销毁玩家数据,调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater
 // 不在这里关闭 Syncer:关闭动作必须发生在 Unlock 之后,见 Close
 func (p *Player) Destroy() error {
+	//空壳(Updater==nil,见 players.Lock)没有数据要销毁,直接算成功。
+	//不能返回 error:daemon 的 released 收到 error 会还原状态、下个 tick 重试,
+	//空壳每次都失败就成了死循环。
+	if p.Updater == nil {
+		p.Pending = Pending{}
+		p.Emitter = nil
+		return nil
+	}
 	if err := p.Updater.Destroy(); err != nil {
 		return err
 	}

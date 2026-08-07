@@ -37,8 +37,9 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 	}
 	p.Lock()
 	defer p.Unlock()
-	//必须先判状态再 Reset:拿到锁时可能已经被 released 销毁
-	if p.Denied(atomic.LoadInt32(&p.Status)) {
+	//必须先判状态再 Reset:拿到锁时可能已经被 released 销毁。
+	//Updater==nil 是 Lock 留下的空壳,按定义不是在线玩家,理由见 actor 版同处注释。
+	if p.Denied(atomic.LoadInt32(&p.Status)) || p.Updater == nil {
 		return errors.ErrNotOnline
 	}
 	p.Reset()
@@ -81,16 +82,9 @@ func (this *Players) Lock(uid string, handle player.Handle) error {
 			return errors.ErrNotOnline
 		}
 	} else {
-		//我们建的空壳 Updater==nil,绝不能留在 Manage 里:
-		//后续 Get/Load 会对它 Reset(),那是 p.Updater.Reset(),直接空指针
-		//
-		//摘除前先打拒绝态:此刻可能已经有 Get 拿到了这个指针、正堵在锁上,
-		//只 Delete 拦不住它们——它们手里的指针依然有效,解锁后照样往下走 Reset()。
-		//置 Released 后那些等待者会在状态检查处返回 ErrNotOnline。
-		defer func() {
-			atomic.StoreInt32(&r.Status, player.StatusReleased)
-			this.Manage.Delete(r.Key())
-		}()
+		//空壳留在 Manage 里等人自愈,不删不打拒绝态,理由见 actor 版同处注释。
+		//KeepAlive 也别省:不刷心跳的空壳是全场最先被 daemon 释放的对象。
+		r.KeepAlive(0)
 	}
 	//不调 Reset/Release:两者都直接解引用 Updater,空壳上必崩;
 	//已在内存的那条也不 Reset,本方法只保证互斥,不提供数据访问

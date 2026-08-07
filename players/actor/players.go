@@ -35,8 +35,12 @@ func (this *Players) Get(uid string, handle player.Handle) error {
 		return errors.ErrNotOnline
 	}
 	return invoke(p, func() error {
-		//状态判定必须在通道内、Reset 之前:released 会在通道内把 Updater 置空
-		if p.Denied(atomic.LoadInt32(&p.Status)) {
+		//状态判定必须在通道内、Reset 之前:released 会在通道内把 Updater 置空。
+		//Updater==nil 是 Lock 留下的空壳(只占了锁位、没加载数据):它按定义就不是在线玩家,
+		//这里必须挡住——否则会把 nil Updater 交给业务。返回 ErrNotOnline 也正好让
+		//context/locker.go 与 gomcp 那两条「Get 失败→退回 Load」的降级链继续成立,
+		//由 Load 的 Loading 去自愈它。
+		if p.Denied(atomic.LoadInt32(&p.Status)) || p.Updater == nil {
 			return errors.ErrNotOnline
 		}
 		p.Reset()
@@ -72,15 +76,16 @@ func (this *Players) Lock(uid string, handle player.Handle) error {
 	if loaded {
 		r = i
 	} else {
-		//空壳用完即摘,理由同 locker 版;Delete/Close 必须在通道外做
-		//(Close 关的是玩家通道,持有时关会让 worker 卡死),故放 defer。
-		//先打拒绝态再摘:通道里可能已排着别人的 Get,close 后缓冲区里的 fn 仍会执行,
-		//置 Released 能让它们在状态检查处返回 ErrNotOnline 而不是 Reset 空指针。
-		defer func() {
-			atomic.StoreInt32(&r.Status, player.StatusReleased)
-			this.Manage.Delete(r.Key())
-			r.Close()
-		}()
+		//空壳留在 Manage 里,**不要**用完就删:处理期间别人(登录/Get/Load)可能已经
+		//LoadOrStore 拿到同一个指针、正堵在通道外等,删掉等于让它在 Manage 之外操作
+		//一个孤儿对象;打拒绝态更糟,会把一次合法登录直接拒了。
+		//正确的归宿是自愈:谁需要数据谁调 Loading 把它补全(Load/Login 已经这么做),
+		//没人来就由 daemon 正常回收(Reset/Destroy 已对空壳 nil-safe)。
+		//
+		//必须补一次心跳:player.New 不设 heartbeat(恒 0),而 daemon 按
+		//Heartbeat()<offlineTime 判回收、内存压力下又按 heartbeat 升序先放谁——
+		//不刷的话空壳是全场最先被释放的对象,等不到有人来自愈。preload 同款做法。
+		r.KeepAlive(0)
 	}
 	return invoke(r, func() error {
 		if loaded && r.Denied(atomic.LoadInt32(&r.Status)) {

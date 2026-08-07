@@ -2,6 +2,7 @@ package locker
 
 import (
 	"github.com/hwcer/cosgo/await"
+	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -49,7 +50,16 @@ func (this *Locker) loading(uid string) error {
 		i.Lock()
 		r.Unlock()
 		r = i
-	} else if err := r.Loading(false); err != nil {
+		//已在内存的也要判拒绝态:Released 的对象 Updater 已被销毁
+		if r.Denied() {
+			r.Unlock()
+			return errors.ErrNotOnline
+		}
+	}
+	//两条分支都要 Loading:原先只在新建分支调,已在内存的直接 Reset ——
+	//遇到 players.Lock 留下的空壳(Updater==nil)就是空指针。Loading 幂等,
+	//已加载过的对象零成本。actor 版(actor/channel.go)两条分支本来就都调了。
+	if err := r.Loading(false); err != nil {
 		r.Unlock()
 		instance.Manage.Delete(r.Key())
 		return err
