@@ -35,6 +35,9 @@ type Statement struct {
 // 到达 2^53 时相邻分数不再可分。超过 2^52 时 tiebreak 已完全退化为并列。
 func (this *Statement) formatScore(w *Bucket, score int64) float64 {
 	base := float64(score)
+	if !w.zTiebreak {
+		return base //关闭tiebreak:score保持纯整数,读侧无需parseScore
+	}
 	d := this.zExpire - this.zTime //本届时长
 	if d <= 1 {
 		return base //时长无效,不做时间tiebreak

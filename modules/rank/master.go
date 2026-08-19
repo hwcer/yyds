@@ -29,7 +29,7 @@ func (this master) Get(name any) *Bucket {
 // name 仅支持字符串和数字
 //
 // 只能在 Start 之前调用:启动后 Master 会被心跳协程和业务协程并发读取,再写入将导致进程崩溃
-func (this master) Register(name any, zMax, zScore int64, zType SortType, handle Handle) {
+func (this master) Register(name any, zMax, zScore int64, zType SortType, handle Handle, opts ...Option) {
 	if started.Load() {
 		logger.Fatal("排行榜必须在 rank.Start 之前注册:%v", name)
 		return
@@ -43,7 +43,7 @@ func (this master) Register(name any, zMax, zScore int64, zType SortType, handle
 		logger.Fatal("重复注册排行榜:%v", name)
 		return
 	}
-	this[k] = NewBucket(name, k, zMax, zScore, zType, handle)
+	this[k] = NewBucket(name, k, zMax, zScore, zType, handle, opts...)
 }
 
 func (this master) start() (err error) {

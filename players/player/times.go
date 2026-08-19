@@ -70,7 +70,10 @@ func (this *Times) ExpireWithArray(args ...int64) (r int64, err error) {
 	return this.Expire(v[0], v[1])
 }
 
-// Expire 过期时间
+// Expire 过期时间点，语义为左闭右开区间 [Start, Expire) 的右端点
+//
+// 该时间点【本身不属于】本届：判定有效一律用 now < expire，判定过期用 now >= expire。
+// 口径与 cosgo/times.Times.Expire 一致，勿在调用方用 <= / >= 判定，否则会晚一个单位过期。
 func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 	if t == 0 {
 		return 0, nil
@@ -91,14 +94,14 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 		if v > 0 {
 			role := this.p.Document(RoleIType)
 			create := role.Get(RoleFields.Create)
-			dt := times.Unix(values.ParseInt64(create)).Daily(int(v)).Add(-1)
+			dt := times.Unix(values.ParseInt64(create)).Daily(int(v))
 			r = dt.Now().Unix()
 		}
 		return
 	case ExpireTimeServerCreate:
 		if v > 0 {
 			dt := times.Unix(options.GetServerTime())
-			dt = dt.Daily(int(v)).Add(-1)
+			dt = dt.Daily(int(v))
 			r = dt.Now().Unix()
 		}
 		return

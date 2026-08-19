@@ -27,6 +27,18 @@ func ZAdd(name any, cycle int64, uid string, score int64) error {
 	return nil
 }
 
+// ZSwap 原子对调两名成员的分数,返回各自对调【前】的原始分数
+//
+// 详见 Bucket.ZSwap。错误按 errors.Is 区分:
+// ErrTruce / ErrSwapMemberMissing / ErrSwapCondition
+func ZSwap(name any, cycle int64, a, b string, cond SwapCond) (scoreA, scoreB int64, err error) {
+	w := Master.Get(name)
+	if w == nil {
+		return 0, 0, values.Error("Rank not exist")
+	}
+	return w.ZSwap(cycle, a, b, cond)
+}
+
 func ZCard(name any, cycle int64) (int64, error) {
 	w := Master.Get(name)
 	if w == nil {

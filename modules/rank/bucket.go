@@ -4,29 +4,39 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/logger"
 )
 
-func NewBucket(name any, zKey string, zMax, zScore int64, zType SortType, handle Handle) *Bucket {
-	return &Bucket{zName: name, zKey: zKey, zMax: zMax, zScore: zScore, zType: zType, handle: handle}
+func NewBucket(name any, zKey string, zMax, zScore int64, zType SortType, handle Handle, opts ...Option) *Bucket {
+	b := &Bucket{zName: name, zKey: zKey, zMax: zMax, zScore: zScore, zType: zType, handle: handle}
+	b.zTiebreak = true //默认启用同分tiebreak,由 WithoutTiebreak 关闭
+	for _, opt := range opts {
+		if opt != nil {
+			opt(b)
+		}
+	}
+	return b
 }
 
 type Bucket struct {
-	zMax    int64                     //排行榜人数限制
-	zKey    string                    //排行榜名称转换后的确定字符串,用于生成REDIS KEY
-	zType   SortType                  //排序方式
-	zName   any                       //排行榜名称,仅支持字符串和数字
-	zScore  int64                     //排行榜最低分数限制
-	zStmt   atomic.Pointer[Statement] //当前届,换届时整体替换,业务协程无锁读取
-	zMutex  sync.Mutex                //保护 submits 以及换届过程
-	handle  Handle                    //获取当前期数和过期时间
-	submits []*Statement              //当前待结算,只由心跳协程消费
+	zMax      int64                     //排行榜人数限制
+	zKey      string                    //排行榜名称转换后的确定字符串,用于生成REDIS KEY
+	zType     SortType                  //排序方式
+	zName     any                       //排行榜名称,仅支持字符串和数字
+	zScore    int64                     //排行榜最低分数限制
+	zTiebreak bool                      //是否把达成时间编码进score小数位做同分tiebreak,见 WithoutTiebreak
+	zStmt     atomic.Pointer[Statement] //当前届,换届时整体替换,业务协程无锁读取
+	zMutex    sync.Mutex                //保护 submits 以及换届过程
+	handle    Handle                    //获取当前期数和过期时间
+	submits   []*Statement              //当前待结算,只由心跳协程消费
 }
 
 // Name 排行榜名称(原始值)
@@ -145,6 +155,83 @@ func (this *Bucket) ZAdd(cycle int64, uid string, score int64) (err error) {
 		return nil
 	}
 	return this.save(stmt, uid, score)
+}
+
+// swapScript 原子对调两名成员的分数
+//
+// 必须整体在 Lua 内完成:若在 Go 侧先 ZSCORE 读出来比大小、再发两条 ZADD,那个"读-判-写"
+// 不是原子的——并发下目标的名次可能在读与写之间被第三方换走,判定即失效;
+// 两条 ZADD 之间还存在中间态,此刻别的请求会读到两人同分。
+//
+// 返回 ZSCORE 的原始字符串而非 number:REDIS 的 Lua 返回 number 时会截断小数,
+// 启用了 tiebreak 的榜其 score 带小数位,直接返回 number 会丢精度。
+var swapScript = redis.NewScript(`
+local a = redis.call('ZSCORE', KEYS[1], ARGV[1])
+local b = redis.call('ZSCORE', KEYS[1], ARGV[2])
+if (not a) or (not b) then return {'missing'} end
+if ARGV[3] == '1' then
+  local ahead
+  if ARGV[4] == '1' then
+    ahead = tonumber(b) > tonumber(a)
+  else
+    ahead = tonumber(b) < tonumber(a)
+  end
+  if not ahead then return {'cond'} end
+end
+redis.call('ZADD', KEYS[1], b, ARGV[1])
+redis.call('ZADD', KEYS[1], a, ARGV[2])
+return {'ok', a, b}
+`)
+
+// ZSwap 原子对调 a 与 b 的分数,返回各自对调【前】的原始分数
+//
+// 适用于"名次即资源"的榜:挑战成功后攻守双方交换席位。cond 见 SwapCond。
+// 不做入围分数(isScore)与名次(isMax)检查——双方本就都在榜上,与"够不够格上榜"无关。
+//
+// 错误:ErrTruce(休战期) / ErrSwapMemberMissing(有人不在榜) / ErrSwapCondition(条件不满足)
+func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scoreB int64, err error) {
+	if a == "" || b == "" || a == b {
+		return 0, 0, values.Error("rank: ZSwap invalid uid")
+	}
+	v, writable := this.Cycle()
+	if !writable {
+		return 0, 0, ErrTruce
+	}
+	if cycle == 0 {
+		cycle = v
+	} else if cycle != v {
+		return 0, 0, ErrSwapMemberMissing //非当前届不可交换
+	}
+	stmt := this.statement()
+	if stmt == nil || stmt.zCycle != cycle {
+		return 0, 0, ErrSwapMemberMissing
+	}
+	desc := "0"
+	if this.zType == SortTypeDesc {
+		desc = "1"
+	}
+	key := this.RedisRankKey(cycle)
+	res, e := swapScript.Run(context.Background(), Redis, []string{key}, a, b, fmt.Sprintf("%d", cond), desc).StringSlice()
+	if e != nil {
+		return 0, 0, e
+	}
+	if len(res) == 0 {
+		return 0, 0, values.Error("rank: ZSwap empty reply")
+	}
+	switch res[0] {
+	case "missing":
+		return 0, 0, ErrSwapMemberMissing
+	case "cond":
+		return 0, 0, ErrSwapCondition
+	case "ok":
+		if len(res) < 3 {
+			return 0, 0, values.Error("rank: ZSwap bad reply")
+		}
+		fa, _ := strconv.ParseFloat(res[1], 64)
+		fb, _ := strconv.ParseFloat(res[2], 64)
+		return parseScore(fa), parseScore(fb), nil
+	}
+	return 0, 0, values.Errorf(0, "rank: ZSwap unknown reply:%v", res[0])
 }
 
 func (this *Bucket) ZRem(cycle int64, uid string) (err error) {
