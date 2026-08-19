@@ -281,6 +281,12 @@ func (this *Bucket) ZRank(cycle int64, uid string, withScore bool) (r *Player, e
 		r.Rank = -1
 		err = nil
 	}
+	//超出 zMax 的一律视为未上榜:溢出清理是延时的(要 ZCARD>zMax+OverflowThreshold 才触发,
+	//且由 5s 心跳驱动),期间 REDIS 里真实存在 zMax 之外的成员。若如实返回,玩家会看到
+	//"第 5200 名"这种榜容量之外的名次,与 ZCard 截断后的总数自相矛盾。
+	if this.outOfRange(r.Rank) {
+		r.Rank = -1
+	}
 	if !withScore || r.Rank < 0 {
 		return
 	}
@@ -293,7 +299,18 @@ func (this *Bucket) ZRank(cycle int64, uid string, withScore bool) (r *Player, e
 }
 
 // ZRange 区间信息
+//
+// 区间自动截断到 zMax 之内:溢出清理是延时的,REDIS 里可能存在 zMax 之外的成员,
+// 不截断会把它们当作榜内数据返回。zMax==0(不限人数)时不做限制。
 func (this *Bucket) ZRange(cycle int64, s, e int64) (r []*Player, err error) {
+	if this.zMax > 0 {
+		if s >= this.zMax {
+			return []*Player{}, nil //起点已在榜外
+		}
+		if e < 0 || e >= this.zMax {
+			e = this.zMax - 1
+		}
+	}
 	k := this.RedisRankKey(cycle)
 	var z []redis.Z
 	if this.zType == SortTypeDesc {
@@ -390,6 +407,11 @@ func (this *Bucket) Remove(cycle, delay int64) (err error) {
 		return Redis.Del(context.Background(), key).Err()
 	}
 	return Redis.Expire(context.Background(), key, time.Second*time.Duration(delay)).Err()
+}
+
+// outOfRange 名次是否已在榜容量之外(zMax==0 表示不限人数,恒为 false)
+func (this *Bucket) outOfRange(rank int64) bool {
+	return this.zMax > 0 && rank >= this.zMax
 }
 
 func (this *Bucket) save(stmt *Statement, uid string, score int64) (err error) {
