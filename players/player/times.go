@@ -112,6 +112,8 @@ func (this *Times) Expire(t int64, v int64) (r int64, err error) {
 }
 
 // Verify 验证是否在有效期(开始以及过期时间)内，返回开始和结束时间
+//
+// 区间为左闭右开 [start, expire)：start 那一刻已开始，expire 那一刻已结束（见 Expire 注释）。
 func (this *Times) Verify(args []int64) (t [2]int64, err error) {
 	arr := []int64{0, 0, 0}
 	copy(arr, args)
@@ -125,7 +127,7 @@ func (this *Times) Verify(args []int64) (t [2]int64, err error) {
 	if t[1], err = this.Expire(arr[0], arr[2]); err != nil {
 		return
 	}
-	if t[1] > 0 && t[1] < now {
+	if t[1] > 0 && t[1] <= now {
 		err = errors.ErrActiveExpired
 		return
 	}
