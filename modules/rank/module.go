@@ -46,6 +46,8 @@ func GetBucket(name any) *Bucket {
 }
 
 // Register 注册排行榜,只能在 init 阶段(Start 之前)调用
-func Register(name any, zMax, zScore int64, zType SortType, plugs Handle) {
-	Master.Register(name, zMax, zScore, zType, plugs)
+//
+// opts 可选项,如 WithoutTiebreak() 关闭同分tiebreak(令 score 保持纯整数)
+func Register(name any, zMax, zScore int64, zType SortType, plugs Handle, opts ...Option) {
+	Master.Register(name, zMax, zScore, zType, plugs, opts...)
 }
