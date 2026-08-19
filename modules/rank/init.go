@@ -52,6 +52,11 @@ var (
 	ErrSwapMemberMissing = errors.New("rank: member not on the list")
 	//ErrSwapCondition 交换条件不满足,如要求目标更靠前但其名次已被他人换走
 	ErrSwapCondition = errors.New("rank: swap condition not satisfied")
+	//ErrSwapEqualScore 双方分数相同,交换是 no-op
+	//
+	//ZSET 同分时按 member 字典序排,互换相同的分数改变不了任何人的名次。
+	//这种情况必须显式报错而非返回成功,否则调用方会以为交换生效了。
+	ErrSwapEqualScore = errors.New("rank: equal score, swap would be a no-op")
 	//ErrTruce 休战期内不可写
 	//
 	//注意与 ZAdd 的差异:ZAdd 在休战期静默返回 nil(丢弃写入),那是分数榜可接受的降级;

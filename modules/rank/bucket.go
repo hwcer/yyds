@@ -165,18 +165,29 @@ func (this *Bucket) ZAdd(cycle int64, uid string, score int64) (err error) {
 //
 // 返回 ZSCORE 的原始字符串而非 number:REDIS 的 Lua 返回 number 时会截断小数,
 // 启用了 tiebreak 的榜其 score 带小数位,直接返回 number 会丢精度。
+//
+// 🔴 两处与"排序"有关的坑:
+//
+//	1.【同分直接拒绝】ZSET 同分时按 member 字典序排,此时互换分数是 no-op ——
+//	  名次纹丝不动,却会让调用方以为换成功了(静默失败)。故 score 相等一律返回 equal。
+//	2.【条件判定用 ZRANK 而不是比分数】同分时分数比较反映不了真实名次(见上)。
+//	  改用 ZRANK/ZREVRANK 取真实名次比较,rank 恒为"越小越靠前",顺带把升序/降序两种
+//	  榜的方向差异收敛掉,不必在脚本里按 SortType 反转比较符。
 var swapScript = redis.NewScript(`
 local a = redis.call('ZSCORE', KEYS[1], ARGV[1])
 local b = redis.call('ZSCORE', KEYS[1], ARGV[2])
 if (not a) or (not b) then return {'missing'} end
+if tonumber(a) == tonumber(b) then return {'equal'} end
 if ARGV[3] == '1' then
-  local ahead
+  local ra, rb
   if ARGV[4] == '1' then
-    ahead = tonumber(b) > tonumber(a)
+    ra = redis.call('ZREVRANK', KEYS[1], ARGV[1])
+    rb = redis.call('ZREVRANK', KEYS[1], ARGV[2])
   else
-    ahead = tonumber(b) < tonumber(a)
+    ra = redis.call('ZRANK', KEYS[1], ARGV[1])
+    rb = redis.call('ZRANK', KEYS[1], ARGV[2])
   end
-  if not ahead then return {'cond'} end
+  if rb >= ra then return {'cond'} end
 end
 redis.call('ZADD', KEYS[1], b, ARGV[1])
 redis.call('ZADD', KEYS[1], a, ARGV[2])
@@ -221,6 +232,8 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 	switch res[0] {
 	case "missing":
 		return 0, 0, ErrSwapMemberMissing
+	case "equal":
+		return 0, 0, ErrSwapEqualScore
 	case "cond":
 		return 0, 0, ErrSwapCondition
 	case "ok":
