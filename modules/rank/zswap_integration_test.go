@@ -121,3 +121,46 @@ func TestZSwapMemberMissing(t *testing.T) {
 		t.Fatalf("应返回 ErrSwapMemberMissing, 实际 %v", err)
 	}
 }
+
+// TestZSwapDescRankActuallySwapped 降序榜:交换后【真实名次】必须对调，而不只是分数对调
+//
+// 单看 score 互换不足以证明正确——降序榜的排序方向与升序相反，
+// 若脚本里 ZRANK/ZREVRANK 选错，条件判定会整个反过来。
+func TestZSwapDescRankActuallySwapped(t *testing.T) {
+	setupRedis(t)
+	b := newSwapBucket(t, SortTypeDesc)
+	//降序:分数越大名次越靠前 -> top=300(rank0), mid=200(rank1), low=100(rank2)
+	_ = b.ZAdd(1, "top", 300)
+	_ = b.ZAdd(1, "mid", 200)
+	_ = b.ZAdd(1, "low", 100)
+
+	rankOf := func(uid string) int64 {
+		p, err := b.ZRank(1, uid, false)
+		if err != nil {
+			t.Fatalf("ZRank(%s): %v", uid, err)
+		}
+		return p.Rank
+	}
+	if rankOf("low") != 2 || rankOf("top") != 0 {
+		t.Fatalf("前置状态错误 low=%d top=%d", rankOf("low"), rankOf("top"))
+	}
+
+	//low 挑战 top(更靠前) -> 应成功
+	from, to, err := b.ZSwap(1, "low", "top", SwapIfTargetAhead)
+	if err != nil {
+		t.Fatalf("降序榜挑战更靠前者应成功: %v", err)
+	}
+	if from != 100 || to != 300 {
+		t.Errorf("返回原分数应为 (100,300), 实际 (%d,%d)", from, to)
+	}
+	//名次必须真的互换:low 变第 0、top 落到第 2,中间的 mid 不受影响
+	if r := rankOf("low"); r != 0 {
+		t.Errorf("low 交换后名次应为 0, 实际 %d", r)
+	}
+	if r := rankOf("top"); r != 2 {
+		t.Errorf("top 交换后名次应为 2, 实际 %d", r)
+	}
+	if r := rankOf("mid"); r != 1 {
+		t.Errorf("mid 不该被波及, 名次应为 1, 实际 %d", r)
+	}
+}
