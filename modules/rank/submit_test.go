@@ -13,7 +13,6 @@ type fakeHandle struct {
 	failing atomic.Bool
 }
 
-func (h *fakeHandle) Truce() int64                      { return 0 }
 func (h *fakeHandle) Cycle(skip int64) int64            { return 1 + skip }
 func (h *fakeHandle) Expire(cycle int64) (int64, int64) { return 0, 0 }
 func (h *fakeHandle) Submit(b *Bucket, cycle int64) (int64, error) {

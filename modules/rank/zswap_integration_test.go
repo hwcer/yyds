@@ -36,7 +36,6 @@ func setupRedis(t *testing.T) {
 
 type swapHandle struct{}
 
-func (swapHandle) Truce() int64                         { return 0 }
 func (swapHandle) Cycle(skip int64) int64               { return 1 + skip }
 func (swapHandle) Expire(int64) (int64, int64)          { return 0, 0 }
 func (swapHandle) Submit(*Bucket, int64) (int64, error) { return 0, nil }

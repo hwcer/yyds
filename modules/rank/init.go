@@ -80,7 +80,6 @@ func WithoutTiebreak() Option {
 }
 
 type Handle interface {
-	Truce() int64                             //赛季前X秒进入休战期，休战期开始结算，并且无法再更新数据
 	Cycle(skip int64) (cycle int64)           //返回本期标记,skip :0 当前，-1：上一届，1：下一届。。。
 	Expire(cycle int64) (start, expire int64) //当前届排行榜的开始时间和结束时间,均为unix秒
 	//Submit 结算,返回排行榜数据的删除时间(unix秒)
@@ -91,6 +90,34 @@ type Handle interface {
 
 type HandleHeartbeat interface {
 	Heartbeat(w *Bucket, cycle int64)
+}
+
+// HandleTruce 可选:由排行榜【自己】判断当前是否处于休战期(榜只读)。
+//
+// 不实现即永不休战。
+//
+// # 为什么从 Truce() int64 改成回调
+//
+// 旧签名返回「本届结束前 X 秒」,只能表达**一种固定形状**:一届一次、且必须贴着届末。
+// 现实里的休战窗口未必长这样——角斗场的届是【周】(周一 04:00 换届),
+// 而它的结算休赛要求【每天】0 点都来一次,用旧签名压根写不出来,
+// 只能让业务绕开框架自己判,于是 Writable() 这类框架接口再也反映不了真实状态。
+//
+// 改成回调后,「什么时候算休战」完全交给榜自己;框架只问一句"现在休不休战"。
+// 届末 X 秒那种老用法照样能写:
+//
+//	func (h *xxx) Truce(cycle int64) bool {
+//	    _, e := h.Expire(cycle)
+//	    return time.Now().Unix() >= e-300
+//	}
+//
+// # 休战期内的写入一律显式报错
+//
+// 🔴 ZAdd 在休战期**返回 ErrTruce,不再静默返回 nil**。旧行为是个长期的坑:
+// 玩家扣了票、发了奖、分数却没写进去,而调用方拿到 nil 以为成功,日志里什么都看不到。
+// ZSwap / ZAdds 从一开始就没有沿用那个静默语义,现在 ZAdd 与它们对齐。
+type HandleTruce interface {
+	Truce(cycle int64) bool
 }
 
 // Member 批量写分的一条记录,见 Bucket.ZAdds

@@ -18,6 +18,9 @@ import (
 func NewBucket(name any, zKey string, zMax, zScore int64, zType SortType, handle Handle, opts ...Option) *Bucket {
 	b := &Bucket{zName: name, zKey: zKey, zMax: zMax, zScore: zScore, zType: zType, handle: handle}
 	b.zTiebreak = true //默认启用同分tiebreak,由 WithoutTiebreak 关闭
+	//休战判定是可选能力,在此一次性断言并缓存:它会被每次读写路径调用,
+	//每次都做一遍类型断言纯属浪费。
+	b.truce, _ = handle.(HandleTruce)
 	for _, opt := range opts {
 		if opt != nil {
 			opt(b)
@@ -36,6 +39,7 @@ type Bucket struct {
 	zStmt     atomic.Pointer[Statement] //当前届,换届时整体替换,业务协程无锁读取
 	zMutex    sync.Mutex                //保护 submits 以及换届过程
 	handle    Handle                    //获取当前期数和过期时间
+	truce     HandleTruce               //可选:休战判定,handle 未实现该接口时为 nil(即永不休战)
 	submits   []*Statement              //当前待结算,只由心跳协程消费
 }
 
@@ -95,15 +99,14 @@ func (this *Bucket) heartbeat() {
 	}
 }
 
-func (this *Bucket) Writable(cycle int64) (r bool) {
-	r = true
-	_, e := this.handle.Expire(cycle)
-	if truce := this.handle.Truce(); truce > 0 {
-		if time.Now().Unix() >= e-truce {
-			r = false
-		}
-	}
-	return
+// Writable 指定届当前是否可写(不在休战期)
+func (this *Bucket) Writable(cycle int64) bool {
+	return !this.truced(cycle)
+}
+
+// truced 是否处于休战期。handle 未实现 HandleTruce 即永不休战。
+func (this *Bucket) truced(cycle int64) bool {
+	return this.truce != nil && this.truce.Truce(cycle)
 }
 
 // Cycle 获取当前第几期
@@ -125,11 +128,7 @@ func (this *Bucket) Cycle(skip ...int64) (cycle int64, writable bool) {
 		return
 	}
 	//休战
-	if truce := this.handle.Truce(); truce > 0 {
-		if time.Now().Unix() >= stmt.zExpire-truce {
-			writable = false
-		}
-	}
+	writable = !this.truced(cycle)
 	return
 }
 
@@ -140,7 +139,11 @@ func (this *Bucket) Expire(cycle int64) (start, expire int64) {
 func (this *Bucket) ZAdd(cycle int64, uid string, score int64) (err error) {
 	v, writable := this.Cycle()
 	if !writable {
-		return nil //休战期不更新
+		//🔴 休战期【显式报错】,不再静默返回 nil。
+		//旧行为是个长期的坑:玩家扣了票、发了奖、分数却没写进去,
+		//而调用方拿到 nil 以为成功,日志里什么都看不到。
+		//ZSwap / ZAdds 从一开始就没沿用那个静默语义,这里与它们对齐。
+		return ErrTruce
 	}
 	if cycle == 0 {
 		cycle = v
