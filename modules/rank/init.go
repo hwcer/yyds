@@ -57,6 +57,8 @@ var (
 	//ZSET 同分时按 member 字典序排,互换相同的分数改变不了任何人的名次。
 	//这种情况必须显式报错而非返回成功,否则调用方会以为交换生效了。
 	ErrSwapEqualScore = errors.New("rank: equal score, swap would be a no-op")
+	//ErrCycleExpired 目标届已不是当前届(换届/传错届号),批量写入拒绝执行
+	ErrCycleExpired = errors.New("rank: cycle expired")
 	//ErrTruce 休战期内不可写
 	//
 	//注意与 ZAdd 的差异:ZAdd 在休战期静默返回 nil(丢弃写入),那是分数榜可接受的降级;
@@ -89,4 +91,13 @@ type Handle interface {
 
 type HandleHeartbeat interface {
 	Heartbeat(w *Bucket, cycle int64)
+}
+
+// Member 批量写分的一条记录,见 Bucket.ZAdds
+//
+// 用值类型而不是复用 *Player:Player 带 Rank(写入时无意义),且指针切片在建榜这种
+// 上千条的场景下要多做上千次分配。
+type Member struct {
+	Uid   string
+	Score int64
 }

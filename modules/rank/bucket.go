@@ -157,6 +157,73 @@ func (this *Bucket) ZAdd(cycle int64, uid string, score int64) (err error) {
 	return this.save(stmt, uid, score)
 }
 
+// zAddsChunk 单条 ZADD 携带的成员上限。
+//
+// REDIS 是单线程的,一条命令的执行时间就是所有其他客户端的等待时间;
+// 且一条命令要整体驻留内存。分片既压住单条命令的体量,又保住批量的收益
+// ——5000 个成员分 5 条,与逐条发 5000 次相比仍是三个数量级的差距。
+const zAddsChunk = 1000
+
+// ZAdds 批量写分,供建榜 / 换届重建这类成百上千条的一次性写入。
+//
+// 逐条 ZAdd 时每条都是一次 RTT:实测跨网段写 5000 条约 3.6 秒(约 0.72ms/条,
+// 基本是纯网络往返)。批量把它压成 ceil(n/zAddsChunk) 次往返。
+//
+// 返回实际写入的条数:入围分数(zScore)与守门员(zKeeper)过滤掉的不计。
+//
+// 🔴 与 ZAdd 的语义差异:休战期 / 届已过期时,ZAdd 是【静默返回 nil】,本接口【显式报错】。
+// 不是不一致,是场景不同——ZAdd 单条写分失败无伤大雅(下次打分再写),
+// 而批量写的调用方多半在建榜:静默不写会留下一张空榜,调用方却以为填好了,
+// 之后所有"取我上方/下方的对手"都取空。ZSwap 当初也是为同一个理由没有沿用静默语义。
+func (this *Bucket) ZAdds(cycle int64, members []Member) (n int, err error) {
+	if len(members) == 0 {
+		return 0, nil
+	}
+	v, writable := this.Cycle()
+	if !writable {
+		return 0, ErrTruce
+	}
+	if cycle == 0 {
+		cycle = v
+	} else if cycle != v {
+		return 0, ErrCycleExpired
+	}
+	stmt := this.statement()
+	if stmt == nil || stmt.zCycle != cycle {
+		return 0, ErrCycleExpired
+	}
+	key := this.RedisRankKey(stmt.zCycle)
+	buf := make([]*redis.Z, 0, zAddsChunk)
+	flush := func() error {
+		if len(buf) == 0 {
+			return nil
+		}
+		if e := Redis.ZAdd(context.Background(), key, buf...).Err(); e != nil {
+			return e
+		}
+		n += len(buf)
+		buf = buf[:0]
+		return nil
+	}
+	for i := range members {
+		m := &members[i]
+		if m.Uid == "" {
+			continue
+		}
+		if !this.isMax(stmt, m.Score) || !this.isScore(m.Score) {
+			continue
+		}
+		buf = append(buf, &redis.Z{Member: m.Uid, Score: stmt.formatScore(this, m.Score)})
+		if len(buf) >= zAddsChunk {
+			if err = flush(); err != nil {
+				return
+			}
+		}
+	}
+	err = flush()
+	return
+}
+
 // swapScript 原子对调两名成员的分数
 //
 // 必须整体在 Lua 内完成:若在 Go 侧先 ZSCORE 读出来比大小、再发两条 ZADD,那个"读-判-写"

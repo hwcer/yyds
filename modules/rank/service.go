@@ -27,6 +27,18 @@ func ZAdd(name any, cycle int64, uid string, score int64) error {
 	return nil
 }
 
+// ZAdds 批量写分,见 Bucket.ZAdds
+//
+// 返回实际写入条数;休战期返回 ErrTruce,届已过期返回 ErrCycleExpired
+// (与单条 ZAdd 的静默语义【有意不同】,原因见 Bucket.ZAdds)。
+func ZAdds(name any, cycle int64, members []Member) (int, error) {
+	w := Master.Get(name)
+	if w == nil {
+		return 0, values.Error("Rank not exist")
+	}
+	return w.ZAdds(cycle, members)
+}
+
 // ZSwap 原子对调两名成员的分数,返回各自对调【前】的原始分数
 //
 // 详见 Bucket.ZSwap。错误按 errors.Is 区分:

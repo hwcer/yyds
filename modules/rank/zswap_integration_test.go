@@ -3,15 +3,28 @@ package rank
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	cosredis "github.com/hwcer/cosgo/redis"
 )
 
-// 需要本地 Redis(127.0.0.1:6379)，不可用则跳过
+// testRedisAddr 集成测试用的 Redis 地址
+//
+// 默认本地;用环境变量 RANK_TEST_REDIS 覆盖，便于在只有远端 Redis 的机器上跑
+// (地址不写死在代码里——每家的开发环境不一样，硬编码谁的地址都不对)。
+// 一律用高位 db，别和业务库混在一起。
+func testRedisAddr() string {
+	if v := os.Getenv("RANK_TEST_REDIS"); v != "" {
+		return v
+	}
+	return "127.0.0.1:6379?password=123456&db=15"
+}
+
+// 需要 Redis(默认本地 127.0.0.1:6379)，不可用则跳过
 func setupRedis(t *testing.T) {
 	t.Helper()
-	c, err := cosredis.New("127.0.0.1:6379?password=123456&db=15")
+	c, err := cosredis.New(testRedisAddr())
 	if err != nil {
 		t.Skipf("跳过:本地 Redis 不可用 %v", err)
 	}
