@@ -1,6 +1,7 @@
 package rank
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -63,5 +64,41 @@ func TestCycleWorksWithoutRedis(t *testing.T) {
 	}
 	if !Writable("cycletest", 1) {
 		t.Error("未启动时 Writable 仍应可判定")
+	}
+}
+
+// TestServiceAPIWorksWhenStarted 已启动时包级 API 必须真的能用
+//
+// 🔴 这条看着废话，但它抓到过一个真 bug：`bucket()` 内部被误写成调用自身，
+// 未启动时因为提前 return 而不显形，一旦启动就无限递归 → 栈溢出。
+// 框架原有的用例全走 Bucket 方法，**从没走过包级 API 的正常路径**，所以一个都没挂。
+func TestServiceAPIWorksWhenStarted(t *testing.T) {
+	setupRedis(t)
+	b := NewBucket("svcapitest", "svcapitest", 0, ScoreUnlimited, SortTypeDesc, swapHandle{}, WithoutTiebreak())
+	b.zStmt.Store(NewStatement(1, 0, 0))
+	Master["svcapitest"] = b
+	t.Cleanup(func() {
+		delete(Master, "svcapitest")
+		Redis.Del(context.Background(), b.RedisRankKey(1))
+	})
+	Redis.Del(context.Background(), b.RedisRankKey(1))
+
+	if !Started() {
+		t.Fatal("setupRedis 之后应为已启动")
+	}
+	if err := ZAdd("svcapitest", 1, "u1", 100); err != nil {
+		t.Fatalf("ZAdd: %v", err)
+	}
+	if n, err := ZCard("svcapitest", 1); err != nil || n != 1 {
+		t.Fatalf("ZCard = %v, %v; want 1, nil", n, err)
+	}
+	if p, err := ZRank("svcapitest", 1, "u1", true); err != nil || p.Score != 100 {
+		t.Fatalf("ZRank = %v, %v", p, err)
+	}
+	if _, err := ZAdds("svcapitest", 1, []Member{{Uid: "u2", Score: 50}}); err != nil {
+		t.Fatalf("ZAdds: %v", err)
+	}
+	if rows, err := ZRange("svcapitest", 1, 0, 10); err != nil || len(rows) != 2 {
+		t.Fatalf("ZRange = %v 条, %v; want 2", len(rows), err)
 	}
 }

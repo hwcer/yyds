@@ -28,9 +28,9 @@ func bucket(name any) (*Bucket, error) {
 	if Redis == nil {
 		return nil, ErrNotStarted
 	}
-	w, err := bucket(name)
-	if err != nil {
-		return nil, err
+	w := Master.Get(name)
+	if w == nil {
+		return nil, values.Errorf(0, "Rank not exist:%v", name)
 	}
 	return w, nil
 }
