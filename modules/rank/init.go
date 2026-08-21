@@ -69,6 +69,8 @@ const (
 var (
 	//ErrSwapMemberMissing 至少一方不在榜上(退榜/换届/从未入榜)
 	ErrSwapMemberMissing = errors.New("rank: member not on the list")
+	//ErrTakeoverMemberExists 顶替方已在榜上,应改用 ZSwap 互换而非顶替
+	ErrTakeoverMemberExists = errors.New("rank: takeover member already on the list")
 	//ErrSwapCondition 交换条件不满足,如要求目标更靠前但其名次已被他人换走
 	ErrSwapCondition = errors.New("rank: swap condition not satisfied")
 	//ErrSwapEqualScore 双方分数相同,交换是 no-op

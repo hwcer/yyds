@@ -317,6 +317,73 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 	return 0, 0, values.Errorf(0, "rank: ZSwap unknown reply:%v", res[0])
 }
 
+// takeoverScript 榜外成员顶替榜内成员:a 接手 b 的分数,b 被移出榜
+//
+// 与 swapScript 同理必须整体在 Lua 内完成:ZREM 与 ZADD 之间存在中间态,
+// 此刻别的请求会读到"这一席空着",并发下两个榜外玩家可能同时顶上同一席。
+//
+// 🔴 要求 a **不在**榜上。a 已在榜上时该用 ZSwap——那是双方互换,总数不变;
+// 这里是 b 出榜、a 进榜,若 a 本就在榜,执行下去等于把 a 原来那一席凭空丢掉。
+var takeoverScript = redis.NewScript(`
+local a = redis.call('ZSCORE', KEYS[1], ARGV[1])
+local b = redis.call('ZSCORE', KEYS[1], ARGV[2])
+if not b then return {'missing'} end
+if a then return {'exists'} end
+redis.call('ZREM', KEYS[1], ARGV[2])
+redis.call('ZADD', KEYS[1], b, ARGV[1])
+return {'ok', b}
+`)
+
+// ZTakeover 榜外成员 a 顶替榜内成员 b,接手其分数(名次),b 转为榜外。返回接手到的分数
+//
+// 适用于"名次即资源"且**榜容量固定**的榜:榜外玩家打赢榜底对手后占下那一席,
+// 榜内总数恒定不变。与 ZSwap 的分工:双方都在榜上用 ZSwap(互换),
+// 攻方在榜外用 ZTakeover(顶替)。
+//
+// 同样不做入围分数(isScore)与名次(isMax)检查——顶替是"接手一个已存在的席位",
+// 席位本身就在榜内,与"够不够格上榜"无关。
+//
+// 错误:ErrTruce(休战期) / ErrSwapMemberMissing(b 不在榜) / ErrTakeoverMemberExists(a 已在榜)
+func (this *Bucket) ZTakeover(cycle int64, a, b string) (score int64, err error) {
+	if a == "" || b == "" || a == b {
+		return 0, values.Error("rank: ZTakeover invalid uid")
+	}
+	v, writable := this.Cycle()
+	if !writable {
+		return 0, ErrTruce
+	}
+	if cycle == 0 {
+		cycle = v
+	} else if cycle != v {
+		return 0, ErrSwapMemberMissing //非当前届不可顶替
+	}
+	stmt := this.statement()
+	if stmt == nil || stmt.zCycle != cycle {
+		return 0, ErrSwapMemberMissing
+	}
+	key := this.RedisRankKey(cycle)
+	res, e := takeoverScript.Run(context.Background(), client, []string{key}, a, b).StringSlice()
+	if e != nil {
+		return 0, e
+	}
+	if len(res) == 0 {
+		return 0, values.Error("rank: ZTakeover empty reply")
+	}
+	switch res[0] {
+	case "missing":
+		return 0, ErrSwapMemberMissing
+	case "exists":
+		return 0, ErrTakeoverMemberExists
+	case "ok":
+		if len(res) < 2 {
+			return 0, values.Error("rank: ZTakeover bad reply")
+		}
+		f, _ := strconv.ParseFloat(res[1], 64)
+		return parseScore(f), nil
+	}
+	return 0, values.Errorf(0, "rank: ZTakeover unknown reply:%v", res[0])
+}
+
 func (this *Bucket) ZRem(cycle int64, uid string) (err error) {
 	key := this.RedisRankKey(cycle)
 	return client.ZRem(context.Background(), key, uid).Err()

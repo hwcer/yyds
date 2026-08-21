@@ -76,6 +76,18 @@ func ZSwap(name any, cycle int64, a, b string, cond SwapCond) (scoreA, scoreB in
 	return w.ZSwap(cycle, a, b, cond)
 }
 
+// ZTakeover 榜外成员 a 顶替榜内成员 b,接手其分数(名次),b 转为榜外
+//
+// 详见 Bucket.ZTakeover。错误按 errors.Is 区分:
+// ErrTruce / ErrSwapMemberMissing / ErrTakeoverMemberExists
+func ZTakeover(name any, cycle int64, a, b string) (score int64, err error) {
+	w, err := bucket(name)
+	if err != nil {
+		return 0, err
+	}
+	return w.ZTakeover(cycle, a, b)
+}
+
 func ZCard(name any, cycle int64) (int64, error) {
 	w, err := bucket(name)
 	if err != nil {
