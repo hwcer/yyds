@@ -14,10 +14,10 @@ func Get(name any) *Bucket {
 //
 // 🔴 **Get(name) != nil 不代表已启动**:Register 在各模块的 init 里就把桶填进
 // Master 了,而 Start 要等 Redis 配置就绪才调用。业务若只判 Get 非空就去读写,
-// 未配 Redis 的环境下会在 Redis.XXX 上空指针——而那时调用栈里只有框架帧,
+// 未配 Redis 的环境下会在 client.XXX 上空指针——而那时调用栈里只有框架帧,
 // 极难定位(2026-08-21 踩过)。判"能不能用"一律用本函数。
 func Started() bool {
-	return Redis != nil
+	return client != nil
 }
 
 // bucket 取桶并确认模块已启动。
@@ -25,7 +25,7 @@ func Started() bool {
 // 两者任一不满足都返回明确错误,而不是让调用方拿着一个能取到、
 // 却会在第一次访问 Redis 时崩掉的桶。
 func bucket(name any) (*Bucket, error) {
-	if Redis == nil {
+	if client == nil {
 		return nil, ErrNotStarted
 	}
 	w := Master.Get(name)

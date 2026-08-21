@@ -31,7 +31,7 @@ func setupRedis(t *testing.T) {
 	if err = c.Ping(context.Background()).Err(); err != nil {
 		t.Skipf("跳过:Redis Ping 失败 %v", err)
 	}
-	Redis = c
+	client = c
 }
 
 type swapHandle struct{}
@@ -43,8 +43,8 @@ func (swapHandle) Submit(*Bucket, int64) (int64, error) { return 0, nil }
 func newSwapBucket(t *testing.T, st SortType) *Bucket {
 	b := NewBucket("zswaptest", "zswaptest", 0, ScoreUnlimited, st, swapHandle{}, WithoutTiebreak())
 	b.zStmt.Store(NewStatement(1, 0, 0))
-	Redis.Del(context.Background(), b.RedisRankKey(1))
-	t.Cleanup(func() { Redis.Del(context.Background(), b.RedisRankKey(1)) })
+	client.Del(context.Background(), b.RedisRankKey(1))
+	t.Cleanup(func() { client.Del(context.Background(), b.RedisRankKey(1)) })
 	return b
 }
 

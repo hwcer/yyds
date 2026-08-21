@@ -15,8 +15,8 @@ func TestQueryClampedToZMax(t *testing.T) {
 	b := NewBucket("zmaxclamp", "zmaxclamp", zMax, ScoreUnlimited, SortTypeAsc, swapHandle{}, WithoutTiebreak())
 	b.zStmt.Store(NewStatement(1, 0, 0))
 	key := b.RedisRankKey(1)
-	Redis.Del(context.Background(), key)
-	t.Cleanup(func() { Redis.Del(context.Background(), key) })
+	client.Del(context.Background(), key)
+	t.Cleanup(func() { client.Del(context.Background(), key) })
 
 	//塞 8 个(> zMax，但未达 zMax+OverflowThreshold，清理不会触发)
 	for i := 1; i <= 8; i++ {
@@ -24,7 +24,7 @@ func TestQueryClampedToZMax(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if n, _ := Redis.ZCard(context.Background(), key).Result(); n != 8 {
+	if n, _ := client.ZCard(context.Background(), key).Result(); n != 8 {
 		t.Fatalf("前置条件:REDIS 里应有 8 个成员，实际 %d", n)
 	}
 
@@ -83,8 +83,8 @@ func TestNoClampWhenUnlimited(t *testing.T) {
 	b := NewBucket("zmaxfree", "zmaxfree", 0, ScoreUnlimited, SortTypeAsc, swapHandle{}, WithoutTiebreak())
 	b.zStmt.Store(NewStatement(1, 0, 0))
 	key := b.RedisRankKey(1)
-	Redis.Del(context.Background(), key)
-	t.Cleanup(func() { Redis.Del(context.Background(), key) })
+	client.Del(context.Background(), key)
+	t.Cleanup(func() { client.Del(context.Background(), key) })
 
 	for i := 1; i <= 8; i++ {
 		_ = b.ZAdd(1, fmt.Sprintf("u%d", i), int64(i))

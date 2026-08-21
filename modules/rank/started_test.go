@@ -13,9 +13,9 @@ import (
 // 未配 Redis 的环境下直接在 Redis.ZCard 上空指针——而 panic 被 cosgo 的事件 recover
 // 吞掉后，日志里只剩框架帧，完全看不出是谁调的（2026-08-21 真实事故）。
 func TestNotStartedReturnsError(t *testing.T) {
-	old := Redis
-	Redis = nil
-	t.Cleanup(func() { Redis = old })
+	old := client
+	client = nil
+	t.Cleanup(func() { client = old })
 
 	b := NewBucket("startedtest", "startedtest", 0, ScoreUnlimited, SortTypeDesc, swapHandle{})
 	Master["startedtest"] = b
@@ -51,9 +51,9 @@ func TestNotStartedReturnsError(t *testing.T) {
 // Cycle / Expire / Writable 都是纯计算，不碰 Redis。让它们也要求「已启动」
 // 会把「未配 Redis 时届号照样算得出来」这个既有行为改掉，业务侧的展示与判断都会受影响。
 func TestCycleWorksWithoutRedis(t *testing.T) {
-	old := Redis
-	Redis = nil
-	t.Cleanup(func() { Redis = old })
+	old := client
+	client = nil
+	t.Cleanup(func() { client = old })
 
 	b := NewBucket("cycletest", "cycletest", 0, ScoreUnlimited, SortTypeDesc, swapHandle{})
 	Master["cycletest"] = b
@@ -79,9 +79,9 @@ func TestServiceAPIWorksWhenStarted(t *testing.T) {
 	Master["svcapitest"] = b
 	t.Cleanup(func() {
 		delete(Master, "svcapitest")
-		Redis.Del(context.Background(), b.RedisRankKey(1))
+		client.Del(context.Background(), b.RedisRankKey(1))
 	})
-	Redis.Del(context.Background(), b.RedisRankKey(1))
+	client.Del(context.Background(), b.RedisRankKey(1))
 
 	if !Started() {
 		t.Fatal("setupRedis 之后应为已启动")
@@ -100,5 +100,34 @@ func TestServiceAPIWorksWhenStarted(t *testing.T) {
 	}
 	if rows, err := ZRange("svcapitest", 1, 0, 10); err != nil || len(rows) != 2 {
 		t.Fatalf("ZRange = %v 条, %v; want 2", len(rows), err)
+	}
+}
+
+// TestRedisAccessorIsReadOnly 连接只能由 Start 写入，外部只读
+//
+// 🔴 它曾经是导出的 `Redis` 变量，于是外部可以直接赋值——而 Start 开头的
+// `if client != nil { return nil }` 本意是防重复启动，一旦有人提前赋了值，
+// Start 就整个空转：ShareId/ServerId 不设（REDIS key 丢掉分区前缀，多服共用一个
+// Redis 时互相踩）、started 不置位、Master.start() 不执行（statement 没建、
+// 心跳没起、未结算届没检查）。而且全程不报错。
+//
+// 封死写入口之后，`client != nil` 才真正等价于「Start 调用过」，Started() 也才可信。
+func TestRedisAccessorIsReadOnly(t *testing.T) {
+	setupRedis(t)
+	if Redis() == nil {
+		t.Fatal("已启动时 Redis() 不该为 nil")
+	}
+	if Redis() != client {
+		t.Error("Redis() 应返回内部连接本身")
+	}
+	// 未启动时两者一致地为 nil
+	old := client
+	client = nil
+	t.Cleanup(func() { client = old })
+	if Redis() != nil {
+		t.Error("未启动时 Redis() 应为 nil")
+	}
+	if Started() {
+		t.Error("未启动时 Started 应为 false")
 	}
 }

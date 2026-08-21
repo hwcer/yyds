@@ -201,7 +201,7 @@ func (this *Bucket) ZAdds(cycle int64, members []Member) (n int, err error) {
 		if len(buf) == 0 {
 			return nil
 		}
-		if e := Redis.ZAdd(context.Background(), key, buf...).Err(); e != nil {
+		if e := client.ZAdd(context.Background(), key, buf...).Err(); e != nil {
 			return e
 		}
 		n += len(buf)
@@ -292,7 +292,7 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 		desc = "1"
 	}
 	key := this.RedisRankKey(cycle)
-	res, e := swapScript.Run(context.Background(), Redis, []string{key}, a, b, fmt.Sprintf("%d", cond), desc).StringSlice()
+	res, e := swapScript.Run(context.Background(), client, []string{key}, a, b, fmt.Sprintf("%d", cond), desc).StringSlice()
 	if e != nil {
 		return 0, 0, e
 	}
@@ -319,13 +319,13 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 
 func (this *Bucket) ZRem(cycle int64, uid string) (err error) {
 	key := this.RedisRankKey(cycle)
-	return Redis.ZRem(context.Background(), key, uid).Err()
+	return client.ZRem(context.Background(), key, uid).Err()
 }
 
 // ZCard 当前REDIS中的记录数
 func (this *Bucket) ZCard(cycle int64) (n int64, err error) {
 	key := this.RedisRankKey(cycle)
-	if n, err = Redis.ZCard(context.Background(), key).Result(); err != nil {
+	if n, err = client.ZCard(context.Background(), key).Result(); err != nil {
 		return
 	}
 
@@ -343,9 +343,9 @@ func (this *Bucket) ZRank(cycle int64, uid string, withScore bool) (r *Player, e
 	r = &Player{Uid: uid, Rank: -1}
 	k := this.RedisRankKey(cycle)
 	if this.zType == SortTypeDesc {
-		r.Rank, err = Redis.ZRevRank(context.Background(), k, uid).Result()
+		r.Rank, err = client.ZRevRank(context.Background(), k, uid).Result()
 	} else {
-		r.Rank, err = Redis.ZRank(context.Background(), k, uid).Result()
+		r.Rank, err = client.ZRank(context.Background(), k, uid).Result()
 	}
 	if errors.Is(err, redis.Nil) {
 		r.Rank = -1
@@ -361,7 +361,7 @@ func (this *Bucket) ZRank(cycle int64, uid string, withScore bool) (r *Player, e
 		return
 	}
 	var score float64
-	if score, err = Redis.ZScore(context.Background(), k, uid).Result(); err != nil {
+	if score, err = client.ZScore(context.Background(), k, uid).Result(); err != nil {
 		return
 	}
 	r.Score = parseScore(score)
@@ -384,9 +384,9 @@ func (this *Bucket) ZRange(cycle int64, s, e int64) (r []*Player, err error) {
 	k := this.RedisRankKey(cycle)
 	var z []redis.Z
 	if this.zType == SortTypeDesc {
-		z, err = Redis.ZRevRangeWithScores(context.Background(), k, s, e).Result()
+		z, err = client.ZRevRangeWithScores(context.Background(), k, s, e).Result()
 	} else {
-		z, err = Redis.ZRangeWithScores(context.Background(), k, s, e).Result()
+		z, err = client.ZRangeWithScores(context.Background(), k, s, e).Result()
 	}
 	if err != nil {
 		return
@@ -474,9 +474,9 @@ func (this *Bucket) Range(cycle int64, handle func(player *Player) error) error 
 func (this *Bucket) Remove(cycle, delay int64) (err error) {
 	key := this.RedisRankKey(cycle)
 	if delay <= 0 {
-		return Redis.Del(context.Background(), key).Err()
+		return client.Del(context.Background(), key).Err()
 	}
-	return Redis.Expire(context.Background(), key, time.Second*time.Duration(delay)).Err()
+	return client.Expire(context.Background(), key, time.Second*time.Duration(delay)).Err()
 }
 
 // outOfRange 名次是否已在榜容量之外(zMax==0 表示不限人数,恒为 false)
@@ -488,7 +488,7 @@ func (this *Bucket) save(stmt *Statement, uid string, score int64) (err error) {
 	z := &redis.Z{Member: uid}
 	z.Score = stmt.formatScore(this, score)
 	key := this.RedisRankKey(stmt.zCycle)
-	return Redis.ZAdd(context.Background(), key, z).Err()
+	return client.ZAdd(context.Background(), key, z).Err()
 }
 
 // isMax 否满足入围名次
@@ -524,7 +524,7 @@ func (this *Bucket) mayKeeper(stmt *Statement) {
 		return
 	}
 	key := this.RedisRankKey(stmt.zCycle)
-	v, err := Redis.ZCard(context.Background(), key).Result()
+	v, err := client.ZCard(context.Background(), key).Result()
 	if err != nil || v <= this.zMax+OverflowThreshold {
 		return
 	}
@@ -543,7 +543,7 @@ func (this *Bucket) mayKeeper(stmt *Statement) {
 		start = 0
 		stop = v - this.zMax - 1
 	}
-	if err := Redis.ZRemRangeByRank(context.Background(), key, start, stop).Err(); err != nil {
+	if err := client.ZRemRangeByRank(context.Background(), key, start, stop).Err(); err != nil {
 		logger.Error("ZRemRangeByRank error, key:%v, err:%v", key, err)
 	}
 }

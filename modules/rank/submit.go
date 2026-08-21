@@ -16,14 +16,14 @@ var ErrSubmitted = errors.New("排行榜该期正在结算或已结算")
 // checkUnsettledRanks 检查是否有未结算的排行榜
 func (this *Bucket) checkUnsettledRanks() {
 	key := this.RedisSettlementKey()
-	if exists, err := Redis.Exists(context.Background(), key).Result(); err != nil {
+	if exists, err := client.Exists(context.Background(), key).Result(); err != nil {
 		logger.Error("检查结算记录失败: %v", err)
 		return
 	} else if exists == 0 {
 		return
 	}
 	// 遍历整个HASH表，检查所有周期的结算状态
-	fields, err := Redis.HGetAll(context.Background(), key).Result()
+	fields, err := client.HGetAll(context.Background(), key).Result()
 	if err != nil {
 		logger.Error("获取结算记录失败: %v", err)
 		return
@@ -100,15 +100,15 @@ func (this *Bucket) maySubmit(stmt *Statement) {
 	stmt.submit.Store(true)
 	// 结算完成后删除Redis hash表中的记录
 	key := this.RedisSettlementKey()
-	if err = Redis.HDel(context.Background(), key, strconv.FormatInt(cycle, 10)).Err(); err != nil {
+	if err = client.HDel(context.Background(), key, strconv.FormatInt(cycle, 10)).Err(); err != nil {
 		logger.Alert("删除结算记录失败: %v", err)
 	}
 	// 按 Submit 返回的删除时间设置过期,过期时间无效时使用默认保留时长兜底
 	rk := this.RedisRankKey(cycle)
 	if expire > time.Now().Unix() {
-		err = Redis.ExpireAt(context.Background(), rk, time.Unix(expire, 0)).Err()
+		err = client.ExpireAt(context.Background(), rk, time.Unix(expire, 0)).Err()
 	} else {
-		err = Redis.Expire(context.Background(), rk, DefaultRetention).Err()
+		err = client.Expire(context.Background(), rk, DefaultRetention).Err()
 	}
 	if err != nil {
 		logger.Alert("设置排行榜数据过期时间失败: %v", err)
@@ -139,7 +139,7 @@ func (this *Bucket) changeCycle(cycle int64) {
 	// 之后 HSet 才落库,留下一条永不清除的未结算记录,重启后重复结算
 	// 存储对应周期的结算状态，0表示未结算
 	key := this.RedisSettlementKey()
-	if err := Redis.HSet(context.Background(), key, stmt.zCycle, 0).Err(); err != nil {
+	if err := client.HSet(context.Background(), key, stmt.zCycle, 0).Err(); err != nil {
 		logger.Error("保存结算记录失败: %v", err)
 	}
 	// 切换届时将上一届加入待结算队列

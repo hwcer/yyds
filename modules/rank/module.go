@@ -23,10 +23,10 @@ func Start(redis *redis.Client, sharId string, serverId int32) (err error) {
 	if redis == nil {
 		return fmt.Errorf("rank redis is nil")
 	}
-	if Redis != nil {
+	if client != nil {
 		return nil
 	}
-	Redis = redis
+	client = redis
 	Options.ShareId = sharId
 	Options.ServerId = serverId
 	//置位后 Register 不再接受新注册,Master 自此只读

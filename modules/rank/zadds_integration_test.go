@@ -11,8 +11,8 @@ import (
 func newAddsBucket(t *testing.T, zMax int64, zScore int64, st SortType, opts ...Option) *Bucket {
 	b := NewBucket("zaddstest", "zaddstest", zMax, zScore, st, swapHandle{}, opts...)
 	b.zStmt.Store(NewStatement(1, 0, 0))
-	Redis.Del(context.Background(), b.RedisRankKey(1))
-	t.Cleanup(func() { Redis.Del(context.Background(), b.RedisRankKey(1)) })
+	client.Del(context.Background(), b.RedisRankKey(1))
+	t.Cleanup(func() { client.Del(context.Background(), b.RedisRankKey(1)) })
 	return b
 }
 
@@ -72,11 +72,11 @@ func TestZAddsSameAsZAdd(t *testing.T) {
 	if _, err := b.ZAdds(1, []Member{{Uid: "batch", Score: 4242}}); err != nil {
 		t.Fatal(err)
 	}
-	a, err := Redis.ZScore(context.Background(), key, "single").Result()
+	a, err := client.ZScore(context.Background(), key, "single").Result()
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := Redis.ZScore(context.Background(), key, "batch").Result()
+	c, err := client.ZScore(context.Background(), key, "batch").Result()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestZAddsFasterThanLoop(t *testing.T) {
 		}
 	}
 	loop := time.Since(t0)
-	Redis.Del(context.Background(), b1.RedisRankKey(1))
+	client.Del(context.Background(), b1.RedisRankKey(1))
 
 	b2 := newAddsBucket(t, 0, ScoreUnlimited, SortTypeAsc, WithoutTiebreak())
 	t0 = time.Now()

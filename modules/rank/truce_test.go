@@ -24,8 +24,8 @@ func (plainHandle) Submit(*Bucket, int64) (int64, error) { return 0, nil }
 func newTruceBucket(t *testing.T, h Handle) *Bucket {
 	b := NewBucket("trucetest", "trucetest", 0, ScoreUnlimited, SortTypeDesc, h, WithoutTiebreak())
 	b.zStmt.Store(NewStatement(1, 0, 0))
-	Redis.Del(context.Background(), b.RedisRankKey(1))
-	t.Cleanup(func() { Redis.Del(context.Background(), b.RedisRankKey(1)) })
+	client.Del(context.Background(), b.RedisRankKey(1))
+	t.Cleanup(func() { client.Del(context.Background(), b.RedisRankKey(1)) })
 	return b
 }
 

@@ -36,7 +36,26 @@ var Options = struct {
 }{
 	StartTime: "2024-01-01 00:00:00+0800",
 }
-var Redis *redis.Client
+
+// client 排行榜专用的 Redis 连接。
+//
+// 🔴 **私有,只有 Start 能写**。它曾经是导出的 `Redis`,于是外部可以直接赋值——
+// 而 Start 开头的 `if Redis != nil { return nil }` 本意是防重复启动,一旦有人
+// 提前赋了值,Start 就整个空转:ShareId/ServerId 不设(REDIS key 丢掉分区前缀,
+// 多服共用一个 Redis 时互相踩)、started 不置位(注册保护失效)、
+// Master.start() 不执行(statement 没建、心跳没起、未结算届没检查)。
+//
+// 而且全程不报错——榜看着能读能写,只是届号、换届、结算全是坏的。
+// 封死写入口之后,`client != nil` 才真正等价于「Start 调用过」。
+var client *redis.Client
+
+// Redis 取排行榜的 Redis 连接（只读）。
+//
+// 给需要直接操作 REDIS 的业务用（如自己的标记键）;**不要拿它去写榜数据**,
+// 那样会绕开分数编码(formatScore)与休战判定,写出格式不一致的分数。
+func Redis() *redis.Client {
+	return client
+}
 
 // SwapCond ZSwap 的交换条件,在 Lua 内部重查后判定,保证"读-判-写"整体原子
 type SwapCond int8
