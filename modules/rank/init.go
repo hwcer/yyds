@@ -57,6 +57,8 @@ var (
 	//ZSET 同分时按 member 字典序排,互换相同的分数改变不了任何人的名次。
 	//这种情况必须显式报错而非返回成功,否则调用方会以为交换生效了。
 	ErrSwapEqualScore = errors.New("rank: equal score, swap would be a no-op")
+	//ErrNotStarted 排行榜模块尚未启动(未配置 Redis / Start 未调用)
+	ErrNotStarted = errors.New("rank: module not started")
 	//ErrCycleExpired 目标届已不是当前届(换届/传错届号),批量写入拒绝执行
 	ErrCycleExpired = errors.New("rank: cycle expired")
 	//ErrTruce 休战期内不可写
