@@ -90,7 +90,7 @@ func ZTakeover(name any, cycle int64, a, b string) (score int64, err error) {
 
 // ZPreset 预置某一届的完整榜单,用于在该届开始之前把数据写好
 //
-// 详见 Bucket.ZPreset。错误按 errors.Is 区分:ErrPresetNotFuture
+// 详见 Bucket.ZPreset。错误按 errors.Is 区分:ErrPresetNotEmpty
 func ZPreset(name any, cycle int64, members []Member) (n int, err error) {
 	w, err := bucket(name)
 	if err != nil {

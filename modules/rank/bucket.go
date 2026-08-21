@@ -323,13 +323,17 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 // 那一刻新一届还没开始,ZAdd/ZAdds 会因为「不是当前届」返回 ErrCycleExpired,
 // 且冻结期本身还会被休战检查拦成 ErrTruce。ZPreset 是唯一能穿过这两道的写入口。
 //
-// 🔴 **只能写未来的届**。写当前届会覆盖正在用的榜(玩家名次凭空重排),
-// 写过去的届会污染已结算的历史数据,两者一律拒绝(ErrPresetNotFuture)。
+// 🔴 **要求目标届当前【没有数据】**,靠 RENAMENX 原子保证。
+// 这一条同时挡住两种误用:覆盖正在用的榜(玩家名次凭空重排)、
+// 污染已结算的历史数据——两者的榜都非空,RENAMENX 直接失败(ErrPresetNotEmpty)。
+//
+// ⚠ 判据是「空」而不是「未来」:结算窗口若贴在日初,换届那一刻新一届【已经是当前届】了,
+// 此时它的榜还是空的,正需要预置。用「必须是未来届」去卡会把这条正常路径一并否掉。
 //
 // 🔴 **写临时键再 RENAME,不直接写目标键**。整批 5000 条要分多次 ZADD,
-// 中途若跨过了届的边界(目标届变成当前届),直接写就会留下一个只填了一半的活榜——
-// 而它非空,业务侧的「榜空即补」兜底不会触发,这一届就永久缺人。
-// 改成写临时键 + 最后原子 RENAME:中途放弃时目标键仍是空的,兜底照常生效。
+// 中途失败直接写就会留下一个只填了一半的活榜——而它非空,
+// 业务侧的「榜空即补」兜底不会触发,这一届就永久缺人。
+// 改成写临时键 + 最后原子 RENAMENX:中途放弃时目标键仍是空的,兜底照常生效。
 //
 // 传空成员列表视为调用方的错误:预置一个空榜没有任何意义,只会让 RENAME 失败。
 func (this *Bucket) ZPreset(cycle int64, members []Member) (n int, err error) {
@@ -339,11 +343,10 @@ func (this *Bucket) ZPreset(cycle int64, members []Member) (n int, err error) {
 	if len(members) == 0 {
 		return 0, values.Error("rank: ZPreset empty members")
 	}
-	cur, _ := this.Cycle() //不看 writable:预置本来就是要在休战窗口里做的事
-	if cycle <= cur {
-		return 0, ErrPresetNotFuture
-	}
-	//目标届还没开始,拿不到它的 Statement,按业务回调算出的起止时间造一个。
+	//不看 writable:预置本来就是要在休战窗口里做的事。
+	//也不比对当前届:是否允许写由「目标榜是否为空」决定,见下面的 RENAMENX。
+	//
+	//目标届可能还没开始,拿不到它的 Statement,按业务回调算出的起止时间造一个。
 	//tiebreak 的小数位依赖「本届已过时间占比」,届未开始时 elapsed 为负、被钳到 0,
 	//即全体同分先到先得的初值——正是预置该有的语义。
 	zt, ze := this.handle.Expire(cycle)
@@ -390,15 +393,17 @@ func (this *Bucket) ZPreset(cycle int64, members []Member) (n int, err error) {
 		_ = client.Del(ctx, tmp).Err()
 		return 0, values.Error("rank: ZPreset all members filtered out")
 	}
-	//落地前再确认一次:写这一批的工夫里届可能已经推进,那就整批作废,
-	//让目标键保持空,由业务侧的兜底重建接手
-	if cur, _ = this.Cycle(); cycle <= cur {
-		_ = client.Del(ctx, tmp).Err()
-		return 0, ErrPresetNotFuture
-	}
-	if err = client.Rename(ctx, tmp, dst).Err(); err != nil {
+	//RENAMENX:目标已有数据就整批作废,不覆盖。
+	//「先 EXISTS 再 RENAME」不行——两步之间别的进程可能刚把榜建好,
+	//那一瞬的覆盖恰恰是最难查的一类事故(名次凭空重排、且只在并发时偶发)。
+	ok, err := client.RenameNX(ctx, tmp, dst).Result()
+	if err != nil {
 		_ = client.Del(ctx, tmp).Err()
 		return 0, err
+	}
+	if !ok {
+		_ = client.Del(ctx, tmp).Err()
+		return 0, ErrPresetNotEmpty
 	}
 	return n, nil
 }

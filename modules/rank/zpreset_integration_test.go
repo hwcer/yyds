@@ -61,8 +61,8 @@ func TestZPresetFutureCycle(t *testing.T) {
 	}
 }
 
-// 重复预置同一届:后一次整体替换前一次,不叠加。结算重试要靠这个性质
-func TestZPresetIsIdempotentReplace(t *testing.T) {
+// 目标届已有数据必须拒绝,不能覆盖也不能叠加
+func TestZPresetRejectsNonEmptyTarget(t *testing.T) {
 	setupRedis(t)
 	b := newSwapBucket(t, SortTypeAsc)
 	t.Cleanup(func() { client.Del(context.Background(), b.RedisRankKey(2)) })
@@ -70,24 +70,42 @@ func TestZPresetIsIdempotentReplace(t *testing.T) {
 	if _, err := b.ZPreset(2, presetMembers(50)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.ZPreset(2, presetMembers(20)); err != nil {
-		t.Fatal(err)
+	if _, err := b.ZPreset(2, presetMembers(20)); !errors.Is(err, ErrPresetNotEmpty) {
+		t.Fatalf("第二次预置应返回 ErrPresetNotEmpty,实际 %v", err)
 	}
 	got, _ := client.ZCard(context.Background(), b.RedisRankKey(2)).Result()
-	if got != 20 {
-		t.Fatalf("第二次预置应整体替换为 20 条,实际 %v(叠加了?)", got)
+	if got != 50 {
+		t.Fatalf("被拒绝时原数据必须原样保留,应为 50 条,实际 %v", got)
+	}
+	//临时键不能留下来
+	if e, _ := client.Exists(context.Background(), b.RedisRankKey(2)+"-preset").Result(); e != 0 {
+		t.Fatal("拒绝后临时键没清掉")
 	}
 }
 
-// 写当前届必须拒绝:放行等于把正在用的榜整体重排
-func TestZPresetRejectsCurrentCycle(t *testing.T) {
+// 当前届【为空】时允许预置——结算窗口贴日初时,换届那一刻新一届已经是当前届了,
+// 用「必须是未来届」去卡会把这条正常路径一并否掉
+func TestZPresetAllowsEmptyCurrentCycle(t *testing.T) {
+	setupRedis(t)
+	b := newSwapBucket(t, SortTypeAsc) //zStmt = 第 1 届,且榜是空的
+	n, err := b.ZPreset(1, presetMembers(30))
+	if err != nil {
+		t.Fatalf("当前届为空时应允许预置,实际 %v", err)
+	}
+	if n != 30 {
+		t.Fatalf("应写入 30 条,实际 %v", n)
+	}
+}
+
+// 当前届【非空】时必须拒绝:放行等于把正在用的榜整体重排
+func TestZPresetRejectsLiveCurrentCycle(t *testing.T) {
 	setupRedis(t)
 	b := newSwapBucket(t, SortTypeAsc)
 	if err := b.ZAdd(1, "live", 10); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.ZPreset(1, presetMembers(50)); !errors.Is(err, ErrPresetNotFuture) {
-		t.Fatalf("应返回 ErrPresetNotFuture,实际 %v", err)
+	if _, err := b.ZPreset(1, presetMembers(50)); !errors.Is(err, ErrPresetNotEmpty) {
+		t.Fatalf("应返回 ErrPresetNotEmpty,实际 %v", err)
 	}
 	n, _ := client.ZCard(context.Background(), b.RedisRankKey(1)).Result()
 	if n != 1 {
