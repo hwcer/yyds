@@ -69,6 +69,8 @@ const (
 var (
 	//ErrSwapMemberMissing 至少一方不在榜上(退榜/换届/从未入榜)
 	ErrSwapMemberMissing = errors.New("rank: member not on the list")
+	//ErrPresetNotFuture 预置的目标届不在未来(等于或早于当前届),拒绝覆盖在用或已结算的榜
+	ErrPresetNotFuture = errors.New("rank: preset cycle is not in the future")
 	//ErrTakeoverMemberExists 顶替方已在榜上,应改用 ZSwap 互换而非顶替
 	ErrTakeoverMemberExists = errors.New("rank: takeover member already on the list")
 	//ErrSwapCondition 交换条件不满足,如要求目标更靠前但其名次已被他人换走

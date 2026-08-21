@@ -317,6 +317,92 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 	return 0, 0, values.Errorf(0, "rank: ZSwap unknown reply:%v", res[0])
 }
 
+// ZPreset 预置某一届的完整榜单——在该届【开始之前】把数据写好
+//
+// 场景:换届结算要在上一届的最后时段完成(例如每天最后半小时冻结榜、跑结算),
+// 那一刻新一届还没开始,ZAdd/ZAdds 会因为「不是当前届」返回 ErrCycleExpired,
+// 且冻结期本身还会被休战检查拦成 ErrTruce。ZPreset 是唯一能穿过这两道的写入口。
+//
+// 🔴 **只能写未来的届**。写当前届会覆盖正在用的榜(玩家名次凭空重排),
+// 写过去的届会污染已结算的历史数据,两者一律拒绝(ErrPresetNotFuture)。
+//
+// 🔴 **写临时键再 RENAME,不直接写目标键**。整批 5000 条要分多次 ZADD,
+// 中途若跨过了届的边界(目标届变成当前届),直接写就会留下一个只填了一半的活榜——
+// 而它非空,业务侧的「榜空即补」兜底不会触发,这一届就永久缺人。
+// 改成写临时键 + 最后原子 RENAME:中途放弃时目标键仍是空的,兜底照常生效。
+//
+// 传空成员列表视为调用方的错误:预置一个空榜没有任何意义,只会让 RENAME 失败。
+func (this *Bucket) ZPreset(cycle int64, members []Member) (n int, err error) {
+	if cycle <= 0 {
+		return 0, values.Error("rank: ZPreset invalid cycle")
+	}
+	if len(members) == 0 {
+		return 0, values.Error("rank: ZPreset empty members")
+	}
+	cur, _ := this.Cycle() //不看 writable:预置本来就是要在休战窗口里做的事
+	if cycle <= cur {
+		return 0, ErrPresetNotFuture
+	}
+	//目标届还没开始,拿不到它的 Statement,按业务回调算出的起止时间造一个。
+	//tiebreak 的小数位依赖「本届已过时间占比」,届未开始时 elapsed 为负、被钳到 0,
+	//即全体同分先到先得的初值——正是预置该有的语义。
+	zt, ze := this.handle.Expire(cycle)
+	stmt := NewStatement(cycle, zt, ze)
+
+	dst := this.RedisRankKey(cycle)
+	tmp := dst + "-preset"
+	ctx := context.Background()
+	if err = client.Del(ctx, tmp).Err(); err != nil {
+		return 0, err
+	}
+	buf := make([]*redis.Z, 0, zAddsChunk)
+	flush := func() error {
+		if len(buf) == 0 {
+			return nil
+		}
+		if e := client.ZAdd(ctx, tmp, buf...).Err(); e != nil {
+			return e
+		}
+		n += len(buf)
+		buf = buf[:0]
+		return nil
+	}
+	for i := range members {
+		m := &members[i]
+		if m.Uid == "" || !this.isScore(m.Score) {
+			continue
+		}
+		//不做 isMax 检查:那是按当前届的 zKeeper(末位分数)裁溢出的,
+		//目标届还没开始、根本没有 keeper,拿当前届的去卡新榜是张冠李戴
+		buf = append(buf, &redis.Z{Member: m.Uid, Score: stmt.formatScore(this, m.Score)})
+		if len(buf) >= zAddsChunk {
+			if err = flush(); err != nil {
+				_ = client.Del(ctx, tmp).Err()
+				return 0, err
+			}
+		}
+	}
+	if err = flush(); err != nil {
+		_ = client.Del(ctx, tmp).Err()
+		return 0, err
+	}
+	if n == 0 {
+		_ = client.Del(ctx, tmp).Err()
+		return 0, values.Error("rank: ZPreset all members filtered out")
+	}
+	//落地前再确认一次:写这一批的工夫里届可能已经推进,那就整批作废,
+	//让目标键保持空,由业务侧的兜底重建接手
+	if cur, _ = this.Cycle(); cycle <= cur {
+		_ = client.Del(ctx, tmp).Err()
+		return 0, ErrPresetNotFuture
+	}
+	if err = client.Rename(ctx, tmp, dst).Err(); err != nil {
+		_ = client.Del(ctx, tmp).Err()
+		return 0, err
+	}
+	return n, nil
+}
+
 // takeoverScript 榜外成员顶替榜内成员:a 接手 b 的分数,b 被移出榜
 //
 // 与 swapScript 同理必须整体在 Lua 内完成:ZREM 与 ZADD 之间存在中间态,
