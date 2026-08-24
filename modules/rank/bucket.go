@@ -167,25 +167,50 @@ func (this *Bucket) ZAdd(cycle int64, uid string, score int64) (err error) {
 // ——5000 个成员分 5 条,与逐条发 5000 次相比仍是三个数量级的差距。
 const zAddsChunk = 1000
 
-// ZAdds 批量写分,供建榜 / 换届重建这类成百上千条的一次性写入。
+// ZAdds 批量写分,往【正在用的活榜】里成百上千条地写。
 //
 // 逐条 ZAdd 时每条都是一次 RTT:实测跨网段写 5000 条约 3.6 秒(约 0.72ms/条,
 // 基本是纯网络往返)。批量把它压成 ceil(n/zAddsChunk) 次往返。
 //
 // 返回实际写入的条数:入围分数(zScore)与守门员(zKeeper)过滤掉的不计。
 //
-// 🔴 与 ZAdd 的语义差异:休战期 / 届已过期时,ZAdd 是【静默返回 nil】,本接口【显式报错】。
-// 不是不一致,是场景不同——ZAdd 单条写分失败无伤大雅(下次打分再写),
-// 而批量写的调用方多半在建榜:静默不写会留下一张空榜,调用方却以为填好了,
-// 之后所有"取我上方/下方的对手"都取空。ZSwap 当初也是为同一个理由没有沿用静默语义。
+// # 与 ZPreset 的分界:目标榜空不空
+//
+//	目标榜非空 -> ZAdds   往活榜里写:定时全量重算(战力榜/等级榜)、赛季中批量补人、
+//	                      GM 批量修正、分批拼榜的后续批次
+//	目标榜为空 -> ZPreset 从空建起:换届填充、预置还没开始的那一届
+//
+// ZPreset 靠 RENAMENX 要求目标榜为空,所以它做不了"往已有的榜里补人/改分"——
+// 那正是本接口不可替代的地盘。反过来,一次性从空建满整份榜优先用 ZPreset:
+// 它中途失败不会留下一张半填的活榜(详见 ZPreset)。
+//
+// 🔴 本接口做 isMax 守门员裁剪而 ZPreset 不做,这不是随手配的:
+// 往活榜里批量写必须尊重当前届的 zKeeper(末位分数),否则会冲破 zMax;
+// 而空榜压根没有 keeper。这条差异与"活榜 vs 空榜"一一对应。
+//
+// 🔴 【不受休战约束】,与 ZAdd / ZSwap 不同。休战拦的是「改变名次」——玩家写分、席位争夺;
+// 而本接口是系统在写榜(定时重算、批量补人),那些事本来就跑在冻结窗口里。
+// ⚠ 反过来说它没有保险:玩家驱动的批量写入(如"结算时批量补分")会因此绕过休战,
+// 那类写入一律走 ZAdd / ZSwap。
+//
+// 🔴 届已过期时【显式报错】而不像 ZAdd 那样静默返回 nil:ZAdd 单条写分失败无伤大雅
+// (下次打分再写),而批量写的调用方多半在建榜——静默不写会留下一张空榜,
+// 调用方却以为填好了,之后所有"取我上方/下方的对手"都取空。
+//
+// ⚠ 只能写【当前届】。那一届还没开始就要把榜摆好,只有 ZPreset 走得通。
 func (this *Bucket) ZAdds(cycle int64, members []Member) (n int, err error) {
 	if len(members) == 0 {
 		return 0, nil
 	}
-	v, writable := this.Cycle()
-	if !writable {
-		return 0, ErrTruce
-	}
+	//🔴 不判休战。休战约束的是「改变名次」(玩家写分/席位争夺),不是「建立榜单」——
+	//而建榜恰恰发生在休战窗口里:换届冻结、结算、把新一届填好,是同一段时间里的事。
+	//判了休战,ZAdds 在它唯一的正经用途上永远返回 ErrTruce。
+	//
+	//⚠ 代价是这把枪没有保险:拿它做玩家驱动的批量写入(如"结算时批量补分")会绕过休战。
+	//玩家驱动的写入一律走 ZAdd / ZSwap,本接口只给系统建榜用。
+	//
+	//仍然调用 Cycle():它顺带驱动换届(changeCycle),跳过会让本次写入落进已废弃的届。
+	v, _ := this.Cycle()
 	if cycle == 0 {
 		cycle = v
 	} else if cycle != v {
@@ -227,7 +252,7 @@ func (this *Bucket) ZAdds(cycle int64, members []Member) (n int, err error) {
 	return
 }
 
-// swapScript 原子对调两名成员的分数
+// swapScript 原子完成"a 夺取 b 的席位"
 //
 // 必须整体在 Lua 内完成:若在 Go 侧先 ZSCORE 读出来比大小、再发两条 ZADD,那个"读-判-写"
 // 不是原子的——并发下目标的名次可能在读与写之间被第三方换走,判定即失效;
@@ -236,18 +261,34 @@ func (this *Bucket) ZAdds(cycle int64, members []Member) (n int, err error) {
 // 返回 ZSCORE 的原始字符串而非 number:REDIS 的 Lua 返回 number 时会截断小数,
 // 启用了 tiebreak 的榜其 score 带小数位,直接返回 number 会丢精度。
 //
+// 🔴 **b 必须在榜,a 在不在榜都合法**——这条不对称是整个脚本的骨架:
+// 席位得先存在才谈得上夺取,而"a 在不在榜"恰恰是调用方查不准的那一半
+// (查完到调用落地之间,a 可能被 ZAdd 进榜,也可能被溢出裁剪静默挤出去),
+// 所以这个判断只能在这里做,跟写入同处一个原子块。见 Bucket.ZSwap。
+//
+// 🔴 **cond 判定必须留在互换分支【里面】**,不能提到分支之前统一做:
+// ZRANK 对不在榜的成员返回 nil,在 Lua 里是 false,`rb >= ra` 拿 number 跟 boolean 比
+// 会【直接抛运行时错误】而不是返回 false——调用方拿到的既不是 ErrSwapCondition
+// 也不是任何已定义错误码,且只在 a 恰好榜外时才炸,平时测试全绿。
+//
 // 🔴 两处与"排序"有关的坑:
 //
 //	1.【同分直接拒绝】ZSET 同分时按 member 字典序排,此时互换分数是 no-op ——
 //	  名次纹丝不动,却会让调用方以为换成功了(静默失败)。故 score 相等一律返回 equal。
-//	2.【条件判定用 ZRANK 而不是比分数】同分时分数比较反映不了真实名次(见上)。
-//	  改用 ZRANK/ZREVRANK 取真实名次比较,rank 恒为"越小越靠前",顺带把升序/降序两种
-//	  榜的方向差异收敛掉,不必在脚本里按 SortType 反转比较符。
+//	  只在互换分支判:顶替时 a 不在榜,接手 b 的分数必然改变榜面,不存在 no-op。
+//	2.【条件判定用 ZRANK 而不是比分数】ZREVRANK/ZRANK 二选一后,rank 恒为
+//	  "越小越靠前",把升序/降序两种榜的方向差异收敛掉,比较符只需要一个,
+//	  不必在脚本里按 SortType 反转。
 var swapScript = redis.NewScript(`
-local a = redis.call('ZSCORE', KEYS[1], ARGV[1])
-local b = redis.call('ZSCORE', KEYS[1], ARGV[2])
-if (not a) or (not b) then return {'missing'} end
-if tonumber(a) == tonumber(b) then return {'equal'} end
+local sa = redis.call('ZSCORE', KEYS[1], ARGV[1])
+local sb = redis.call('ZSCORE', KEYS[1], ARGV[2])
+if not sb then return {'missing'} end
+if not sa then
+  redis.call('ZREM', KEYS[1], ARGV[2])
+  redis.call('ZADD', KEYS[1], sb, ARGV[1])
+  return {'takeover', sb}
+end
+if tonumber(sa) == tonumber(sb) then return {'equal'} end
 if ARGV[3] == '1' then
   local ra, rb
   if ARGV[4] == '1' then
@@ -259,33 +300,57 @@ if ARGV[3] == '1' then
   end
   if rb >= ra then return {'cond'} end
 end
-redis.call('ZADD', KEYS[1], b, ARGV[1])
-redis.call('ZADD', KEYS[1], a, ARGV[2])
-return {'ok', a, b}
+redis.call('ZADD', KEYS[1], sb, ARGV[1])
+redis.call('ZADD', KEYS[1], sa, ARGV[2])
+return {'swap', sa, sb}
 `)
 
-// ZSwap 原子对调 a 与 b 的分数,返回各自对调【前】的原始分数
+// ZSwap 原子完成"a 夺取 b 的席位",返回结局与双方交换【前】的分数
 //
-// 适用于"名次即资源"的榜:挑战成功后攻守双方交换席位。cond 见 SwapCond。
-// 不做入围分数(isScore)与名次(isMax)检查——双方本就都在榜上,与"够不够格上榜"无关。
+// 适用于"名次即席位"的定容榜:挑战成功后 a 坐上 b 的名次。两种结局由 a 原本
+// 在不在榜上决定,由脚本自己查、调用方不需要(也无法)预先判断:
 //
-// 错误:ErrTruce(休战期) / ErrSwapMemberMissing(有人不在榜) / ErrSwapCondition(条件不满足)
-func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scoreB int64, err error) {
+//	a 在榜 + b 在榜  -> SwapKindSwap     互换分数,b 退到 a 原来的名次
+//	a 榜外 + b 在榜  -> SwapKindTakeover a 接手 b 的名次,b 出榜
+//	          b 榜外  -> ErrSwapMemberMissing(席位不存在,无从夺取)
+//
+// # 为什么不拆成两个 API 让调用方自己选
+//
+// 曾经拆成 ZSwap(双方在榜) / ZTakeover(a 在榜外) 两个函数,由业务判断该调哪个。
+// 那个分工**在并发下是判不准的**,不是"业务容易漏"的问题:判据只能在调用【之前】查,
+// 而查完到调用落地之间,a 可能刚被 ZAdd 进榜,也可能被溢出裁剪挤出去
+// (mayKeeper 里的 ZRemRangeByRank,ZCARD 超过 zMax+OverflowThreshold 时由心跳触发,
+// 业务侧完全看不见)。于是每个调用方都必须写"拿到 XXXMemberExists/Missing 就换另一个
+// API 重试"的样板——而那两个错误码本意是"你判错了",实际上业务并没判错,是判据在飞。
+// 判断挪进 Lua 之后,判与写同处一个原子块,这个竞态从根上不存在。
+//
+// # ⚠ 只适用于"名次即席位"的定容榜
+//
+// 榜没满时 a 顶掉 b 会【静默发生】:明明还有空位,b 却被挤出榜。
+// 拆成两个 API 时,这个前提靠调用方主动选 ZTakeover 来表达;合并之后没地方表达了。
+// 容量没满、该让人直接上榜的场合应该用 ZAdd,不是 ZSwap。
+//
+// 不做入围分数(isScore)与名次(isMax)检查——夺取的是一个已存在的席位,
+// 席位本身就在榜内,与"够不够格上榜"无关。
+//
+// 错误:ErrTruce(休战期) / ErrSwapMemberMissing(b 不在榜) /
+// ErrSwapCondition(cond 不满足) / ErrSwapEqualScore(双方同分,互换是 no-op)
+func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (r *SwapResult, err error) {
 	if a == "" || b == "" || a == b {
-		return 0, 0, values.Error("rank: ZSwap invalid uid")
+		return nil, values.Error("rank: ZSwap invalid uid")
 	}
 	v, writable := this.Cycle()
 	if !writable {
-		return 0, 0, ErrTruce
+		return nil, ErrTruce
 	}
 	if cycle == 0 {
 		cycle = v
 	} else if cycle != v {
-		return 0, 0, ErrSwapMemberMissing //非当前届不可交换
+		return nil, ErrSwapMemberMissing //非当前届不可交换
 	}
 	stmt := this.statement()
 	if stmt == nil || stmt.zCycle != cycle {
-		return 0, 0, ErrSwapMemberMissing
+		return nil, ErrSwapMemberMissing
 	}
 	desc := "0"
 	if this.zType == SortTypeDesc {
@@ -294,32 +359,60 @@ func (this *Bucket) ZSwap(cycle int64, a, b string, cond SwapCond) (scoreA, scor
 	key := this.RedisRankKey(cycle)
 	res, e := swapScript.Run(context.Background(), client, []string{key}, a, b, fmt.Sprintf("%d", cond), desc).StringSlice()
 	if e != nil {
-		return 0, 0, e
+		return nil, e
 	}
 	if len(res) == 0 {
-		return 0, 0, values.Error("rank: ZSwap empty reply")
+		return nil, values.Error("rank: ZSwap empty reply")
 	}
 	switch res[0] {
 	case "missing":
-		return 0, 0, ErrSwapMemberMissing
+		return nil, ErrSwapMemberMissing
 	case "equal":
-		return 0, 0, ErrSwapEqualScore
+		return nil, ErrSwapEqualScore
 	case "cond":
-		return 0, 0, ErrSwapCondition
-	case "ok":
+		return nil, ErrSwapCondition
+	case "takeover":
+		if len(res) < 2 {
+			return nil, values.Error("rank: ZSwap bad reply")
+		}
+		fb, _ := strconv.ParseFloat(res[1], 64)
+		//ScoreA 留零值:a 本不在榜,没有"交换前的分数"。调用方靠 Kind 区分,不看 ScoreA。
+		return &SwapResult{Kind: SwapKindTakeover, ScoreB: parseScore(fb)}, nil
+	case "swap":
 		if len(res) < 3 {
-			return 0, 0, values.Error("rank: ZSwap bad reply")
+			return nil, values.Error("rank: ZSwap bad reply")
 		}
 		fa, _ := strconv.ParseFloat(res[1], 64)
 		fb, _ := strconv.ParseFloat(res[2], 64)
-		return parseScore(fa), parseScore(fb), nil
+		return &SwapResult{Kind: SwapKindSwap, ScoreA: parseScore(fa), ScoreB: parseScore(fb)}, nil
 	}
-	return 0, 0, values.Errorf(0, "rank: ZSwap unknown reply:%v", res[0])
+	return nil, values.Errorf(0, "rank: ZSwap unknown reply:%v", res[0])
 }
 
 // ZPreset 预置某一届的完整榜单——在该届【开始之前】把数据写好
 //
-// 场景:换届结算要在上一届的最后时段完成(例如每天最后半小时冻结榜、跑结算),
+// # 与 ZAdds 的分界:目标榜空不空
+//
+// ZAdds 的对手是 ZAdd(批量 vs 单条);ZPreset 是另一回事——【从空建起】:
+//
+//	           ZAdds                    ZPreset
+//	目标榜     非空,往活榜里增量合入      必须为空,否则 ErrPresetNotEmpty
+//	写哪一届   只能当前届                指定届,含还没开始的下一届(不接受 0)
+//	写法       直接 ZADD 目标键,分片      写临时键,最后 RENAMENX 原子搬过去
+//	中途失败   已写的分片留在榜上(半填)   目标键仍是空的
+//	过滤       isScore + isMax           只 isScore(空榜没有 keeper,见下)
+//
+// 两者都【不受休战约束】(受约束的是玩家驱动的 ZAdd / ZSwap)。
+//
+// 🔴 **不要让本接口在榜非空时自动降级成 ZAdds**。ZSwap 合并 ZTakeover 的理由在这里
+// 恰好反过来:那边的判据「a 在不在榜」是外部状态,查完就变、业务判不准,所以必须挪进 Lua;
+// 这边的判据是【调用方的意图】——"我要从空建起,榜非空说明出事了"。
+// ErrPresetNotEmpty 的全部价值就在于它会失败:自动降级会把"覆盖了一张正在用的榜"
+// 这个事故变成静默的成功,玩家名次凭空重排,而调用方拿到 nil。
+//
+// # 场景
+//
+// 换届结算要在上一届的最后时段完成(例如每天最后半小时冻结榜、跑结算),
 // 那一刻新一届还没开始,ZAdd/ZAdds 会因为「不是当前届」返回 ErrCycleExpired,
 // 且冻结期本身还会被休战检查拦成 ErrTruce。ZPreset 是唯一能穿过这两道的写入口。
 //
@@ -406,73 +499,6 @@ func (this *Bucket) ZPreset(cycle int64, members []Member) (n int, err error) {
 		return 0, ErrPresetNotEmpty
 	}
 	return n, nil
-}
-
-// takeoverScript 榜外成员顶替榜内成员:a 接手 b 的分数,b 被移出榜
-//
-// 与 swapScript 同理必须整体在 Lua 内完成:ZREM 与 ZADD 之间存在中间态,
-// 此刻别的请求会读到"这一席空着",并发下两个榜外玩家可能同时顶上同一席。
-//
-// 🔴 要求 a **不在**榜上。a 已在榜上时该用 ZSwap——那是双方互换,总数不变;
-// 这里是 b 出榜、a 进榜,若 a 本就在榜,执行下去等于把 a 原来那一席凭空丢掉。
-var takeoverScript = redis.NewScript(`
-local a = redis.call('ZSCORE', KEYS[1], ARGV[1])
-local b = redis.call('ZSCORE', KEYS[1], ARGV[2])
-if not b then return {'missing'} end
-if a then return {'exists'} end
-redis.call('ZREM', KEYS[1], ARGV[2])
-redis.call('ZADD', KEYS[1], b, ARGV[1])
-return {'ok', b}
-`)
-
-// ZTakeover 榜外成员 a 顶替榜内成员 b,接手其分数(名次),b 转为榜外。返回接手到的分数
-//
-// 适用于"名次即资源"且**榜容量固定**的榜:榜外玩家打赢榜底对手后占下那一席,
-// 榜内总数恒定不变。与 ZSwap 的分工:双方都在榜上用 ZSwap(互换),
-// 攻方在榜外用 ZTakeover(顶替)。
-//
-// 同样不做入围分数(isScore)与名次(isMax)检查——顶替是"接手一个已存在的席位",
-// 席位本身就在榜内,与"够不够格上榜"无关。
-//
-// 错误:ErrTruce(休战期) / ErrSwapMemberMissing(b 不在榜) / ErrTakeoverMemberExists(a 已在榜)
-func (this *Bucket) ZTakeover(cycle int64, a, b string) (score int64, err error) {
-	if a == "" || b == "" || a == b {
-		return 0, values.Error("rank: ZTakeover invalid uid")
-	}
-	v, writable := this.Cycle()
-	if !writable {
-		return 0, ErrTruce
-	}
-	if cycle == 0 {
-		cycle = v
-	} else if cycle != v {
-		return 0, ErrSwapMemberMissing //非当前届不可顶替
-	}
-	stmt := this.statement()
-	if stmt == nil || stmt.zCycle != cycle {
-		return 0, ErrSwapMemberMissing
-	}
-	key := this.RedisRankKey(cycle)
-	res, e := takeoverScript.Run(context.Background(), client, []string{key}, a, b).StringSlice()
-	if e != nil {
-		return 0, e
-	}
-	if len(res) == 0 {
-		return 0, values.Error("rank: ZTakeover empty reply")
-	}
-	switch res[0] {
-	case "missing":
-		return 0, ErrSwapMemberMissing
-	case "exists":
-		return 0, ErrTakeoverMemberExists
-	case "ok":
-		if len(res) < 2 {
-			return 0, values.Error("rank: ZTakeover bad reply")
-		}
-		f, _ := strconv.ParseFloat(res[1], 64)
-		return parseScore(f), nil
-	}
-	return 0, values.Errorf(0, "rank: ZTakeover unknown reply:%v", res[0])
 }
 
 func (this *Bucket) ZRem(cycle int64, uid string) (err error) {

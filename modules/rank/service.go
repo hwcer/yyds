@@ -52,10 +52,15 @@ func ZAdd(name any, cycle int64, uid string, score int64) error {
 	return nil
 }
 
-// ZAdds 批量写分,见 Bucket.ZAdds
+// ZAdds 批量写分,往【正在用的活榜】里写(定时全量重算、批量补人、GM 修正),见 Bucket.ZAdds
 //
-// 返回实际写入条数;休战期返回 ErrTruce,届已过期返回 ErrCycleExpired
+// 与 ZPreset 的分界是【目标榜空不空】:非空走本接口,从空建起走 ZPreset。
+//
+// 返回实际写入条数;届已过期返回 ErrCycleExpired
 // (与单条 ZAdd 的静默语义【有意不同】,原因见 Bucket.ZAdds)。
+//
+// 🔴 【不受休战约束】:休战拦的是玩家驱动的 ZAdd / ZSwap。
+// 反过来说它没有保险,玩家驱动的批量写入不要用它。
 func ZAdds(name any, cycle int64, members []Member) (int, error) {
 	w, err := bucket(name)
 	if err != nil {
@@ -64,31 +69,26 @@ func ZAdds(name any, cycle int64, members []Member) (int, error) {
 	return w.ZAdds(cycle, members)
 }
 
-// ZSwap 原子对调两名成员的分数,返回各自对调【前】的原始分数
+// ZSwap 原子完成"a 夺取 b 的席位",返回结局与双方交换【前】的分数
 //
-// 详见 Bucket.ZSwap。错误按 errors.Is 区分:
-// ErrTruce / ErrSwapMemberMissing / ErrSwapCondition
-func ZSwap(name any, cycle int64, a, b string, cond SwapCond) (scoreA, scoreB int64, err error) {
+// b 必须在榜(席位得先存在);a 在不在榜都合法,由脚本自己查:
+// 都在榜则互换(SwapKindSwap),a 在榜外则顶替、b 出榜(SwapKindTakeover)。
+// 调用方不需要、也无法预先判断 a 的状态,原因详见 Bucket.ZSwap。
+//
+// 错误按 errors.Is 区分:
+// ErrTruce / ErrSwapMemberMissing / ErrSwapCondition / ErrSwapEqualScore
+func ZSwap(name any, cycle int64, a, b string, cond SwapCond) (*SwapResult, error) {
 	w, err := bucket(name)
 	if err != nil {
-		return 0, 0, err
+		return nil, err
 	}
 	return w.ZSwap(cycle, a, b, cond)
 }
 
-// ZTakeover 榜外成员 a 顶替榜内成员 b,接手其分数(名次),b 转为榜外
+// ZPreset 从空建起一整份榜单:换届填充,或预置还没开始的那一届
 //
-// 详见 Bucket.ZTakeover。错误按 errors.Is 区分:
-// ErrTruce / ErrSwapMemberMissing / ErrTakeoverMemberExists
-func ZTakeover(name any, cycle int64, a, b string) (score int64, err error) {
-	w, err := bucket(name)
-	if err != nil {
-		return 0, err
-	}
-	return w.ZTakeover(cycle, a, b)
-}
-
-// ZPreset 预置某一届的完整榜单,用于在该届开始之前把数据写好
+// 要求目标榜【为空】,这是护栏不是障碍——榜非空说明撞上了正在用的榜或已结算的历史数据。
+// 往非空的活榜里批量写请用 ZAdds。
 //
 // 详见 Bucket.ZPreset。错误按 errors.Is 区分:ErrPresetNotEmpty
 func ZPreset(name any, cycle int64, members []Member) (n int, err error) {

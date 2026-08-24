@@ -58,12 +58,15 @@ func TestZSwapAscSuccess(t *testing.T) {
 	if err := b.ZAdd(1, "def", 30); err != nil {
 		t.Fatal(err)
 	}
-	from, to, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead)
+	r, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead)
 	if err != nil {
 		t.Fatalf("应交换成功: %v", err)
 	}
-	if from != 100 || to != 30 {
-		t.Errorf("返回原分数应为 (100,30), 实际 (%d,%d)", from, to)
+	if r.Kind != SwapKindSwap {
+		t.Errorf("双方都在榜应为 SwapKindSwap, 实际 %d", r.Kind)
+	}
+	if r.ScoreA != 100 || r.ScoreB != 30 {
+		t.Errorf("返回原分数应为 (100,30), 实际 (%d,%d)", r.ScoreA, r.ScoreB)
 	}
 	// 交换后 atk 占 30、def 占 100
 	if p, _ := b.ZRank(1, "atk", true); p.Score != 30 {
@@ -80,7 +83,7 @@ func TestZSwapAscConditionRejected(t *testing.T) {
 	b := newSwapBucket(t, SortTypeAsc)
 	_ = b.ZAdd(1, "atk", 30)
 	_ = b.ZAdd(1, "def", 100) //def 名次更靠后
-	_, _, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead)
+	_, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead)
 	if !errors.Is(err, ErrSwapCondition) {
 		t.Fatalf("应返回 ErrSwapCondition, 实际 %v", err)
 	}
@@ -95,12 +98,12 @@ func TestZSwapEqualScoreRejected(t *testing.T) {
 	b := newSwapBucket(t, SortTypeAsc)
 	_ = b.ZAdd(1, "atk", 50)
 	_ = b.ZAdd(1, "def", 50)
-	_, _, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead)
+	_, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead)
 	if !errors.Is(err, ErrSwapEqualScore) {
 		t.Fatalf("同分应返回 ErrSwapEqualScore, 实际 %v", err)
 	}
 	// 无条件模式同样要拒绝——换了也不会改变任何人的名次
-	if _, _, err = b.ZSwap(1, "atk", "def", SwapAlways); !errors.Is(err, ErrSwapEqualScore) {
+	if _, err = b.ZSwap(1, "atk", "def", SwapAlways); !errors.Is(err, ErrSwapEqualScore) {
 		t.Fatalf("SwapAlways 同分也应拒绝, 实际 %v", err)
 	}
 }
@@ -111,26 +114,51 @@ func TestZSwapDescDirection(t *testing.T) {
 	b := newSwapBucket(t, SortTypeDesc)
 	_ = b.ZAdd(1, "atk", 30)
 	_ = b.ZAdd(1, "def", 100) //降序下 def 分高=更靠前
-	if _, _, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead); err != nil {
+	if _, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead); err != nil {
 		t.Fatalf("降序榜挑战高分者应成功: %v", err)
 	}
 	if p, _ := b.ZRank(1, "atk", true); p.Score != 100 {
 		t.Errorf("atk 应拿到 100, 实际 %d", p.Score)
 	}
 	// 反向:此刻 atk=100 已在前、def=30 在后,由 atk 去挑战 def 应被拒
-	if _, _, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead); !errors.Is(err, ErrSwapCondition) {
+	if _, err := b.ZSwap(1, "atk", "def", SwapIfTargetAhead); !errors.Is(err, ErrSwapCondition) {
 		t.Fatalf("降序榜挑战靠后者应被拒, 实际 %v", err)
 	}
 }
 
-// 一方不在榜
-func TestZSwapMemberMissing(t *testing.T) {
+// 🔴 b 不在榜必须拒绝,且【不能】反向顶替
+//
+// 合并 ZTakeover 之后语义是有方向的:"a 夺取 b 的席位",席位得先存在。
+// 若图省事实现成对称交换,这里会变成 a 出榜、b 凭空进榜——攻方打赢反被踢出去。
+func TestZSwapTargetMissing(t *testing.T) {
 	setupRedis(t)
 	b := newSwapBucket(t, SortTypeAsc)
 	_ = b.ZAdd(1, "atk", 10)
-	_, _, err := b.ZSwap(1, "atk", "ghost", SwapIfTargetAhead)
+	_, err := b.ZSwap(1, "atk", "ghost", SwapIfTargetAhead)
 	if !errors.Is(err, ErrSwapMemberMissing) {
 		t.Fatalf("应返回 ErrSwapMemberMissing, 实际 %v", err)
+	}
+	if p, _ := b.ZRank(1, "atk", true); p == nil || p.Rank < 0 || p.Score != 10 {
+		t.Fatalf("a 不得被摘掉,应仍在榜且分数 10, 实际 %+v", p)
+	}
+	if p, _ := b.ZRank(1, "ghost", false); p != nil && p.Rank >= 0 {
+		t.Fatalf("b 不得凭空进榜, 实际 %+v", p)
+	}
+	if n, _ := b.ZCard(1); n != 1 {
+		t.Fatalf("榜内总数不该变, 实际 %v", n)
+	}
+}
+
+// 双方都不在榜:同样是 missing,且不得有任何写入
+func TestZSwapBothMissing(t *testing.T) {
+	setupRedis(t)
+	b := newSwapBucket(t, SortTypeAsc)
+	_, err := b.ZSwap(1, "atk", "ghost", SwapIfTargetAhead)
+	if !errors.Is(err, ErrSwapMemberMissing) {
+		t.Fatalf("应返回 ErrSwapMemberMissing, 实际 %v", err)
+	}
+	if n, _ := b.ZCard(1); n != 0 {
+		t.Fatalf("失败时不该有任何写入, 实际 %v", n)
 	}
 }
 
@@ -158,12 +186,12 @@ func TestZSwapDescRankActuallySwapped(t *testing.T) {
 	}
 
 	//low 挑战 top(更靠前) -> 应成功
-	from, to, err := b.ZSwap(1, "low", "top", SwapIfTargetAhead)
+	r, err := b.ZSwap(1, "low", "top", SwapIfTargetAhead)
 	if err != nil {
 		t.Fatalf("降序榜挑战更靠前者应成功: %v", err)
 	}
-	if from != 100 || to != 300 {
-		t.Errorf("返回原分数应为 (100,300), 实际 (%d,%d)", from, to)
+	if r.ScoreA != 100 || r.ScoreB != 300 {
+		t.Errorf("返回原分数应为 (100,300), 实际 (%d,%d)", r.ScoreA, r.ScoreB)
 	}
 	//名次必须真的互换:low 变第 0、top 落到第 2,中间的 mid 不受影响
 	if r := rankOf("low"); r != 0 {

@@ -58,21 +58,51 @@ func Redis() *redis.Client {
 }
 
 // SwapCond ZSwap 的交换条件,在 Lua 内部重查后判定,保证"读-判-写"整体原子
+//
+// # 升序/降序的方向差异是怎么消掉的
+//
+// 判定比的是【名次】而不是分数:降序榜取 ZREVRANK、升序榜取 ZRANK,两条路出来的
+// rank 恒为"越小越靠前",于是比较符只有 rb < ra 一个,不必按 SortType 翻转。
+// 方向判断只发生在"取哪个 rank 函数"这一处——比翻转比较符稳:
+// 以后改条件语义时,翻转符号那种写法极容易只改一半。
+//
+// ⚠ a 在榜外时【不参与】这个判定:榜外不在分数空间里,既没有分数也没有名次,
+// 一律视为"排在所有人之后"。这对升序降序同时成立(它只跟"有没有席位"有关,
+// 跟分数怎么映射到名次无关),故 SwapIfTargetAhead 在顶替路径恒放行。
 type SwapCond int8
 
 const (
 	SwapAlways        SwapCond = 0 //无条件对调
-	SwapIfTargetAhead SwapCond = 1 //仅当 b 比 a 更靠前时才对调(按该榜 SortType 判定)
+	SwapIfTargetAhead SwapCond = 1 //仅当 b 比 a 更靠前时才对调
 )
+
+// SwapKind ZSwap 的结局:a 原本在不在榜上,决定了 b 的去向
+//
+// 调用方通常需要区分——顶替会把 b 挤出榜(要发邮件、清它的名次缓存),互换不会。
+// 也正因为要区分,SwapResult 才不能用 ScoreA==0 表示"a 原本不在榜":0 是合法分数,
+// 那样调用方分不出"a 原来 0 分"和"a 根本没上榜"。
+type SwapKind int8
+
+const (
+	SwapKindSwap     SwapKind = 1 //双方都在榜:互换分数,b 退到 a 原来的名次
+	SwapKindTakeover SwapKind = 2 //a 原在榜外:接手 b 的名次,b 出榜。榜内人数不变
+)
+
+// SwapResult ZSwap 成功时的结果
+type SwapResult struct {
+	Kind   SwapKind //见 SwapKind,区分 b 是"被换到后面"还是"被挤出榜"
+	ScoreA int64    //a 交换【前】的分数。Kind==SwapKindTakeover 时无意义(a 本不在榜)
+	ScoreB int64    //b 交换【前】的分数,即 a 接手到的分数。两种结局下都有效
+}
 
 // ZSwap 的错误,业务侧需按 errors.Is 区分处理
 var (
-	//ErrSwapMemberMissing 至少一方不在榜上(退榜/换届/从未入榜)
+	//ErrSwapMemberMissing 被挑战方 b 不在榜上(退榜/换届/从未入榜),没有席位可夺
+	//
+	//注意只约束 b:a 在不在榜都是合法输入,见 Bucket.ZSwap。
 	ErrSwapMemberMissing = errors.New("rank: member not on the list")
 	//ErrPresetNotEmpty 预置的目标届已有数据,拒绝覆盖(在用的榜 / 已结算的历史数据)
 	ErrPresetNotEmpty = errors.New("rank: preset target already has data")
-	//ErrTakeoverMemberExists 顶替方已在榜上,应改用 ZSwap 互换而非顶替
-	ErrTakeoverMemberExists = errors.New("rank: takeover member already on the list")
 	//ErrSwapCondition 交换条件不满足,如要求目标更靠前但其名次已被他人换走
 	ErrSwapCondition = errors.New("rank: swap condition not satisfied")
 	//ErrSwapEqualScore 双方分数相同,交换是 no-op
@@ -86,8 +116,15 @@ var (
 	ErrCycleExpired = errors.New("rank: cycle expired")
 	//ErrTruce 休战期内不可写
 	//
-	//注意与 ZAdd 的差异:ZAdd 在休战期静默返回 nil(丢弃写入),那是分数榜可接受的降级;
-	//但交换类操作静默失败会导致业务侧以为换成功了(已扣代价却没换),故必须显式报错。
+	//🔴 休战约束的是【改变名次】,不是【建立榜单】:
+	//	受约束   ZAdd / ZSwap  —— 玩家驱动:写分、席位争夺
+	//	不受约束 ZAdds / ZPreset —— 系统驱动:活榜批量写、从空建榜
+	//
+	//系统写榜本来就发生在休战窗口里(换届冻结→结算→填新一届、定时重算全服分数),
+	//拦了它,那两个接口在自己的正经用途上永远失败。
+	//
+	//受约束的两条路径一律【显式报错】而非静默丢弃:静默失败是个长期的坑——
+	//玩家扣了票、发了奖、分数却没写进去,而调用方拿到 nil 以为成功,日志里什么都看不到。
 	ErrTruce = errors.New("rank: truce period, list is read-only")
 )
 
