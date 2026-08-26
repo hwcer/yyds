@@ -27,6 +27,9 @@ var (
 	ErrNotOnline        = values.Errorf(14, "user not online")           //不在线
 	ErrServerClosed     = values.Errorf(15, "server closed")
 	ErrServerMaintain   = values.Errorf(16, "server maintain") //服务器维护中,由业务层置位
+	//本进程没有玩家容器(players.Standalone),却走到了要玩家数据的路径。
+	//多半是把 Player 级的路由注册进了这类服务 —— 见 players.Standalone
+	ErrServerStandalone = values.Errorf(17, "server has no player container")
 
 	ErrLoginAgain    = values.Errorf(101, "please login again") //需要重新登录
 	ErrLoginDisabled = values.Errorf(102, "disabled")           //账号禁用
