@@ -20,46 +20,29 @@ const (
 )
 
 var (
-	playersState      atomic.Int32 //启动状态,见 stateStopped / stateRunning
-	playersMaintain   atomic.Bool  //维护中,业务层置位
-	playersCreate     atomic.Bool  //是否开放创建新角色,业务层置位,默认关闭
-	playersStandalone atomic.Bool  //本进程没有玩家容器,见 Standalone
+	playersState    atomic.Int32 //启动状态,见 stateStopped / stateRunning
+	playersMaintain atomic.Bool  //维护中,业务层置位
+	playersCreate   atomic.Bool  //是否开放创建新角色,业务层置位,默认关闭
 )
 
-// Standalone 声明**本进程没有玩家容器**,由这类服务在 Init 阶段调用。
+// ============================================================================
+// 「本进程有没有玩家容器」—— 不需要声明,ps 就是答案
+// ============================================================================
 //
-// # 什么服务该调
+// ps 只在 Start 里被赋值,所以 **ps == nil ⇔ 本进程从没启动过玩家系统**。
+// 只提供共享数据、不持有玩家存档的微服务(社交服的公会 / 好友、世界服的跨服榜单)
+// 天生如此:它们不调 Start,进程里根本没有 Players 容器 —— 那不是配置疏漏,
+// 而是刻意的物理保证,「本服不碰玩家存档」靠"没有那个对象"兑现,比靠纪律可靠。
 //
-// 只提供共享数据、不持有玩家存档的微服务(社交服的公会/好友、世界服的跨服榜单…)。
-// 它们不调 Start,进程里根本没有 Players 容器 —— 那不是配置疏漏,而是刻意的物理保证:
-// 「本服不碰玩家存档」这条约束靠"没有那个对象"来兑现,比靠纪律可靠。
+// 曾考虑加一个显式的 Standalone() 声明,后来删掉了:框架自己就知道答案,
+// 多一个开关只是多一处要记得调、且可能与事实不符的状态。
 //
-// # 为什么需要这个声明
+// 时序上也不会误判(这是删掉声明的前提):
 //
-// Serviceable 原先只有一种解读:playersState != stateRunning 就是"服务没起来"。
-// 对没有玩家容器的服务这个判定恒为真,于是它的**每一个外网接口都回 ErrServerClosed**,
-// 而且是在读权限档位之前就被拒 —— 接口权限设成 None / OAuth / Select 都没用。
-// 结果是这类服务只能提供内网接口,客户端要读它的数据就得绕一个游戏服转发,
-// 而那一跳往往还持着玩家锁等一整个跨进程往返。
+//	所有 Init() → EventTypLoaded(players.Start 挂在这里) → 所有 Start()(网关在这步才 Listen)
 //
-// 声明之后:
-//
-//	Serviceable  跳过启动状态判定,**维护开关照常生效**
-//	Get / Load   返回明确错误而不是空指针崩溃(ps 为 nil)
-//
-// # 🔴 它不放宽任何权限
-//
-// 鉴权分级仍由网关决定。这类服务能提供的上限是 OAuthTypeSelect(要选角、给 uid,
-// 但不进玩家协程);Player 级的路由走到 players.Get 会拿到 ErrServerStandalone,
-// 因为那一档要的东西本进程确实没有。
-func Standalone() {
-	playersStandalone.Store(true)
-}
-
-// IsStandalone 本进程是否声明了「没有玩家容器」
-func IsStandalone() bool {
-	return playersStandalone.Load()
-}
+// 玩家系统起在网关开始收包之前,所以不存在"启动中 ps 还是 nil、请求已经进来"的窗口;
+// 关服时 playersState 翻回 stopped 而 ps 仍非 nil,照样被拒。
 
 // Started 框架是否已启动且未进入关闭流程
 func Started() bool {
@@ -96,9 +79,9 @@ func Creatable(v ...bool) bool {
 // 这些内部访问在维护期间恰恰是必须能用的 —— 维护往往就是为了做这些事。
 // 维护闸门只设在客户端入口(context.handlerCaller),不要下沉到这里。
 func available() error {
-	//没有玩家容器的进程:ps 为 nil,继续往下走就是空指针崩溃。回明确错误,
-	//让调用方(以及误注册成 Player 级的路由)拿到一句能看懂的话。
-	if playersStandalone.Load() {
+	//没有玩家容器的进程:再往下就是 ps 的空指针崩溃。回明确错误,
+	//让调用方(通常是误注册进这类服务的 Player 级路由)拿到一句能看懂的话。
+	if ps == nil {
 		return errors.ErrServerStandalone
 	}
 	if playersState.Load() != stateRunning {
@@ -113,11 +96,13 @@ func available() error {
 // 让请求半推半就地进到业务里 —— 关闭过程中放进来的请求会一边加载玩家、一边被
 // shutdown 释放掉。
 func Serviceable() error {
-	//🔴 没有玩家容器的服务不判启动状态 —— 那个状态由 Start 置位,而它压根不调 Start。
-	//判了的话它的每个外网接口都回 ErrServerClosed,且发生在读权限档位之前,
-	//接口权限设成什么都救不回来。见 Standalone。
+	//🔴 没有玩家容器的进程(ps == nil)不判启动状态 —— 那个状态由 Start 置位,
+	//而它压根不调 Start。判了的话它的**每个外网接口都回 ErrServerClosed**,
+	//且发生在读权限档位之前,接口权限设成 None / OAuth / Select 都救不回来
+	//(这正是社交服此前只能提供内网接口的原因)。见上面那段说明。
+	//
 	//**维护开关照常生效**:维护的语义是"不对客户端提供服务",与有没有玩家容器无关。
-	if !playersStandalone.Load() && playersState.Load() != stateRunning {
+	if ps != nil && playersState.Load() != stateRunning {
 		return errors.ErrServerClosed
 	}
 	if playersMaintain.Load() {
