@@ -129,7 +129,7 @@ func (p *Player) Send(v any, req values.Metadata) {
 	if guid != "" {
 		req.Set(gwcfg.ServiceMetadataGUID, guid) //空值别写进去,免得网关拿它当有效标识
 	}
-	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, gwcfg.MessageSend, v, nil); err != nil {
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGate, gwcfg.MessageSend, v, nil); err != nil {
 		//不能吞掉:推送失败在客户端表现为"没收到",服务端不留痕就完全查不出来
 		logger.Error("消息推送失败,uid:%v,guid:%v,path:%v,err:%v", p.uid, guid, req[gwcfg.ServiceMessagePath], err)
 	}

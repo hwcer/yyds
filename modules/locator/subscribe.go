@@ -1,6 +1,7 @@
 package locator
 
 import (
+	"github.com/hwcer/gateway/gwcfg"
 	"encoding/json"
 
 	"github.com/hwcer/cosgo/binder"
@@ -142,7 +143,7 @@ func send(sid int32, path string, body []byte) {
 	req := values.Metadata{}
 	req.Set(selector.MetaDataServerId, sid)
 	req[binder.HeaderContentType] = binder.Json.Name()
-	if err := client.CallWithMetadata(req, nil, options.ServiceTypeGame, path, body, nil); err != nil {
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGame, path, body, nil); err != nil {
 		logger.Alert("转发 master 事件失败:sid=%v,path=%v,err=%v", sid, path, err)
 	}
 }
@@ -152,7 +153,7 @@ func broadcast(path string, body []byte) {
 	req[binder.HeaderContentType] = binder.Json.Name()
 	ctx, cancel := client.WithTimeout(req, nil)
 	defer cancel()
-	if err := client.Broadcast(ctx, options.ServiceTypeGame, path, body, nil); err != nil {
+	if err := client.Broadcast(ctx, gwcfg.ServiceTypeGame, path, body, nil); err != nil {
 		logger.Alert("广播 master 事件失败:path=%v,err=%v", path, err)
 	}
 }

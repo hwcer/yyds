@@ -1,6 +1,7 @@
 package locator
 
 import (
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/yyds/modules/locator/handle"
@@ -21,13 +22,13 @@ type Module struct {
 }
 
 func (this *Module) Id() string {
-	return options.ServiceTypeLocator
+	return gwcfg.ServiceTypeLocator
 }
 func (this *Module) Init() (err error) {
 	if err = options.Initialize(); err != nil {
 		return
 	}
-	if err = cosgo.Config.UnmarshalKey(options.ServiceTypeLocator, &model.Options); err != nil {
+	if err = cosgo.Config.UnmarshalKey(gwcfg.ServiceTypeLocator, &model.Options); err != nil {
 		return
 	}
 

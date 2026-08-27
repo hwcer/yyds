@@ -8,7 +8,6 @@ import (
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/gateway/gwcfg"
 	yydscontext "github.com/hwcer/yyds/context"
-	"github.com/hwcer/yyds/options"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -70,7 +69,7 @@ func handleDescribe(ctx context.Context, req *mcp.CallToolRequest, args describe
 	}
 	path = strings.ToLower(path)
 	method := gwcfg.GetServiceMethod(path)
-	per, full := gwcfg.Authorize.Get(options.ServiceTypeGame, path)
+	per, full := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
 
 	r := &describeReply{
 		Path:       path,

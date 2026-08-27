@@ -12,16 +12,6 @@ import (
 type Context struct {
 	*cosrpc.Context
 
-	// Deprecated: 不要再使用,后续版本移除。
-	//
-	// 它在 handlerCaller 里是 players.Get 返回之后才执行的 —— 那时玩家锁已经释放、
-	// Player 也已置 nil。闭包里若捕获了玩家对象再调 Updater 方法就是锁外访问:
-	// 轻则读到 released 之后的残值,重则撞上 dataset 里 map 的并发读写,
-	// 那是 recover 拦不住的 fatal error,直接打挂进程。
-	// 而且它只在成功路径执行,handler 返回错误时根本不会被调用,当收尾钩子用并不可靠。
-	// 需要请求后置逻辑请在 handler 内部 defer —— 那里锁还在,语义也完整。
-	Next func()
-
 	// Player 本次请求的玩家对象,**仅在 handler 执行期间有效**,此期间由 players.Get
 	// 持有玩家锁;handler 返回后 handlerCaller 立即置 nil。
 	// 不要存进闭包或全局跨请求使用:锁一释放,daemon 随时可能把这个对象释放掉。

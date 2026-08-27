@@ -1,6 +1,7 @@
 package yyds
 
 import (
+	"github.com/hwcer/gateway/gwcfg"
 	"fmt"
 	"strconv"
 	"strings"
@@ -134,7 +135,7 @@ func (this *Module) Init() (err error) {
 		}
 	}
 	//设置游戏Metadata
-	server.Metadata.Set(options.ServiceTypeGame, fmt.Sprintf("%v=%v", selector.MetaDataServerId, options.Game.Sid))
+	server.Metadata.Set(gwcfg.ServiceTypeGame, fmt.Sprintf("%v=%v", selector.MetaDataServerId, options.Game.Sid))
 	cosgo.On(cosgo.EventTypLoaded, players.Start)
 	return nil
 }

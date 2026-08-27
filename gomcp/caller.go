@@ -124,7 +124,7 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	if err != nil {
 		return nil, err
 	}
-	per, _ := gwcfg.Authorize.Get(options.ServiceTypeGame, path)
+	per, _ := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
 
 	gate, err := prepare(uid, opt.Gateway)
 	if err != nil {
@@ -157,7 +157,7 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	}
 
 	reply := make([]byte, 0)
-	if err = client.CallWithMetadata(req, nil, options.ServiceTypeGame, method, body, &reply); err != nil {
+	if err = client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGame, method, body, &reply); err != nil {
 		return nil, err
 	}
 	if len(reply) == 0 {

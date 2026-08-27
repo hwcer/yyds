@@ -314,7 +314,7 @@ func routes() []*routeItem {
 	yydscontext.Service.Range(func(node *registry.Node) bool {
 		method := serviceMethod(node.Name())
 		path := clientPath(node.Name())
-		per, full := gwcfg.Authorize.Get(options.ServiceTypeGame, path)
+		per, full := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
 		name := permissionName[per]
 		if name == "" {
 			name = fmt.Sprintf("Unknown(%d)", per)

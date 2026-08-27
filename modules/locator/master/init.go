@@ -64,7 +64,7 @@ func proxy(c *cosweb.Context) any {
 func request(sid, path string, args []byte, req, res values.Metadata, reply any) (err error) {
 	req.Set(selector.MetaDataServerId, sid)
 	req[binder.HeaderContentType] = binder.Json.Name()
-	err = client.CallWithMetadata(req, res, options.ServiceTypeGame, path, args, reply)
+	err = client.CallWithMetadata(req, res, gwcfg.ServiceTypeGame, path, args, reply)
 	return
 }
 
@@ -84,5 +84,5 @@ func Broadcast(path string, v any, req values.Metadata) error {
 	ctx, cancel := client.WithTimeout(req, nil)
 	defer cancel()
 
-	return client.Broadcast(ctx, gwcfg.ServiceName, "broadcast", v, nil)
+	return client.Broadcast(ctx, gwcfg.ServiceTypeGate, "broadcast", v, nil)
 }

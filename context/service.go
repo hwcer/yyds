@@ -22,7 +22,7 @@ import (
 使用updater时必须使用playerHandle.data()来获取updater
 */
 
-var Service = server.Service(options.ServiceTypeGame, handlerCaller, handlerFilter)
+var Service = server.Service(gwcfg.ServiceTypeGame, handlerCaller, handlerFilter)
 var Serialize func(c *Context, reply *Message) ([]byte, error) = serializeDefault
 
 type filterCaller interface {
@@ -177,10 +177,6 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		return c.reject(err)
 	}
 	c.Player = nil
-	if c.Next != nil {
-		c.Next()
-	}
-
 	return
 }
 

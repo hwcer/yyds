@@ -13,7 +13,6 @@ import (
 	"github.com/hwcer/cosrpc/selector"
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/options"
 	"github.com/smallnest/rpcx/share"
 )
 
@@ -61,7 +60,7 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 	sid := strconv.FormatUint(u.GetShard(), 10)
 	req.Set(selector.MetaDataServerId, sid)
 	ctx := context.WithValue(context.Background(), share.ReqMetaDataKey, req)
-	return client.Async(ctx, options.ServiceTypeGame, serviceMethod, args)
+	return client.Async(ctx, gwcfg.ServiceTypeGame, serviceMethod, args)
 }
 
 // Send 推送消息，必须长连接在线
@@ -94,7 +93,7 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		return
 	}
 	req.Set(selector.MetaDataAddress, gateway)
-	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceName, gwcfg.MessageSend, v, nil); err != nil {
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGate, gwcfg.MessageSend, v, nil); err != nil {
 		logger.Error("消息推送失败,guid:%v,path:%v,err:%v", guid, path, err)
 	}
 }

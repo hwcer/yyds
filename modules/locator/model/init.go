@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/hwcer/gateway/gwcfg"
 	"errors"
 	"fmt"
 
@@ -26,7 +27,7 @@ func Start() (err error) {
 	if Options.Mongodb == "" {
 		return errors.New("mongodb option is required")
 	}
-	if err = db.Start(fmt.Sprintf("%v#%v", options.Options.Appid, options.ServiceTypeLocator), Options.Mongodb); err != nil {
+	if err = db.Start(fmt.Sprintf("%v#%v", options.Options.Appid, gwcfg.ServiceTypeLocator), Options.Mongodb); err != nil {
 		return
 	}
 	return

@@ -1,14 +1,14 @@
 package handle
 
 import (
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/modules/locator/model"
-	"github.com/hwcer/yyds/options"
 )
 
 var db = model.DB()
-var Service = server.Service(options.ServiceTypeLocator)
+var Service = server.Service(gwcfg.ServiceTypeLocator)
 
 // Register 注册一个 RPC 接口。
 //
