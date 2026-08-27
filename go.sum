@@ -184,6 +184,8 @@ github.com/hwcer/gateway v0.2.3-0.20260827054600-e7aa6fa95116 h1:ywDRXkWPu9Sy9vW
 github.com/hwcer/gateway v0.2.3-0.20260827054600-e7aa6fa95116/go.mod h1:FemMaEeYREtdhs5Dt2M/uWDKNtIbTai1zw17q6JokI8=
 github.com/hwcer/gateway v0.2.3-0.20260827061545-0c21faa40e88 h1:bXCmva0VVgytRqmUAfEE4E0jm9Vbp4Est45fLvGMUOg=
 github.com/hwcer/gateway v0.2.3-0.20260827061545-0c21faa40e88/go.mod h1:FemMaEeYREtdhs5Dt2M/uWDKNtIbTai1zw17q6JokI8=
+github.com/hwcer/gateway v0.2.3-0.20260827105613-a1703b2ada69 h1:SWP/rxEAoUZtjJ1V8Iqbj94SfLxHC4iCzQEGGySzTwE=
+github.com/hwcer/gateway v0.2.3-0.20260827105613-a1703b2ada69/go.mod h1:FemMaEeYREtdhs5Dt2M/uWDKNtIbTai1zw17q6JokI8=
 github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245 h1:hsbI1UJ2Zsj2qG7a/3VSbkJ4RrPWSer/R1AV0TyBN/Y=
 github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245/go.mod h1:NGF7QlsEFiTKJv0NO0XAJ4jlT7I8OdAGiT2SY2+Y6E4=
 github.com/hwcer/pubsub v0.0.0-20260731031827-7640c645c73c h1:FcPdVEH5qb1vUsfkYZ4T2b+1/XmqXif3hoZ4TyBi000=
