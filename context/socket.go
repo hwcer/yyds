@@ -65,36 +65,27 @@ func (this *Context) AsyncWithPlayer(uid string, serviceMethod string, args any)
 
 // Send 推送消息，必须长连接在线
 //
-// 有 Player 时交给 player.Send(它自己校验在线状态/网关/Binder/GUID);
-// 没有 Player 时(未选角的接口)在这里手工组装,校验项与 player.Send 保持一致 ——
-// 两条路径下发的 metadata 和失败时的可观测性必须一样,否则线上只有一条路会出问题、
-// 另一条却查不出来。
+// 有 Player 时交给 player.Send —— 它会用玩家对象上的值覆盖 UID/GUID/网关地址，
+// 那份比从请求上下文取的更权威(角色可能刚换、网关可能刚重连)。
+// 没有 Player 时(未选角的接口)直接用 NewSender 装好的那份。
 func (this *Context) Send(path string, v any, req values.Metadata) {
 	req = this.NewSender(path, req)
 	if this.Player != nil {
 		this.Player.Send(v, req)
 		return
 	}
-	//网关按 GUID 或 SocketId 定位会话,两者都空就投递不出去 ——
+	//网关按 socketId 与 GUID 二选一定位连接,两者都空就投递不出去 ——
 	//必须在这里拦掉而不是发出去等它静默丢弃
-	guid, ok := req[gwcfg.ServiceMetadataGUID]
-	if !ok {
-		if guid = this.GUid(); guid != "" {
-			req[gwcfg.ServiceMetadataGUID] = guid
-		}
-	}
-	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
+	if req[gwcfg.ServiceMetadataGUID] == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
 		logger.Alert("消息推送失败,GUID 与 SocketId 均为空,path:%v", path)
 		return
 	}
-	gateway := this.Gateway()
-	if gateway == "" {
-		logger.Alert("消息推送失败,网关地址为空,guid:%v,path:%v", guid, path)
+	if req[selector.MetaDataAddress] == "" {
+		logger.Alert("消息推送失败,网关地址为空,path:%v", path)
 		return
 	}
-	req.Set(selector.MetaDataAddress, gateway)
 	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGate, gwcfg.MessageSend, v, nil); err != nil {
-		logger.Error("消息推送失败,guid:%v,path:%v,err:%v", guid, path, err)
+		logger.Error("消息推送失败,guid:%v,path:%v,err:%v", req[gwcfg.ServiceMetadataGUID], path, err)
 	}
 }
 
@@ -111,9 +102,31 @@ func (this *Context) NewSender(path string, req values.Metadata) values.Metadata
 			req.Set(gwcfg.ServiceMetadataRequestId, rid)
 		}
 	}
-	//如果 socket id存在，优先使用SOCKET ID推送消息
-	if sockId := this.GetMetadata(gwcfg.ServiceMetadataSocketId); sockId != "" {
-		req.Set(gwcfg.ServiceMetadataSocketId, sockId)
+	//带上**发起这次请求的那条连接**。网关按 socketId 与 GUID 二选一定位,认 socketId 时
+	//代次隔离是白送的:顶号或重连之后那条连接要么还在(推送与确认包一起回到它)、要么已销毁
+	//(丢弃),绝不会改投新端。按 GUID 投才会——上一代连接的数据推给刚上来的另一个人,
+	//而那次请求的确认包走的是请求自己的 socket,一次响应被劈成两半。
+	if _, ok := req[gwcfg.ServiceMetadataSocketId]; !ok {
+		if sockId := this.GetMetadata(gwcfg.ServiceMetadataSocketId); sockId != "" {
+			req.Set(gwcfg.ServiceMetadataSocketId, sockId)
+		}
+	}
+	//GUID / UID / 网关地址:网关定位连接与校验归属要用。有 Player 时 player.Send 会用
+	//玩家对象上的值覆盖掉这里的(那份更权威),没有 Player 时就靠这里装的这份。
+	if _, ok := req[gwcfg.ServiceMetadataGUID]; !ok {
+		if guid := this.GUid(); guid != "" {
+			req.Set(gwcfg.ServiceMetadataGUID, guid)
+		}
+	}
+	if _, ok := req[gwcfg.ServiceMetadataUID]; !ok {
+		if uid := this.Uid(); uid != "" {
+			req.Set(gwcfg.ServiceMetadataUID, uid)
+		}
+	}
+	if _, ok := req[selector.MetaDataAddress]; !ok {
+		if gate := this.Gateway(); gate != "" {
+			req.Set(selector.MetaDataAddress, gate)
+		}
 	}
 	if _, ok := req[gwcfg.ServiceResponseFlag]; !ok {
 		req[gwcfg.ServiceResponseFlag] = strconv.FormatUint(uint64(message.FlagNoreply), 10)

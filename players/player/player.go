@@ -114,7 +114,7 @@ func (p *Player) Send(v any, req values.Metadata) {
 		return
 	}
 
-	//网关按 GUID 或 SocketId 定位会话,两者都空才是真的投不出去。
+	//网关按 socketId 与 GUID 二选一定位连接,两者都空才是真的投不出去。
 	//Guid 取不到通常意味着角色数据不可读(见 Guid 的说明),但只要请求带了 SocketId 仍能投递
 	guid := p.Guid()
 	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
