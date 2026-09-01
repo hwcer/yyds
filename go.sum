@@ -168,8 +168,8 @@ github.com/hwcer/pubsub/redis v0.0.0-20260731031802-4eab632bf8fe h1:c1B+JHyJXg2/
 github.com/hwcer/pubsub/redis v0.0.0-20260731031802-4eab632bf8fe/go.mod h1:ktd8Pj+ljhzXmcMUDnwCbXg6rje863C+lx/uz6K0bQs=
 github.com/hwcer/pubsub/transport v0.0.0-20260731031827-7640c645c73c h1:RMLJIKd+dv4WUQzl19cWpres/Q/xG9QCiNre0LmE2U8=
 github.com/hwcer/pubsub/transport v0.0.0-20260731031827-7640c645c73c/go.mod h1:XnCB7P4o9Wj4YW0C3VoFHGnI08GiEPHCRfsC6LUOEXY=
-github.com/hwcer/updater v1.5.1-0.20260901101311-c6b7c29b99b7 h1:vbD4y/sR/oekTwfxdklSQHywcbJZbFMYe1631jK3ZXM=
-github.com/hwcer/updater v1.5.1-0.20260901101311-c6b7c29b99b7/go.mod h1:9bJW8xbkT0nGLIQYmTFM/wlPMDCOMbbyMB/mfs1xTW8=
+github.com/hwcer/updater v1.5.1-0.20260901141141-13ceeeb88ff6 h1:aKzfhvjrDSLVP6I3D69qkgesa1ZyFS6I1ANd/H6T3NM=
+github.com/hwcer/updater v1.5.1-0.20260901141141-13ceeeb88ff6/go.mod h1:9bJW8xbkT0nGLIQYmTFM/wlPMDCOMbbyMB/mfs1xTW8=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/juju/ratelimit v1.0.2 h1:sRxmtRiajbvrcLQT7S+JbqU0ntsb9W2yhSdNN8tWfaI=
