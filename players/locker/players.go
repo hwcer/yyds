@@ -16,8 +16,15 @@ var (
 func init() {
 	instance.Manage = *player.NewManage()
 }
-func New() *Players {
-	w = await.New(10, time.Second*5)
+
+// New 创建玩家容器,cap / timeout 见 players.Options 的 LockerCap / LockerTimeout
+//
+// 🔴 **await 只有一个 worker,这不是疏忽而是防死锁机制本身**:批量锁按传入顺序逐个抢锁,
+// 两个 locker 并发、成员集合交叉且顺序相反就是 ABBA。全服所有批量锁排成一队,环就构不成。
+// 所以**不能靠加 worker 提吞吐**(要提就得改成按 uid 排序取锁,那是另一套设计),
+// 能调的只有队列深度与排队超时。
+func New(cap int, timeout time.Duration) *Players {
+	w = await.New(cap, timeout)
 	return instance
 }
 

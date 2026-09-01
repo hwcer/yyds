@@ -3,6 +3,7 @@ package players
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/yyds/players/actor"
@@ -24,11 +25,21 @@ func Start() error {
 	if !playersState.CompareAndSwap(stateStopped, stateRunning) {
 		return nil
 	}
+	//🔴 这两个的零值是**致命**的,与其它 Options 不同:LockerTimeout==0 会让
+	//time.NewTimer(0) 立刻触发,凡是没被 worker 当场取走的批量锁一律 ErrTimeout ——
+	//跨玩家操作全线瘫痪,而现象只是"偶尔失败"。MemoryPlayer 这类零值只是策略激进,
+	//不会把功能打死,所以只有这两个需要兜底。
+	if Options.LockerCap <= 0 {
+		Options.LockerCap = 128
+	}
+	if Options.LockerTimeout <= 0 {
+		Options.LockerTimeout = time.Second * 5
+	}
 	if Options.AsyncModel == AsyncModelLocker {
-		ps = locker.New()
+		ps = locker.New(Options.LockerCap, Options.LockerTimeout)
 		newSyncer = locker.NewSyncer
 	} else if Options.AsyncModel == AsyncModelActor {
-		ps = actor.New()
+		ps = actor.New(Options.LockerCap, Options.LockerTimeout)
 		newSyncer = actor.NewSyncer
 	} else {
 		return fmt.Errorf("players: invalid options")

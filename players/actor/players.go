@@ -15,8 +15,16 @@ func init() {
 	instance.Manage = *player.NewManage()
 }
 
-func New() *Players {
-	w = await.New(10, time.Second*5)
+// New 创建玩家容器。w 就是 actor 的**全局玩家通道**,模型说明见 syncer.go 顶部。
+//
+// cap / timeout 见 players.Options 的 LockerCap / LockerTimeout:
+//
+//	cap      通道排队深度。actor 下全服操作都排这一条队,不宜太小
+//	timeout  排队超时。⚠ 它同时是**重入的唯一护栏**:通道内的代码再调一次 players.Get /
+//	         Load(context.GetPlayer 就会这么干)时,新请求排在自己身后永远轮不到,
+//	         靠这个超时退出并报错,而不是永久挂死
+func New(cap int, timeout time.Duration) *Players {
+	w = await.New(cap, timeout)
 	return instance
 }
 
@@ -24,8 +32,18 @@ type Players struct {
 	player.Manage
 }
 
+// invoke 进入全局玩家通道执行 fn,**所有取得玩家的操作都要经过这里**
+//
+// 通道内再取一次 p.Lock(在 actor 下就是全局 gate,见 syncer.go):全局通道只保证
+// "通道内彼此串行",挡不住 daemon / Terminate 那些直接调 Player.Lock 的协程,
+// 两边落在同一把锁上才算互斥。
 func invoke(p *player.Player, fn func() error) error {
-	return p.Syncer.(*Syncer).invoke(fn)
+	_, err := w.Call(func(any) (any, error) {
+		p.Lock()
+		defer p.Unlock()
+		return nil, fn()
+	}, nil)
+	return err
 }
 
 // Get 只获取在线玩家，进入玩家通道执行
@@ -89,6 +107,19 @@ func (this *Players) Load(uid string, test, init bool, handle player.Handle) err
 	})
 }
 
+// Locker 批量取得多个玩家,按调用方**在不在全局通道内**分流 —— self 就是这个信号
+//
+//	self != ""  调用方是玩家请求,已经在通道里了(请求都经 Get / Load 进来)。直接干活,
+//	            🔴 **不能再进一次通道**:通道只有一个 worker,自己排在自己身后永远轮不到。
+//	self == ""  调用方不在通道内:context.Mutex().Async 的 scc 协程、daemon、定时器。
+//	            必须先排队进入,否则等于**完全没有同步**。
+//
+// 🔴 这个分流在 actor 下是**强制**的,不是优化:loading 已经不对目标做任何加锁
+// (权限来自"人在通道里"),所以不进通道就意味着一把锁都没有 —— 与通道内的 worker、
+// 与 daemon 的回收全部裸奔。
 func (this *Players) Locker(self string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+	if self == "" {
+		return NewLockerWithLocker(uid, handle, args, done...)
+	}
 	return NewLocker(self, uid, args, handle, done...)
 }

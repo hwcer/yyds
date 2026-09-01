@@ -4,10 +4,60 @@
 
 ## 并发模式
 
-通过 `Options.AsyncModel` 选择：
+通过 `Options.AsyncModel` **二选一**，同一进程只有一个生效。两者的区别不是性能调优，
+而是**跨玩家操作要不要自己管同步**：
 
-- **AsyncModelLocker** — 用户锁模式，基于用户层面，并发更高，但用户之间数据交互需要使用 `Locker` 同时锁定多个用户
-- **AsyncModelActor** — Actor 模式，每玩家独立通道，不同玩家并发，同一玩家串行
+| | AsyncModelLocker（默认） | AsyncModelActor |
+|---|---|---|
+| 同步点 | 每玩家一把互斥锁 | **一条全局玩家通道**（`actor` 包的 `w`） |
+| 并发度 | 真并发，吃满多核 | **并发绑死在一个协程内**，全服玩家操作串行 |
+| 取得一个玩家 | 拿他那把锁 | 排队进入全局通道 |
+| 取得权限之后能改谁 | **只能改锁住的那几个** | **任意玩家，随便改** |
+| 跨玩家操作 | 要用 `context.Mutex()` 成批取锁，取锁顺序 / ABBA / 空壳都要自己盯 | 直接写，不可能死锁、不可能漏锁 |
+
+### Actor 模式：一个传统编程思想 + Go 特性的模型
+
+**唯一的好处**：一旦取得数据操作权限，就可以修改**任意**玩家的数据 —— 跨角色操作极其方便，
+像写单线程程序一样。
+**最大的特点**：把并发**绑死在一个协程内**，吞吐就是这一个协程的吞吐。
+
+它的全部同步语义只有一条：
+
+> **排到全局通道 = 取得了所有玩家的操作权限**
+
+由此推论（也是最容易被误解的三点）：
+
+1. **没有"每个玩家一条通道"这回事。** 曾经有过，是错的 —— 见下方"历史教训"。
+2. **通道内不需要、也不应该再对目标逐个上锁**（`actor.Locker.loading` 一把锁都不取）。
+3. **通道内不能再进一次通道**：只有一个 worker，自己排在自己身后永远轮不到，
+   只会白等一个 `LockerTimeout`。`context.GetPlayer` 这类"在业务里再调 `players.Get`"
+   的写法在 actor 下就靠这个超时兜底，不会永久挂死，但会白付 5 秒。
+
+`Player.Lock/Unlock` 在 actor 下落到一把全局 `gate` 上 —— 它只用来跟 **不走通道的协程**
+（daemon 回收玩家、`Terminate`）互斥，不承担业务并发控制。
+
+#### 历史教训（2026-09-01 修）
+
+早先 `actor.Syncer` 被实现成"每玩家一条 chan + 一个 worker 协程"，与上面的模型南辕北辙，
+带来两个**实测可复现、且都是永久性故障**的 bug（回归用例见 `actor/actor_test.go`）：
+
+1. `Lock()` 把 `holding` 通道写在**共享字段**上，两个协程同时取得同一玩家时后者覆盖前者
+   —— 实测 8 个协程同时"持有"同一个玩家，随后 `close of closed channel` panic；
+2. 业务 handler 跑在**玩家自己的 worker** 上，于是「A 的请求取 B」与「B 的请求取 A」
+   各占着自己的 worker 等对方 —— 双方永久挂起，全程无超时。
+
+两条的根是同一个：**把同步做成了 per-player**。收敛回全局通道之后都不复存在。
+
+### 批量取得多个玩家（两种模式共同的契约）
+
+`context.Mutex().Lock/Async` 只保证「取得操作权限」，**不保证玩家在线、也不保证有数据**：
+
+- `p.Updater != nil` — 玩家在内存（在线，或离线未回收），已 Reset，可正常读写；
+- `p.Updater == nil` — 玩家不在内存（必然离线），这是**空壳**，直接读写就是当场 nil panic。
+
+空壳是设计不是缺陷：批量锁的典型用途是"改对方一两个字段、发条消息"，而 `Loading` 会把该玩家
+全部常驻模型整表拉一遍并长期留在内存。需要数据时按需加载（`p.Initialize()`），
+只改一两个字段就直连 DB —— 完整契约见 `player.Locker` 接口上的注释。
 
 ## 玩家状态
 
@@ -130,7 +180,13 @@ players.Options.DisconnectTime = 120  // Disconnect 状态超时（秒）
 players.Options.OfflineTime    = 60   // Offline 状态进入回收站超时（秒）
 players.Options.MemoryPlayer   = 2000 // 常驻内存玩家数量
 players.Options.MemoryRelease  = 100  // 回收站阈值，缓存 >= MemoryPlayer + MemoryRelease 时开始清理
+players.Options.LockerCap      = 128  // 批量锁 / 全局通道的排队深度
+players.Options.LockerTimeout  = 5*time.Second // 【排队】超时，不是「任务最多跑多久」
 ```
+
+`LockerTimeout` 的语义是**「愿意在队列里排多久」**：`await.Message.Wait` 在 handler 已经开跑时
+会重置计时器继续等，跑起来的任务不会被打断。所以超时 ⇔ 任务**一次都没执行**。
+调大的代价在 `Mutex().Lock` 那条同步路径：把「快速失败」换成「客户端干等」。
 
 ## 代码结构
 

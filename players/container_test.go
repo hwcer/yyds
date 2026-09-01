@@ -48,7 +48,7 @@ func TestNoContainerServiceable(t *testing.T) {
 // 会一边加载玩家、一边被 shutdown 释放掉。
 func TestHasContainerStillGated(t *testing.T) {
 	reset(t)
-	ps = locker.New()
+	ps = locker.New(Options.LockerCap, Options.LockerTimeout)
 
 	if err := Serviceable(); err != errors.ErrServerClosed {
 		t.Fatalf("有容器但未启动时应回 ErrServerClosed,实得 %v", err)
