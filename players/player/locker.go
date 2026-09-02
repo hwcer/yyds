@@ -12,7 +12,7 @@ package player
 //
 // 空壳不是缺陷是设计:批量锁的典型用途是"改对方一两个字段、给对方发条消息",
 // 而 Loading 会把该玩家**全部常驻模型整表拉一遍**(本项目 6 张表,含整个背包),
-// 还把这份存档长期留在内存(回收要等在线数越过 MemoryPlayer+MemoryRelease)。
+// 还把这份存档长期留在内存(回收要等缓存总量越过 MemoryPlayer+MemoryRelease)。
 // 为一个字段付这份钱不合算,所以锁归锁、数据归数据。
 //
 // # 需要数据时按需手动加载,两条路按代价选
@@ -63,11 +63,14 @@ func (p *Player) Release() {
 	p.Updater.Release()
 }
 
+// Lock 取得玩家锁。加锁契约见 Player 的类型注释
+//
+// ⚠ 不可重入(sync.Mutex),而且没有超时:持锁期间再对**自己**调一次 players.Get 就是自锁死。
 func (p *Player) Lock() {
-	p.Syncer.Lock()
+	p.mutex.Lock()
 }
 
 func (p *Player) Unlock() {
-	p.Syncer.Unlock()
+	p.mutex.Unlock()
 }
 

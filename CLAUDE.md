@@ -501,11 +501,11 @@ p.Emit(key int32, val int32, args ...int32)
 
 ## 玩家协程与并发
 
-- **handler 已经跑在该玩家的协程/锁里**，再对**自己**调一次 `players.Get(c.Uid())`，
-  Actor 模式下直接卡死 channel。手上现成的 `c.Player` 直接用。
+- **handler 已经持有该玩家的锁**，再对**自己**调一次 `players.Get(c.Uid())` 就是自锁死
+  （`sync.Mutex` 不可重入，而且没有超时）。手上现成的 `c.Player` 直接用。
 - `Player.Send` 要求调用方持有玩家锁。从 daemon、定时器或**别的**玩家协程里推消息，
   必须套 `players.Get(uid, func(p){ p.Send(...) })`。
-- 跨玩家操作（交易、好友）用 `players.Locker(self, uids, ...)` 同时锁定多个玩家，
+- 跨玩家操作（交易、好友）用 `c.Mutex().Lock/Async` 同时锁定多个玩家（框架侧是 `players.Locker`），
   不要嵌套 `players.Get`。
 - `p.Status` 是**无锁 CAS 状态机**（disconnect/offline/recycling 的 CAS 都在玩家锁之外），
   持有玩家锁也不能裸读；要读就 `atomic.LoadInt32` 一次存局部变量——两次读之间 daemon
@@ -554,7 +554,7 @@ code/time/dirty。需要自定义协议体时才这么用。
 
 | 文档 | 内容 |
 |------|------|
-| `README.md` | 模块清单、并发模式（Locker / Actor）选择 |
+| `README.md` | 模块清单、并发模式（每玩家一把互斥锁；actor 为什么被移除） |
 | `players/README.md` | 玩家生命周期、7 个状态迁移、事件、内存回收 |
 | `options/README.md` | 运行时配置、`Setting` 可插拔函数（GetIType/GetIMax/Renewal） |
 | `modules/{rank,graph,chat,locator}/README.md` | 排行榜 / 社交图谱 / 聊天 / 全服定位 |

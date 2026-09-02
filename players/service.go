@@ -26,10 +26,10 @@ var (
 )
 
 // ============================================================================
-// 「本进程有没有玩家容器」—— 不需要声明,ps 就是答案
+// 「本进程有没有玩家容器」—— 不需要声明,manage 就是答案
 // ============================================================================
 //
-// ps 只在 Start 里被赋值,所以 **ps == nil ⇔ 本进程从没启动过玩家系统**。
+// manage 只在 Start 里被赋值,所以 **manage == nil ⇔ 本进程从没启动过玩家系统**。
 // 只提供共享数据、不持有玩家存档的微服务(社交服的公会 / 好友、世界服的跨服榜单)
 // 天生如此:它们不调 Start,进程里根本没有 Players 容器 —— 那不是配置疏漏,
 // 而是刻意的物理保证,「本服不碰玩家存档」靠"没有那个对象"兑现,比靠纪律可靠。
@@ -41,8 +41,8 @@ var (
 //
 //	所有 Init() → EventTypLoaded(players.Start 挂在这里) → 所有 Start()(网关在这步才 Listen)
 //
-// 玩家系统起在网关开始收包之前,所以不存在"启动中 ps 还是 nil、请求已经进来"的窗口;
-// 关服时 playersState 翻回 stopped 而 ps 仍非 nil,照样被拒。
+// 玩家系统起在网关开始收包之前,所以不存在"启动中 manage 还是 nil、请求已经进来"的窗口;
+// 关服时 playersState 翻回 stopped 而 manage 仍非 nil,照样被拒。
 
 // Started 框架是否已启动且未进入关闭流程
 func Started() bool {
@@ -79,9 +79,9 @@ func Creatable(v ...bool) bool {
 // 这些内部访问在维护期间恰恰是必须能用的 —— 维护往往就是为了做这些事。
 // 维护闸门只设在客户端入口(context.handlerCaller),不要下沉到这里。
 func available() error {
-	//没有玩家容器的进程:再往下就是 ps 的空指针崩溃。回明确错误,
+	//没有玩家容器的进程:再往下就是 manage 的空指针崩溃。回明确错误,
 	//让调用方(通常是误注册进这类服务的 Player 级路由)拿到一句能看懂的话。
-	if ps == nil {
+	if manage == nil {
 		return errors.ErrServerStandalone
 	}
 	if playersState.Load() != stateRunning {
@@ -96,13 +96,13 @@ func available() error {
 // 让请求半推半就地进到业务里 —— 关闭过程中放进来的请求会一边加载玩家、一边被
 // shutdown 释放掉。
 func Serviceable() error {
-	//🔴 没有玩家容器的进程(ps == nil)不判启动状态 —— 那个状态由 Start 置位,
+	//🔴 没有玩家容器的进程(manage == nil)不判启动状态 —— 那个状态由 Start 置位,
 	//而它压根不调 Start。判了的话它的**每个外网接口都回 ErrServerClosed**,
 	//且发生在读权限档位之前,接口权限设成 None / OAuth / Select 都救不回来
 	//(这正是社交服此前只能提供内网接口的原因)。见上面那段说明。
 	//
 	//**维护开关照常生效**:维护的语义是"不对客户端提供服务",与有没有玩家容器无关。
-	if ps != nil && playersState.Load() != stateRunning {
+	if manage != nil && playersState.Load() != stateRunning {
 		return errors.ErrServerClosed
 	}
 	if playersMaintain.Load() {

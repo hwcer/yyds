@@ -8,7 +8,7 @@
 
 | 模块 | 说明 |
 |------|------|
-| `players/` | 玩家管理，支持 Locker（互斥锁）和 Actor（通道）两种并发模式 |
+| `players/` | 玩家管理：生命周期、并发控制（每玩家一把互斥锁）、内存回收 |
 | `context/` | RPC 请求上下文，玩家操作、消息推送、频道管理 |
 | `config/` | 静态数据加载与热更新，IType/IMax 委托 options.Setting |
 | `options/` | 运行时配置（Game/Master/Setting）、Redis 服务发现、服务类型定义 |
@@ -20,12 +20,14 @@
 
 ## 并发模式
 
-通过 `players.Options.AsyncModel` 选择：
+**每玩家一把互斥锁**（`Player.Lock/Unlock`），业务跑在 rpcx 的请求协程上，同一玩家串行、
+不同玩家真并行。跨玩家用 `c.Mutex().Lock/Async` 成批取锁，全服排一条队列防 ABBA。
 
-- **AsyncModelLocker** — 每玩家独立互斥锁，延迟低、内存小
-- **AsyncModelActor** — 每玩家独立通道 + 协程，FIFO 公平排队
+框架里曾经有过 `AsyncModelActor`，已整体移除 —— 在当前装配下它是净亏（rpcx 已经每请求
+一个协程，再搬进玩家 worker 等于多一跳），理由与"什么时候值得重做"见
+[players/README.md](players/README.md#为什么没有-actor-模式)。
 
-两种模式通过 `player.Syncer` 接口统一抽象，业务层代码无需感知底层差异。
+锁直接内嵌在 `Player` 上，没有中间抽象层；容器与批量锁是 `players/manage.go`、`players/batch.go`。
 
 ## 快速开始
 

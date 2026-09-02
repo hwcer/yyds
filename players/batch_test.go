@@ -1,8 +1,7 @@
-package locker
+package players
 
 import (
 	"testing"
-	"time"
 
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/updater"
@@ -23,7 +22,7 @@ func testUid(index uint64) string {
 // 压测之前根本看不出来。所以用测试钉，不靠注释。
 
 func init() {
-	New(128, time.Second*5) //初始化 await worker 与 instance.Manage
+	newManage() //初始化批量锁队列与管理器
 }
 
 // TestLockerShellForOfflinePlayer 玩家不在内存时给的是空壳：Updater 为 nil。
@@ -32,7 +31,7 @@ func init() {
 func TestLockerShellForOfflinePlayer(t *testing.T) {
 	uid := testUid(1)
 	var got *player.Player
-	_, err := NewLocker([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
+	_, err := newBatch([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
 		got = l.Get(uid)
 		return nil, nil
 	})
@@ -46,11 +45,11 @@ func TestLockerShellForOfflinePlayer(t *testing.T) {
 		t.Fatal("玩家不在内存时必须是空壳(Updater==nil);拿到非 nil 说明 loading 又在加载数据了")
 	}
 	//空壳要留在 Manage 里等人自愈,不能用完就删 —— 别人可能已经拿到同一个指针在等锁
-	if _, ok := instance.Manage.Load(uid); !ok {
+	if _, ok := manage.Load(uid); !ok {
 		t.Fatal("空壳必须留在 Manage 里(占锁位 + 等自愈)")
 	}
 	//心跳必须补:player.New 不设 heartbeat(恒 0),不刷的话它是 daemon 眼里全场最先被回收的
-	if p, _ := instance.Manage.Load(uid); p.Heartbeat() == 0 {
+	if p, _ := manage.Load(uid); p.Heartbeat() == 0 {
 		t.Fatal("空壳必须补一次心跳,否则会被 daemon 抢在自愈之前回收")
 	}
 }
@@ -61,7 +60,7 @@ func TestLockerShellForOfflinePlayer(t *testing.T) {
 // 而这条路只在「被操作者恰好离线」时才走到，测不出来就等着线上炸。
 func TestLockerAggregatesSkipShell(t *testing.T) {
 	uid := testUid(2)
-	_, err := NewLocker([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
+	_, err := newBatch([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
 		l.Select("guild")
 		if e := l.Data(); e != nil {
 			return nil, e
@@ -82,12 +81,12 @@ func TestLockerAggregatesSkipShell(t *testing.T) {
 // 时间基准是 1 年，是最难查的那类问题。
 func TestLockerReusesInMemoryPlayer(t *testing.T) {
 	uid := testUid(3)
-	want := newPlayer(uid, false)
+	want := player.New(uid, false)
 	want.Updater = updater.New(want) //New 出来的 now 是零值,只有 Reset 会设
-	instance.Manage.LoadOrStore(want.Key(), want)
+	manage.LoadOrStore(want.Key(), want)
 
 	var got *player.Player
-	_, err := NewLocker([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
+	_, err := newBatch([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
 		got = l.Get(uid)
 		return nil, nil
 	})
@@ -112,14 +111,14 @@ func TestLockerReusesInMemoryPlayer(t *testing.T) {
 // 种下一个空壳占着内存等回收，而调用方以为自己操作成功了。
 func TestLockerRejectsInvalidUid(t *testing.T) {
 	const bad = "not-a-valid-uid"
-	_, err := NewLocker([]string{bad}, nil, func(l player.Locker, _ any) (any, error) {
+	_, err := newBatch([]string{bad}, nil, func(l player.Locker, _ any) (any, error) {
 		t.Fatal("非法 uid 不该进到回调里")
 		return nil, nil
 	})
 	if err != errors.ErrArgEmpty {
 		t.Fatalf("非法 uid 应回 ErrArgEmpty,实得 %v", err)
 	}
-	if _, ok := instance.Manage.Load(bad); ok {
+	if _, ok := manage.Load(bad); ok {
 		t.Fatal("非法 uid 不能在 Manage 里留下空壳")
 	}
 }
@@ -128,7 +127,7 @@ func TestLockerRejectsInvalidUid(t *testing.T) {
 func TestLockerReleasesLock(t *testing.T) {
 	uid := testUid(4)
 	for i := 0; i < 2; i++ {
-		if _, err := NewLocker([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
+		if _, err := newBatch([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
 			return nil, nil
 		}); err != nil {
 			t.Fatalf("第 %d 次批量锁失败:%v", i+1, err)

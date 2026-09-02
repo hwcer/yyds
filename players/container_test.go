@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/hwcer/yyds/errors"
-	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -12,9 +11,13 @@ import (
 // 所以 ps == nil ⇔ 从没启动过玩家系统。下面三条钉住由此派生的行为。
 
 // reset 还原本文件动过的全局量。它们是包级状态,不还原会串到别的测试。
+//
+// manage 必须**还原**而不是置 nil:同包的 batch_test.go 在 init 里建好了管理器,
+// 置 nil 会让它后面的用例按测试顺序随机崩。
 func reset(t *testing.T) {
+	old := manage
 	t.Cleanup(func() {
-		ps = nil
+		manage = old
 		playersMaintain.Store(false)
 		playersState.Store(stateStopped)
 	})
@@ -28,7 +31,7 @@ func reset(t *testing.T) {
 // 于是接口权限设成 None / OAuth / Select 都救不回来。
 func TestNoContainerServiceable(t *testing.T) {
 	reset(t)
-	ps = nil
+	manage = nil
 
 	if err := Serviceable(); err != nil {
 		t.Fatalf("没有玩家容器时应可对外服务,实得 %v", err)
@@ -48,7 +51,7 @@ func TestNoContainerServiceable(t *testing.T) {
 // 会一边加载玩家、一边被 shutdown 释放掉。
 func TestHasContainerStillGated(t *testing.T) {
 	reset(t)
-	ps = locker.New(Options.LockerCap, Options.LockerTimeout)
+	newManage()
 
 	if err := Serviceable(); err != errors.ErrServerClosed {
 		t.Fatalf("有容器但未启动时应回 ErrServerClosed,实得 %v", err)
@@ -65,7 +68,7 @@ func TestHasContainerStillGated(t *testing.T) {
 // 这类服务」——那种错编译期看不出来,进程也照常启动。
 func TestNoContainerGetErrors(t *testing.T) {
 	reset(t)
-	ps = nil
+	manage = nil
 
 	called := false
 	err := Get("uid-1", func(p *player.Player) error {

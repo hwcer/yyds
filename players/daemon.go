@@ -80,7 +80,11 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 	return
 }
 
-// Disconnect 下线,心跳超时,断开连接等
+// disconnect 心跳超时,视为断开连接
+//
+// 由 worker() 扫描收集、在状态迁移执行池里执行(见 migrate.go),不在 daemon 协程上跑:
+// 它要抢玩家锁,还要触发业务注册的下线事件(离线结算之类,快慢由业务决定)。
+// 开头的 CAS 兼作幂等守卫,重复投递是空操作。
 func disconnect(p *player.Player) bool {
 	status := atomic.LoadInt32(&p.Status)
 	if status != player.StatusConnected {
@@ -97,7 +101,7 @@ func disconnect(p *player.Player) bool {
 	return true
 }
 
-// Offline 业务逻辑层面掉线
+// offline 业务逻辑层面掉线。执行位置与幂等性同 disconnect
 func offline(p *player.Player) bool {
 	status := atomic.LoadInt32(&p.Status)
 	if status != player.StatusDisconnect {
@@ -130,19 +134,24 @@ func recycling(p *player.Player) {
 
 // released 释放用户实例,接受 StatusOffline / StatusTerminated
 //
-// 先 CAS 翻状态再抢玩家锁:翻早一点能让新来的 Get 立刻按拒绝态返回而不必排队等锁,
-// 而 Destroy 置空 Updater 仍然在锁内,不会与正在 handle 里跑的业务协程撞上
+// 由 worker() 扫描收集、在状态迁移执行池里执行(见 migrate.go),或由 shutdown 并行调用。
+// 🔴 它是整个 daemon 里唯一会做数据库 IO 的动作:Destroy 内含一次 BulkWrite 落库,
+// 而且是在玩家锁内做的 —— 这正是它不能留在 daemon 协程里串行跑的原因。
+//
+// **先 CAS 翻状态,再抢玩家锁**(顺序不能调换):翻早一点能让新来的 Get 立刻按拒绝态返回,
+// 不必排队等一把注定用不上的锁;而 Destroy 置空 Updater 仍在锁内,不会与正在 handle 里
+// 跑的业务撞上。CAS 同时兼作幂等守卫:重复投递、或与 shutdown 撞车,只有一方会成功。
 func released(p *player.Player) (ok bool) {
 	status := atomic.LoadInt32(&p.Status)
 	if status != player.StatusOffline && status != player.StatusTerminated {
 		return false
 	}
-	//加锁等待在途业务调用结束,拿到锁后再 CAS,使状态翻转与 Get/Load 的状态检查互斥
 	if !atomic.CompareAndSwapInt32(&p.Status, status, player.StatusReleased) {
 		return false
 	}
 
-	//不能用 defer:成功路径要在解锁之后才能 Delete/Close(Close 关 Syncer 必须在锁外)
+	//加锁等在途业务调用结束。不能用 defer:成功路径要在解锁之后才能 manage.Delete ——
+	//Delete 要取管理器写锁,持着玩家锁去抢它会与"持管理器读锁等玩家锁"的一方成环
 	p.Lock()
 	p.Reset()
 	if err := p.Destroy(); err != nil {
@@ -152,16 +161,42 @@ func released(p *player.Player) (ok bool) {
 		return false
 	}
 	p.Unlock()
-	//先摘出管理器再关通道,避免关闭后仍被 Load 到
-	ps.Delete(p.Key())
-	p.Close()
+	manage.Delete(p.Key())
 	return true
+}
+
+// submit 把一批玩家的状态迁移投给执行池,返回**没能投出去**的数量
+//
+// 三档迁移(disconnect / offline / released)的形状完全一样:投递 → 成功则记一行 Debug →
+// 失败则计数,所以收成一个函数,worker 里就是三行。
+//
+// 各迁移函数内部都用 CAS 二次校验状态:快照与执行之间状态变了、或同一个人被下个 tick
+// 重复投递,都会安全跳过 —— 这是"投出去就不管了"能成立的前提。
+func submit(dict []*player.Player, name string, migrate func(*player.Player) bool) (dropped int) {
+	for _, p := range dict {
+		if !migratePost(func() {
+			if migrate(p) {
+				logger.Debug("Players.%v uid:%v", name, p.Uid())
+			}
+		}) {
+			dropped++
+		}
+	}
+	return
 }
 
 func worker() {
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Debug("Players worker error:%v \n %v", e, string(debug.Stack()))
+		}
+	}()
+	//dropped 统计本轮没能投进执行池的迁移任务。丢掉不丢状态(下个 tick 会重新收集到),
+	//但持续为正说明池子长期满 —— 要么数据库慢,要么 migrateWorker 该调大了,必须看得见。
+	var dropped int
+	defer func() {
+		if dropped > 0 {
+			logger.Trace("Players 状态迁移队列已满,%d 个任务本轮未投递,下个 tick 重试", dropped)
 		}
 	}()
 	if playersRecycling == nil {
@@ -177,7 +212,7 @@ func worker() {
 	//持全局读锁等细粒度锁会把登录路径(Manage 写锁)整体挡住,批量掉线时形成全局停顿
 	var tot int32
 	var down, off, recy, terminate []*player.Player
-	ps.Range(func(_ string, p *player.Player) bool {
+	manage.Range(func(_ string, p *player.Player) bool {
 		tot += 1
 		switch atomic.LoadInt32(&p.Status) {
 		case player.StatusNone, player.StatusOffline:
@@ -200,28 +235,21 @@ func worker() {
 	})
 	playersMemory.Store(tot)
 
-	//以下均已脱离 Manage 读锁;各函数内部都用 CAS 二次校验状态,快照期间状态变了会被安全跳过
-	for _, p := range down {
-		if disconnect(p) {
-			logger.Debug("Players.Disconnect uid:%v", p.Uid())
-		}
-	}
-	for _, p := range off {
-		if offline(p) {
-			logger.Debug("Players.Offline uid:%v", p.Uid())
-		}
-	}
+	//以下均已脱离 Manage 读锁。🔴 **迁移动作一律投给执行池**(见 migrate.go):它们都要抢玩家锁,
+	//而 released 还会在锁内做一次 BulkWrite —— 留在 daemon 里串行跑的话,扫描周期就由最慢的
+	//那个玩家决定。daemon 到这里只剩"谁该迁移到哪个状态"这一件事。
+	dropped += submit(down, "Disconnect", disconnect)
+	dropped += submit(off, "Offline", offline)
+	dropped += submit(terminate, "Terminated", released)
+
+	//recycling 例外:它只往 playersRecycling 这张 daemon 私有的表里记一笔,不抢任何玩家锁、
+	//也不碰 Updater。投出去反而要给那张表加锁,留在本协程里最省事。
 	for _, p := range recy {
 		recycling(p)
 	}
-	for _, p := range terminate {
-		if released(p) {
-			logger.Debug("Players.Terminated uid:%v", p.Uid())
-		}
-	}
+	//回收站清理:只有内存压力超过阈值才动手,平时离线玩家就留在缓存里等重连
 	ct := tot
-	recyclingCount := len(playersRecycling)
-	if recyclingCount == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
+	if len(playersRecycling) == 0 || tot < Options.MemoryPlayer+Options.MemoryRelease {
 		return
 	}
 	var dict []*player.Player
@@ -232,26 +260,34 @@ func worker() {
 		return dict[i].Heartbeat() < dict[j].Heartbeat()
 	})
 
-	//单次 tick 最多释放 MemoryRelease 个:释放要拿玩家锁,脏玩家还会产生一次 BulkWrite 往返,
-	//不限量的话大批量退潮会把 daemon 协程阻塞到秒级,拖慢整个状态机的判定精度。
-	//超出上限的玩家自然落进下面的 else if 留在回收站,下个 tick 继续
+	//一个 tick 释放一批(ReleaseBatch 个)。释放已经不在 daemon 协程里跑了,分批的理由
+	//换成了另外两条:一次退潮把上千个玩家的落库同时压给数据库不是好主意,执行池的队列也吃不下。
+	//这一批没轮到的留在回收站,下个 tick 继续。
 	var freed int32
 	next := map[string]*player.Player{}
 	for _, p := range dict {
-		if ct > Options.MemoryPlayer && freed < Options.MemoryRelease && released(p) {
-			ct--
-			freed++
-		} else if atomic.LoadInt32(&p.Status) == player.StatusOffline {
+		if ct > Options.MemoryPlayer && freed < Options.ReleaseBatch {
+			//🔴 投出去就从回收站摘掉,**不等结果**:释放失败(Destroy 报错)时 released 会把状态
+			//还原成 Offline,下一个 tick 的扫描会把他重新收进回收站 —— 自愈,不必在这里等。
+			if migratePost(func() { _ = released(p) }) {
+				ct--
+				freed++
+				continue
+			}
+			dropped++
+		}
+		if atomic.LoadInt32(&p.Status) == player.StatusOffline {
 			next[p.Key()] = p
 		}
 	}
 	playersRecycling = next
-	if freed >= Options.MemoryRelease && ct > Options.MemoryPlayer {
-		logger.Trace("Players.release 达到单次上限 %d,剩余 %d 待清理", freed, ct-Options.MemoryPlayer)
+	if freed >= Options.ReleaseBatch && ct > Options.MemoryPlayer {
+		logger.Trace("Players.release 本批已放满 %d 个,剩余 %d 待清理", freed, ct-Options.MemoryPlayer)
 	}
 }
 
 func daemon(ctx context.Context) {
+	migrateStart() //状态迁移执行池,daemon 自己只扫描收集
 	t := time.Second * time.Duration(Options.Heartbeat)
 	timer := time.NewTimer(t)
 	defer timer.Stop()
@@ -280,24 +316,51 @@ func shutdown() {
 		return
 	}
 	logger.Alert("收到退出信号，正在保存所有玩家数据")
-	//关闭所有用户
+	start := time.Now()
+
+	//先等执行池排空退出:那批在途的迁移正持着玩家锁在补下线事件、在落库(见 migrateWait);
+	//再自己兜一次底 —— ctx 触发时 daemon 可能正好在投递,而池已经退出了(见 migrateDrain)。
+	migrateWait()
+	migrateDrain()
+
+	//🔴 Range 内**只做快照**,一个玩家锁都不碰。
+	//
+	//Range 持有 Manage 读锁,而 disconnect/offline 要抢玩家锁并触发业务事件,released 还要
+	//回头 manage.Delete(写锁)。在 Range 里做迁移就会成环:这里持读锁等某个玩家锁,
+	//而那把玩家锁的持有者(在途请求,或执行池里还没跑完的 released)正在等写锁 ——
+	//"服务器都在关了哪还有锁"并不成立,scc 的 ctx Done 不会让在途请求立刻结束。
+	//worker() 的扫描阶段(见上面 175 行那段注释)就是为同一个理由把迁移全挪到 Range 外的。
 	var rel []*player.Player
-	ps.Range(func(uid string, p *player.Player) bool {
+	manage.Range(func(_ string, p *player.Player) bool {
+		rel = append(rel, p)
+		return true
+	})
+
+	//离开 Manage 读锁之后再补下线事件,把玩家推到可释放态(released 只接受 Offline/Terminated)
+	for _, p := range rel {
 		switch atomic.LoadInt32(&p.Status) {
 		case player.StatusConnected:
 			disconnect(p)
 			offline(p)
 		case player.StatusDisconnect:
 			offline(p)
-		case player.StatusOffline:
-		default:
+		case player.StatusNone:
+			//预加载进来、从未上线的玩家:没有下线事件要补,直接推到可释放态。
+			//🔴 用 CAS 不用 Store:原先这里是无条件 atomic.Store(Offline),会把
+			//Released(执行池刚释放完)和 Terminated(被踢,released 本就接受)一并抹掉 ——
+			//前者让已销毁的对象又走一遍释放流程,后者把踢人标记降级成普通离线。
+			atomic.CompareAndSwapInt32(&p.Status, player.StatusNone, player.StatusOffline)
 		}
-		atomic.StoreInt32(&p.Status, player.StatusOffline)
-		rel = append(rel, p)
-		return true
-	})
-	//释放所有用户,必须在Range外部循环，否则会死锁
-	for _, p := range rel {
-		_ = released(p)
+	}
+
+	//并行释放并等齐:每个脏玩家一次 BulkWrite,串行跑的话停服时间 = 玩家数 × 一次 DB 往返。
+	//不能借用执行池 —— 此刻 scc 的 ctx 已经 Done,池里的 worker 正在退出,见 releaseAll。
+	failed := releaseAll(rel)
+	//没释放成功的只可能是 StatusLocked(正在 Loading)或已经 Released 过的。
+	//必须留痕:停服时"有几个玩家没落库"是事后唯一能查的线索。
+	if failed > 0 {
+		logger.Alert("玩家数据保存完成:共 %d 个,其中 %d 个未能释放,耗时 %v", len(rel), failed, time.Since(start))
+	} else {
+		logger.Alert("玩家数据保存完成:共 %d 个,耗时 %v", len(rel), time.Since(start))
 	}
 }

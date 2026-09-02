@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -53,9 +54,6 @@ func New(uid string, test bool) *Player {
 //	心跳:       Heartbeat / KeepAlive
 //	锁本身:     Lock / Unlock
 //
-// 反过来必须在**锁外**调用的只有 Close —— actor 模式下它关的是玩家通道,
-// 持锁关闭会让通道 worker 永久阻塞。
-//
 // 例外:对象尚未进入 Manage(其他协程拿不到指针)时不必加锁,预加载
 // (players/preload.go)就是先 Loading 再 Store。
 type Player struct {
@@ -65,7 +63,7 @@ type Player struct {
 	heartbeat atomic.Int64        //最后心跳时间,daemon 与业务协程并发读写,必须原子操作
 	Pending   Pending             //待发送的 Operator 暂存区(跨玩家场景让出锁前 Submit 出来的)
 	Login     int64               //登录时间
-	Syncer    Syncer              //并发控制器
+	mutex     sync.Mutex          //玩家锁,见类型注释的加锁契约;经 Lock/Unlock 访问
 	Binder    binder.Binder       //当前端使用的序列化方式
 	Status    int32               //在线状态
 	Times     *Times              //时间控制器
@@ -200,7 +198,6 @@ func (p *Player) Guid() string {
 }
 
 // Destroy 销毁玩家数据,调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater
-// 不在这里关闭 Syncer:关闭动作必须发生在 Unlock 之后,见 Close
 func (p *Player) Destroy() error {
 	//空壳(Updater==nil,见 players.Lock)没有数据要销毁,直接算成功。
 	//不能返回 error:daemon 的 released 收到 error 会还原状态、下个 tick 重试,
@@ -238,13 +235,6 @@ func (p *Player) Initialize() error {
 	return nil
 }
 
-// Close 关闭并发控制器,必须在 Unlock 之后调用
-// actor 模式下 Syncer.Close 会关掉玩家通道,持锁时关闭会让通道 worker 永久阻塞在 nil channel 上
-func (p *Player) Close() {
-	if p.Syncer != nil {
-		p.Syncer.Close()
-	}
-}
 func (p *Player) On(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
 	return p.Emitter.On(t, args, handle)
 }

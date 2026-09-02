@@ -23,8 +23,7 @@ import (
 // Updater.dirty,而紧接着的 p.Release() 会 `for _, op := range u.dirty { op.Release() }`
 // 把它们归还 sync.Pool 并置 nil —— 改动当场丢失,且 op 可能被后续请求取走复用导致串数据。
 // Player.Pending 是独立切片,不受 Updater.Release() 影响,由 context/service.go 的
-// Pending.Pull() 收走。对照 players/actor/channel.go 与 players/locker/locker.go,
-// 那两处平行实现用的都是 Pending.Push。
+// Pending.Pull() 收走。批量锁(players/batch.go 的 batch.Submit)用的也是 Pending.Push。
 //
 // 代价是一次 GetPlayer 会让自己的 Updater 走完整的 Submit → Release → Reset 周期:
 // **中途会真的提交一次数据库**,并重新 Emit EventTypeReset。调用方要清楚这一点 ——
@@ -74,44 +73,63 @@ type Mutex struct {
 	ctx *Context
 }
 
-// Lock 批量获取玩家锁
-// args  参数会传递给handle
-// handle 获取批量操作后回调函数
-// next   获取操作结束后是否需要回到玩家自身,
-
+// Lock 批量获取玩家锁,同步等结果
+//
+//	uids    要取得的玩家;取锁阶段整批成败,任何一个取不到整个回调都不会执行
+//	args    原样传给 handle
+//	handle  取得权限后的回调,拿到的是 player.Locker(空壳契约见上面 Mutex 的说明)
+//	next    回调结束、锁全部归还之后要执行的收尾,追加在"锁回自己"之后
+//
 // 🔴 `this.ctx.Player != nil` 就等于「我此刻持有它」,不需要另立标记。
 //
 // 这条不变式是被**刻意维护**的:让出锁的地方一律同时把 ctx.Player 置 nil ——
 // GetPlayer 在 Unlock 后置 nil、defer 里重新 Lock 才还回去,本函数下面也是同一套。
-// 所以 self 的含义就是「**我已经在锁内,别再替我排一次队**」。
-//
 // 反过来说,新增任何「中途让出锁」的代码路径,都必须同步把 ctx.Player 置 nil,
 // 否则这条判据就不成立了。
+//
+// ⚠ 代价与 GetPlayer 相同:让出自身锁会让你的 Updater 走完整的 Submit → Release → Reset
+// 周期,**中途会真的提交一次数据库**,并重新 Emit EventTypeRelease / EventTypeReset。
+// 它不是一次轻量的"顺便锁一下别人"。
 func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, next ...func()) (any, error) {
 	var done []func()
-	var self string
-
 	if p := this.ctx.Player; p != nil {
-		self = p.Uid()
-		this.ctx.Player = nil
-		if players.Options.AsyncModel == players.AsyncModelLocker {
-			p.Unlock()
+		//🔴 让出自己那把锁之前**必须先 Submit**(契约见 player.Pending 的注释):
+		//让出期间别人可能取得同一个玩家,而他结束时的 Release() 会把你本次请求攒着的 dirty
+		//逐个归还 sync.Pool 并置 nil —— 改动当场丢失,op 还可能被后续请求取走复用导致串数据。
+		//Submit 出来的 operator 转存进 Player.Pending(独立切片,不受 Release 影响),
+		//回到自己这边时由 context/service.go 的 Pull() 收走、随回包一起下发。
+		//
+		//放在置 ctx.Player 之前:提交失败时调用方手上的 c.Player 原样可用,
+		//不会留下一个"锁已让出、指针已置空"的半拉状态。
+		cs, e := p.Submit()
+		if e != nil {
+			return nil, e
 		}
+		p.Pending.Push(cs...)
+
+		this.ctx.Player = nil
+		//🔴 必须让出自己这把锁:批量锁进去之后会逐个抢目标玩家的锁,
+		//攥着自己的去抢别人的就是标准 ABBA。
+		//Release/Reset 与 Submit 配套:让出等于走完一个请求边界,回来时重新开始 ——
+		//少了 Reset,Release 清掉的 status/Error 不会复位,后续 Submit 的收敛循环可能整个跳过。
+		p.Release()
+		p.Unlock()
 		done = append(done, func() {
-			if players.Options.AsyncModel == players.AsyncModelLocker {
-				p.Lock()
-			}
+			p.Lock()
+			p.Reset()
 			this.ctx.Player = p
 		})
 	}
 	done = append(done, next...)
-	return players.Locker(self, uids, args, handle, done...)
+	return players.Locker(uids, args, handle, done...)
 }
 
-// Async 异步获得锁，独立协程执行锁任务
-// 使用场景：锁中任务和当前任务无任何关系时使用
-// 避免当前业务响应超时
+// Async 异步获得锁,独立协程执行锁任务
+// 使用场景:锁中任务和当前任务无任何关系时使用,避免当前业务响应超时
 // 参数同 Lock
+//
+// 📌 与 Lock 不同,**不让出自己那把锁**,也不需要:取锁跑在另一个协程上,当前请求不等它,
+// 构不成"攥着自己的去抢别人的"那种环。
 //
 // ⚠ **取锁阶段整批成败**：uids 里任何一个取不到锁（非法 uid / 拒绝态 / await 超时），
 // 整个任务都不会执行 —— 包括那些本来没问题的玩家。调用方拿不到这个错误
@@ -123,7 +141,7 @@ func (this *Mutex) Async(uids []string, args any, handle player.AsyncHandle, don
 		return nil, nil
 	}
 	scc.SGO(func(ctx context.Context) {
-		if _, err := players.Locker("", uids, args, lh, done...); err != nil {
+		if _, err := players.Locker(uids, args, lh, done...); err != nil {
 			logger.Alert("Mutex.Async 取锁失败,任务未执行:uids=%v,err=%v", uids, err)
 		}
 	})

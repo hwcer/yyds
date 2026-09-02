@@ -4,51 +4,67 @@
 
 ## 并发模式
 
-通过 `Options.AsyncModel` **二选一**，同一进程只有一个生效。两者的区别不是性能调优，
-而是**跨玩家操作要不要自己管同步**：
+**每玩家一把互斥锁**（`Player.Lock/Unlock`），没有第二种模式可选。
 
-| | AsyncModelLocker（默认） | AsyncModelActor |
-|---|---|---|
-| 同步点 | 每玩家一把互斥锁 | **一条全局玩家通道**（`actor` 包的 `w`） |
-| 并发度 | 真并发，吃满多核 | **并发绑死在一个协程内**，全服玩家操作串行 |
-| 取得一个玩家 | 拿他那把锁 | 排队进入全局通道 |
-| 取得权限之后能改谁 | **只能改锁住的那几个** | **任意玩家，随便改** |
-| 跨玩家操作 | 要用 `context.Mutex()` 成批取锁，取锁顺序 / ABBA / 空壳都要自己盯 | 直接写，不可能死锁、不可能漏锁 |
+| | |
+|---|---|
+| 同步点 | 每玩家一把 `sync.Mutex`（`Player.Lock/Unlock`） |
+| 并发度 | 真并发，吃满多核；业务跑在调用方（rpcx 的请求）协程上 |
+| 取得一个玩家 | 拿他那把锁 |
+| 取得权限之后能改谁 | **只能改锁住的那几个** |
+| 跨玩家操作 | `context.Mutex().Lock/Async` 成批取锁，全服排一条 `await` 队列防 ABBA |
 
-### Actor 模式：一个传统编程思想 + Go 特性的模型
+锁就直接内嵌在 `Player` 上（`Player.mutex`），没有中间抽象层 —— 曾经有过一个
+`player.Syncer` 接口和一个 `players/locker` 子包用来切换并发实现，随 actor 一起移除了。
+要换并发模型的话，入口是 `Player.Lock/Unlock` 加上 `manage.go` / `batch.go` 这两个文件。
 
-**唯一的好处**：一旦取得数据操作权限，就可以修改**任意**玩家的数据 —— 跨角色操作极其方便，
-像写单线程程序一样。
-**最大的特点**：把并发**绑死在一个协程内**，吞吐就是这一个协程的吞吐。
+## 为什么没有 actor 模式
 
-它的全部同步语义只有一条：
+框架里曾经有过 `AsyncModelActor`，**已整体移除**。加回来之前先读完这一节，
+否则会重走一遍已经走过两次的弯路。
 
-> **排到全局通道 = 取得了所有玩家的操作权限**
+### 它返工过两次，两次都是模型错误
 
-由此推论（也是最容易被误解的三点）：
+1. **每玩家一条 chan + 一个 worker，业务在 worker 里跑**。两个实测可复现的永久性故障：
+   `Lock()` 把 `holding` 通道写在共享字段上，后来者覆盖先来者（8 个协程同时"持有"同一玩家，
+   随后 `close of closed channel`）；以及「A 的请求取 B」与「B 的请求取 A」各占着自己的
+   worker 等对方，双方永久挂起、全程无超时。
+2. **收敛成一条全局通道 + 一把全局大锁**。不死锁了，但把全服玩家操作压到**单个协程**——
+   连 `Loading` 六张表、`Submit` 的 BulkWrite 都在里面跑，一次慢查询全服停顿；
+   而且"排到通道 = 拥有所有玩家的操作权"这套语义与 locker **根本不能互换**；
+   还长出独有故障：通道内再进通道（`context.GetPlayer` 就会），自己排在自己身后，
+   必然白等一个排队超时然后失败。
 
-1. **没有"每个玩家一条通道"这回事。** 曾经有过，是错的 —— 见下方"历史教训"。
-2. **通道内不需要、也不应该再对目标逐个上锁**（`actor.Locker.loading` 一把锁都不取）。
-3. **通道内不能再进一次通道**：只有一个 worker，自己排在自己身后永远轮不到，
-   只会白等一个 `LockerTimeout`。`context.GetPlayer` 这类"在业务里再调 `players.Get`"
-   的写法在 actor 下就靠这个超时兜底，不会永久挂死，但会白付 5 秒。
+### 根因：两个前提，当前装配下都不成立
 
-`Player.Lock/Unlock` 在 actor 下落到一把全局 `gate` 上 —— 它只用来跟 **不走通道的协程**
-（daemon 回收玩家、`Terminate`）互斥，不承担业务并发控制。
+**① 谁决定业务跑在哪个协程上。** rpcx 对每个请求 `go processOneRequest`
+（`rpcx/server/server.go:520`，`cosrpc` 没有注入 `WorkerPool`），执行体已经定了。
+actor 再把业务搬进玩家 worker，等于一个在途请求占**两个协程 + 两次调度**，是净亏。
+要翻盘就得拿到 dispatch 权——而 `WorkerPool.Submit(task func())` 只给一个不透明闭包，
+看不到 `req`，也就不知道该投给哪个玩家；要按 uid 路由只能在 auth 插件里偷存，
+强耦合 rpcx 的内部调用顺序。
 
-#### 历史教训（2026-09-01 修）
+**② 框架 API 得允许异步。** `players.Get(uid, handle) error` 是同步的（原地回调、
+阻塞调用方、要拿返回值）。而 actor 的排他性绑在**执行体**上：业务正跑在这个玩家的 worker 里，
+"让出"只能靠从消息里 return，那等于丢掉调用栈。于是"取得别人 → 拿到结果 → 接着往下写"
+这类**同步跨玩家**写法在 actor 下无解——让出锁也没用，锁本来就不是那道门。
 
-早先 `actor.Syncer` 被实现成"每玩家一条 chan + 一个 worker 协程"，与上面的模型南辕北辙，
-带来两个**实测可复现、且都是永久性故障**的 bug（回归用例见 `actor/actor_test.go`）：
+> locker 的排他性绑在**数据**上：持有者是调用方协程，可以中途 `Unlock` 让出，调用栈不动。
+> 这正是 `context.Mutex().Lock` 与 `GetPlayer` 能成立的全部原因。
 
-1. `Lock()` 把 `holding` 通道写在**共享字段**上，两个协程同时取得同一玩家时后者覆盖前者
-   —— 实测 8 个协程同时"持有"同一个玩家，随后 `close of closed channel` panic；
-2. 业务 handler 跑在**玩家自己的 worker** 上，于是「A 的请求取 B」与「B 的请求取 A」
-   各占着自己的 worker 等对方 —— 双方永久挂起，全程无超时。
+### 那它还剩什么
 
-两条的根是同一个：**把同步做成了 per-player**。收敛回全局通道之后都不复存在。
+只剩 FIFO 公平（等待者按先来后到唤醒，`sync.Mutex` 是 barging）。而这一条用
+**通道令牌**就能拿到——`Lock()` 从容量 1 的通道取走令牌、`Unlock()` 放回，
+Go 在 send 时把值直接交给队首等待者，后到的抢不走；零额外协程、业务栈还在请求协程里。
+也就是说，per-player **worker 协程**买到的每一样东西，一把锁或一个令牌通道都给得起。
 
-### 批量取得多个玩家（两种模式共同的契约）
+### 什么时候值得重做
+
+三条同时满足：拿到了 dispatch 权（换传输层，或 rpcx 按 uid 路由）、框架跨玩家 API 改成异步、
+并且确实需要玩家自己的事件循环（战斗循环、玩家内定时器）。缺一条就会退化成上面两次的样子。
+
+### 批量取得多个玩家
 
 `context.Mutex().Lock/Async` 只保证「取得操作权限」，**不保证玩家在线、也不保证有数据**：
 
@@ -91,7 +107,9 @@ StatusNone(0) → StatusConnected(2) → StatusDisconnect(3) → StatusOffline(4
 
 `daemon` 协程随 `Start()` 启动，每 `Heartbeat`（默认 5s）执行一次 `worker` 扫描，负责检测玩家状态变化和内存回收。定时器会扣除 `worker` 自身耗时，使扫描周期稳定在 `Heartbeat` 而非 `Heartbeat + worker 耗时`。服务关闭时自动执行 `shutdown` 保存所有玩家数据。
 
-`worker` 分两段：**先快照、后迁移**。`ps.Range` 内只做状态判定并把待迁移玩家收进切片，Range 返回、`Manage` 读锁释放之后才逐个执行 `disconnect` / `offline` / `recycling` / `released`。原因是后两者要抢玩家锁并触发业务事件（可能再抢其他全局锁），在持有 `Manage` 读锁时等细粒度锁，会把需要 `Manage` 写锁的登录路径整体挡住，批量掉线时形成全局停顿。快照与迁移之间状态变了不要紧——这几个函数内部都用 CAS 二次校验，会安全跳过。
+`worker` 分两段：**先快照、后投递**。`ps.Range` 内只做状态判定并把待迁移玩家收进切片；Range 返回、`Manage` 读锁释放之后，再把 `disconnect` / `offline` / `released` 投给状态迁移执行池（见下方「状态迁移执行池」），daemon 自己只留一个不抢锁的 `recycling`。
+
+分两段的原因：这些迁移要抢玩家锁并触发业务事件（可能再抢其他全局锁），在持有 `Manage` 读锁时等细粒度锁，会把需要 `Manage` 写锁的登录路径整体挡住，批量掉线时形成全局停顿。快照与投递之间状态变了不要紧——这几个函数内部都用 CAS 二次校验，会安全跳过。
 
 ### 状态流转
 
@@ -148,28 +166,60 @@ Connected ──(ConnectedTime 120s 无心跳)──→ Disconnect    触发 Eve
 触发条件: 缓存总数 >= MemoryPlayer(2000) + MemoryRelease(100)
 释放顺序: 按心跳时间升序，优先释放最久未活跃的玩家
 释放目标: 将缓存总数降至 MemoryPlayer 以下
-单次上限: 每个 tick 最多释放 MemoryRelease(100) 个，超出部分顺延到下个 tick
+分批释放: 每个 tick 释放一批 ReleaseBatch(100) 个，没轮到的顺延到下个 tick
 ```
 
-`MemoryRelease` 同时充当触发余量和单次释放上限——「超出 100 才清理，每次最多清 100」。加上限是因为释放要抢玩家锁，脏玩家还会产生一次 BulkWrite 往返；不限量的话大批量退潮会把 daemon 协程阻塞到秒级，连带拖慢状态机的判定精度。命中上限且仍有积压时会打一条 `logger.Trace`，避免从监控指标上看像是「清不动」。
+两个旋钮各管一件事：`MemoryRelease` 是**触发余量**（超出 100 才开始清理，留这段是为了避免在阈值上反复横跳），`ReleaseBatch` 是**一批的大小**（每个 tick 清 100 个）。
 
-释放过程：CAS 置 `StatusReleased`（接受 `StatusOffline` / `StatusTerminated`）→ 取玩家锁（等待在途业务调用结束）→ `Reset`（重置数据）→ `Destroy`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除 → `Close`（关闭 Syncer）。如果 `Destroy` 失败，状态还原成进来时那个，下次重试。
+分批是因为每个脏玩家一次 BulkWrite——一次退潮把上千个的落库同时压给数据库不是好主意，状态迁移执行池的队列也吃不下。⚠ `ReleaseBatch` 的零值是致命的（一个都放不掉，内存只涨不跌），`Start` 里有兜底。一批放满了仍有积压时会打一条 `logger.Trace`，避免从监控指标上看像是「清不动」。
+
+释放过程：CAS 置 `StatusReleased`（接受 `StatusOffline` / `StatusTerminated`）→ 取玩家锁（等待在途业务调用结束）→ `Reset`（重置数据）→ `Destroy`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除。如果 `Destroy` 失败，状态还原成进来时那个，下次重试。
 
 顺序上有两个约束不能调换：
 
 - **必须持锁才能 `Destroy`**：`Destroy` 会把 `Updater` 置空，不加锁就可能在业务协程执行 `handle` 期间抽走它，对端 `defer Release()` 直接 nil panic。相应地 `Get` 也必须**先判 `Denied` 再 `Reset`**。
 - **CAS 放在取锁之前**：状态提前翻成 `StatusReleased`，后来的 `Get` 拿到锁就能立刻按拒绝态返回，不必排队等一把注定用不上的锁；而 `Destroy` 仍在锁内，不会和正在跑的业务协程撞上。
 - **失败时不能硬编码还原成 `StatusOffline`**：`StatusTerminated` 退化成 `Offline` 会被 `Connected()` 复活，踢/封标记就丢了。
-- **`Close` 必须在解锁之后**：actor 模式下 `Syncer.Close` 关的是玩家通道，持锁（通道里挂着栅栏函数）时关闭会让通道 worker 永久阻塞。
+- **`ps.Delete` 必须在解锁之后**：`Delete` 要取管理器写锁，持着玩家锁去抢它，会和"持管理器读锁等玩家锁"的一方成环（`shutdown` 的 `Range` 就是那一方）。这也是这段不能用 `defer` 解锁的原因。
+
+### 状态迁移执行池
+
+`daemon` 是**单协程**，而三种迁移都要抢玩家锁、都可能很慢（`disconnect`/`offline` 要触发业务
+的下线事件，`released` 还要在锁内做一次 BulkWrite 落库）。串行跑的话，一次退潮 N 个玩家就是
+N 次「等锁 + DB 往返」首尾相接，**扫描周期直接被最慢的那个玩家决定**。
+
+所以 daemon 只负责判断"谁该迁移到哪个状态"，迁移动作本身投给执行池（`migrate.go`）。
+三条性质让这件事安全，缺一条都不能这么改：
+
+| | |
+|---|---|
+| CAS 守卫 | 三个迁移函数第一件事都是 CAS 翻状态，重复投递是空操作 |
+| 互不相干 | 玩家之间独立，谁先谁后不影响结果 |
+| 可重试 | 没投出去、或执行失败的，状态不变，下一个 tick 会重新收集到 |
+
+**投递非阻塞**（`select + default`）——阻塞就违背了整件事的目的。队列满时放弃本轮投递，
+并打一条 `Trace`；持续出现说明数据库慢或 `MigrateWorker` 该调大了。
+
+`recycling` 是唯一留在 daemon 协程里的迁移：它只往回收站那张 daemon 私有的表里记一笔，
+不抢任何玩家锁、也不碰 `Updater`，投出去反而要给那张表加锁。
 
 ### 优雅关闭
 
-收到退出信号时，`shutdown` 会：
+收到退出信号时 `shutdown` 会：
 
-1. 将 `playersStarted` 设为 0，拒绝所有新请求（返回 `ErrServerClosed`）
-2. 在线玩家走完 `disconnect → offline` 流程，触发对应事件
-3. 其余状态的玩家强制设为 `StatusOffline`
-4. 遍历所有玩家执行 `released` 释放资源
+1. 翻转启动状态，此后所有请求返回 `ErrServerClosed`（兼作幂等守卫）
+2. `migrateWait()` 等执行池排空并退出 —— 那批在途任务正持着玩家锁在补下线事件、在落库
+3. `migrateDrain()` 兜底：ctx 触发时 daemon 可能正好在投递，而池已经退出，那批任务谁都不会碰
+4. `Range` **只做快照**，一个玩家锁都不碰
+5. 循环外补下线事件：`Connected → disconnect + offline`、`Disconnect → offline`、`None → CAS(Offline)`
+6. `releaseAll` 并行释放并等齐，返回未成功数并写进日志
+
+第 4 步是硬约束：`Range` 持有管理器读锁，而 `released` 要回头 `ps.Delete`（写锁）——
+在 `Range` 里抢玩家锁就会成环（这里持读锁等玩家锁，那把锁的持有者在等写锁）。
+"服务器都在关了哪还有锁"不成立：`scc` 的 ctx Done 不会让在途请求立刻结束。
+
+第 5 步用 CAS 而不是无条件 `Store(Offline)`：后者会把 `Released`（刚被池释放完）和
+`Terminated`（被踢，`released` 本就接受）一并抹掉。
 
 ## 配置参数
 
@@ -179,24 +229,31 @@ players.Options.ConnectedTime  = 120  // Connected 状态无心跳超时（秒�
 players.Options.DisconnectTime = 120  // Disconnect 状态超时（秒）
 players.Options.OfflineTime    = 60   // Offline 状态进入回收站超时（秒）
 players.Options.MemoryPlayer   = 2000 // 常驻内存玩家数量
-players.Options.MemoryRelease  = 100  // 回收站阈值，缓存 >= MemoryPlayer + MemoryRelease 时开始清理
-players.Options.LockerCap      = 128  // 批量锁 / 全局通道的排队深度
-players.Options.LockerTimeout  = 5*time.Second // 【排队】超时，不是「任务最多跑多久」
+players.Options.MemoryRelease  = 100  // 回收触发余量，缓存 >= MemoryPlayer + MemoryRelease 时开始清理
+players.Options.ReleaseBatch   = 100  // 每个 tick 释放一批的大小
+players.Options.MigrateWorker  = 4    // 状态迁移执行池并发度
 ```
 
-`LockerTimeout` 的语义是**「愿意在队列里排多久」**：`await.Message.Wait` 在 handler 已经开跑时
-会重置计时器继续等，跑起来的任务不会被打断。所以超时 ⇔ 任务**一次都没执行**。
-调大的代价在 `Mutex().Lock` 那条同步路径：把「快速失败」换成「客户端干等」。
+批量锁那条队列的深度与排队超时**不是配置项**（`manage.go` 里的 `batchCap` / `batchTimeout`）——
+它们不是需要按项目调的旋钮：队列深度纯粹是突发吸收能力，调大无风险也无收益；排队超时的语义是
+「愿意在队列里排多久」而不是「任务最多跑多久」，调大只是把「快速失败」换成「客户端干等」。
+而真正想提吞吐的人会盯上的那个旋钮——worker 数——恰恰不是选项，单 worker 就是防 ABBA 机制本身。
+
+`MigrateWorker` 的瓶颈在**数据库**而不是 CPU（`released` 每个玩家一次 BulkWrite），
+别按核数设，按库扛得住多少并发写来设；停服时的全量落库用的也是这个值。
 
 ## 代码结构
 
 ```
 players/
-├── default.go     // 入口，Start/Get/Load/Login 等公开 API
-├── daemon.go      // 守护协程，状态流转、回收、关闭
-├── options.go     // 配置参数、并发模式定义
+├── default.go     // 入口，Start/Get/Load/Login/Locker 等公开 API
+├── manage.go      // 玩家管理器 + 单玩家取用（get / load）
+├── batch.go       // 批量锁：同时取得多个玩家（context.Mutex 的底座）
+├── service.go     // 可服务性判定（启动状态 + 维护开关）
+├── daemon.go      // 守护协程：扫描收集状态迁移、优雅关闭
+├── migrate.go     // 状态迁移执行池（daemon 只收集，迁移在这里跑）
+├── preload.go     // 启动时预加载活跃玩家
+├── options.go     // 配置参数
 ├── emitter.go     // 生命周期事件定义
-├── player/        // Player 结构体、状态常量、核心方法
-├── locker/        // Locker 并发模式实现
-└── actor/         // Actor 并发模式实现
+└── player/        // Player 结构体、状态常量、玩家锁、核心方法
 ```

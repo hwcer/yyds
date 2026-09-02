@@ -5,7 +5,7 @@ import "github.com/hwcer/updater/operator"
 // Pending 待发送的 Operator 暂存区。
 //
 // 装的是「已经 Submit 出来、但没能随当次回包发出去」的操作：跨玩家场景
-// (Context.GetPlayer / Mutex.Lock / actor / locker) 让出自己这一侧的锁之前必须先 Submit，
+// (Context.GetPlayer / Mutex.Lock / 批量锁本身) 让出自己这一侧的锁之前必须先 Submit，
 // 否则改动会丢；而那时回包还没成形，只能先存这里，等回到自己这边时由
 // context/service.go 的 Pull() 取走、随回包一起下发。
 //

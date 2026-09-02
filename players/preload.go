@@ -101,7 +101,7 @@ func (this *Progress) player(uid string) {
 	}()
 	p := NewPlayer(uid, false)
 	if e := p.Loading(false); e == nil {
-		ps.Store(p.Key(), p)
+		manage.Store(p.Key(), p)
 		p.KeepAlive(time.Now().Unix())
 	}
 }

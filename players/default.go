@@ -1,14 +1,10 @@
 package players
 
 import (
-	"fmt"
 	"sync/atomic"
-	"time"
 
 	"github.com/hwcer/cosgo/scc"
-	"github.com/hwcer/yyds/players/actor"
 	"github.com/hwcer/yyds/players/emitter"
-	"github.com/hwcer/yyds/players/locker"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -18,32 +14,18 @@ var (
 	playersRecycling map[string]*player.Player
 )
 
-var ps Players
-var newSyncer func() player.Syncer
 
 func Start() error {
 	if !playersState.CompareAndSwap(stateStopped, stateRunning) {
 		return nil
 	}
-	//🔴 这两个的零值是**致命**的,与其它 Options 不同:LockerTimeout==0 会让
-	//time.NewTimer(0) 立刻触发,凡是没被 worker 当场取走的批量锁一律 ErrTimeout ——
-	//跨玩家操作全线瘫痪,而现象只是"偶尔失败"。MemoryPlayer 这类零值只是策略激进,
-	//不会把功能打死,所以只有这两个需要兜底。
-	if Options.LockerCap <= 0 {
-		Options.LockerCap = 128
+	//🔴 ReleaseBatch 的零值是**致命**的,与其它 Options 不同:一个玩家都放不掉,
+	//内存只涨不跌,而现象只是"跑久了内存回不去"。MemoryPlayer 这类零值只是策略激进,
+	//不会把功能打死,所以只有它需要兜底。
+	if Options.ReleaseBatch <= 0 {
+		Options.ReleaseBatch = 100
 	}
-	if Options.LockerTimeout <= 0 {
-		Options.LockerTimeout = time.Second * 5
-	}
-	if Options.AsyncModel == AsyncModelLocker {
-		ps = locker.New(Options.LockerCap, Options.LockerTimeout)
-		newSyncer = locker.NewSyncer
-	} else if Options.AsyncModel == AsyncModelActor {
-		ps = actor.New(Options.LockerCap, Options.LockerTimeout)
-		newSyncer = actor.NewSyncer
-	} else {
-		return fmt.Errorf("players: invalid options")
-	}
+	newManage()
 	scc.CGO(daemon)
 	return loading()
 }
@@ -113,7 +95,7 @@ func Get(uid string, handle player.Handle) error {
 	if err := available(); err != nil {
 		return err
 	}
-	return ps.Get(uid, handle)
+	return get(uid, handle)
 }
 
 // Load 加载玩家数据,如果不在线则实时读写数据库。
@@ -144,7 +126,7 @@ func Load(uid string, init bool, handle player.Handle) (err error) {
 	if err = available(); err != nil {
 		return err
 	}
-	return ps.Load(uid, false, init, handle)
+	return load(uid, false, init, handle)
 }
 
 // Login 登录成功,只能在登录时调用
@@ -153,7 +135,7 @@ func Login(uid string, test bool, meta map[string]string, handle player.Handle) 
 	if err = available(); err != nil {
 		return err
 	}
-	err = ps.Load(uid, test, true, func(p *player.Player) error {
+	err = load(uid, test, true, func(p *player.Player) error {
 		if e := Connected(p, meta); e != nil {
 			return e
 		}
@@ -162,19 +144,35 @@ func Login(uid string, test bool, meta map[string]string, handle player.Handle) 
 	return
 }
 
-func Locker(self string, uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
+// Locker 批量取得多个玩家的操作权限
+//
+// 有 Context 的地方(业务 handler 内)请用 **c.Mutex().Lock / Async** —— 它们在这之上多做了
+// 一件必须做的事:先把自己这一侧 Submit 结清并让出锁。本函数留给 daemon、定时器、
+// 内网 RPC 这类拿不到 Context、也不持有任何玩家锁的调用方。
+//
+// 🔴 **调用方绝不能持有任何玩家锁**:批量锁进去之后会逐个抢目标玩家的锁,
+// 攥着自己的去抢别人的就是标准 ABBA。
+//
+// ⚠ 取锁阶段整批成败:uids 里任何一个取不到(非法 uid / 拒绝态 / 排队超时),
+// 整个回调都不会执行 —— 包括那些本来没问题的玩家。
+//
+// 回调里拿到的是 player.Locker:**不保证玩家在线、也不保证有数据**,不在内存的给的是
+// 空壳(p.Updater == nil),完整契约见 player.Locker 接口上的说明。
+func Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
 	if err := available(); err != nil {
 		return nil, err
 	}
-	return ps.Locker(self, uid, args, handle, done...)
+	return newBatch(uid, args, handle, done...)
 }
 
 func Range(f func(string, *player.Player) bool) {
-	ps.Range(f)
+	manage.Range(f)
 }
 
+// NewPlayer 造一个带并发控制器的玩家对象(尚未进入管理器)
+//
+// 只有预加载(preload.go)这类"对象还没被别人拿到、可以安全地先 Loading 再 Store"的路径才用它。
+// 正常取玩家一律走 Get / Load。
 func NewPlayer(uid string, test bool) *player.Player {
-	p := player.New(uid, test)
-	p.Syncer = newSyncer()
-	return p
+	return player.New(uid, test)
 }
