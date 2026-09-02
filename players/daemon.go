@@ -196,7 +196,8 @@ func worker() {
 	var dropped int
 	defer func() {
 		if dropped > 0 {
-			logger.Trace("Players 状态迁移队列已满,%d 个任务本轮未投递,下个 tick 重试", dropped)
+			//Trace 在生产环境通常关着,而这正是"该调大 MigrateWorker / 查数据库"的信号,必须看得见
+			logger.Alert("Players 状态迁移队列已满,%d 个任务本轮未投递,下个 tick 重试", dropped)
 		}
 	}()
 	if playersRecycling == nil {

@@ -50,8 +50,12 @@ func loading() (err error) {
 	})
 	close(progress.c)
 	if tx.Error != nil {
-		return tx.Error
+		err = tx.Error
 	}
+	//🔴 必须无条件 Wait:done 的关闭原先只由 Printf 里「value >= total && len(c)==0」触发,
+	//而 Count 与 Range 是两次查询,期间有玩家被删就会出现 rows < record → value 永远到不了
+	//total → done 不关 → printer 协程不退 → **Start 永久挂死**。改为 workers(随 c 关闭退出)
+	//全部结束后由这里兜底关闭 done,计数不符只影响进度条显示,不影响启动。
 	progress.Wait()
 
 	return
@@ -107,9 +111,9 @@ func (this *Progress) player(uid string) {
 }
 
 func (this *Progress) Wait() {
-	this.wg.Add(1)
+	//printer 不计入 wg:它等 done 退出,而 done 要等 workers(wg)全部结束后才由这里关闭,
+	//算进同一个 WaitGroup 就是互相等待的死锁
 	go func() {
-		defer this.wg.Done()
 		t := time.NewTicker(time.Millisecond * 100)
 		defer t.Stop()
 		for {
@@ -122,6 +126,8 @@ func (this *Progress) Wait() {
 		}
 	}()
 	this.wg.Wait()
+	//workers 已全部退出(通道关闭),无论计数是否对得上都收掉 printer,见 loading 里的说明
+	this.once.Do(func() { close(this.done) })
 }
 
 func (this *Progress) Add(v int64) {

@@ -92,7 +92,9 @@ type Mutex struct {
 // 它不是一次轻量的"顺便锁一下别人"。
 func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, next ...func()) (any, error) {
 	var done []func()
+	var self *player.Player
 	if p := this.ctx.Player; p != nil {
+		self = p
 		//🔴 让出自己那把锁之前**必须先 Submit**(契约见 player.Pending 的注释):
 		//让出期间别人可能取得同一个玩家,而他结束时的 Release() 会把你本次请求攒着的 dirty
 		//逐个归还 sync.Pool 并置 nil —— 改动当场丢失,op 还可能被后续请求取走复用导致串数据。
@@ -121,7 +123,18 @@ func (this *Mutex) Lock(uids []string, args any, handle player.LockerHandle, nex
 		})
 	}
 	done = append(done, next...)
-	return players.Locker(uids, args, handle, done...)
+	reply, err := players.Locker(uids, args, handle, done...)
+	//🔴 取锁整批失败时 done 不会执行,自己的锁还悬在让出状态:
+	//	available() 在 newBatch 之前就拒绝、或 await 排队超时(超时 ⇔ 任务从未开跑,
+	//	worker 那边会因 CAS 失败跳过它)—— 这两条路径 batch.call 根本不运行。
+	//	不补的话,外层 players.Get 的 defer p.Unlock() 会解锁一把未锁的 mutex 当场 panic。
+	//	ctx.Player != nil 说明 done 已执行过(失败也可能发生在 handle 内,那时 release 照跑),不能重复恢复
+	if err != nil && self != nil && this.ctx.Player == nil {
+		self.Lock()
+		self.Reset()
+		this.ctx.Player = self
+	}
+	return reply, err
 }
 
 // Async 异步获得锁,独立协程执行锁任务

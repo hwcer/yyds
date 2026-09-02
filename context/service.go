@@ -211,7 +211,8 @@ func (c *Context) caller(node *registry.Node) (r *Message) {
 	defer func() {
 		if v := recover(); v != nil {
 			r = Errorf(500, "server error")
-			logger.Trace("server error:%v\n%v", v, string(debug.Stack()))
+			//业务 panic 是必须上线后还能查到的事,Trace 生产默认关着等于没记
+			logger.Error("server error:%v\n%v", v, string(debug.Stack()))
 		}
 	}()
 

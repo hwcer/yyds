@@ -4,6 +4,7 @@ import (
 	"sync/atomic"
 
 	"github.com/hwcer/cosgo/scc"
+	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/player"
 )
@@ -70,7 +71,11 @@ func Terminate(p *player.Player) bool {
 	for {
 		from = atomic.LoadInt32(&p.Status)
 		if p.Denied(from) {
-			//Released 无需再踢;Locked 说明 Loading 正在锁内借用状态并会还原,需稍后重试
+			//Released 无需再踢;Locked 说明有绕过玩家锁写状态的路径
+			//(按契约持锁调用时 Loading 的 Locked 在锁内自生自灭,观察不到),踢人已丢失,必须留痕
+			if from == player.StatusLocked {
+				logger.Alert("Terminate: uid:%v 处于 Locked,踢人未生效", p.Uid())
+			}
 			return false
 		}
 		if atomic.CompareAndSwapInt32(&p.Status, from, player.StatusTerminated) {
