@@ -64,6 +64,11 @@ cosgo.EventTypLoaded             → players.Start（预加载活跃玩家）
 > write` fatal（进程直接挂，不是 panic recover 能兜的）。运营开关走 `players.Maintain()` /
 > `players.Creatable()` 这类并发安全接口，其余走 `ServerStartHandle` 回调。
 
+> ⚠ **业务写的启动期自检，在 debug 模式下只告警、不拦启动**（`config.Reload` 的行为）。
+> 所以"配置与代码对不上"这类自检**在开发机上永远只是一行日志**，正式模式才拒绝启动。
+> 写自检时要按"开发期没人会看日志"来设计：错误信息里直接写清**该跑哪个脚本/改哪张表**，
+> 而不是只报"校验失败"。
+
 > ⚠ `autoServerId()` 在未显式配 sid 时用 `utils.LocalIPv4()` 的后两段推导服务器编号。
 > 多网卡机器（装了 Docker / WSL）上可能选到 `172.x` 虚拟网卡，推出错误的 sid 且不报错。
 > **生产环境显式配 `[game].sid`。**
@@ -162,6 +167,33 @@ Authorize.SetMaster(servicePath, serviceMethod)   // 标记 GM/开发者接口�
 > `ServiceMetadataDeveloper`，`Player` 这一级根本不带，而绝大多数游戏接口都走后者。
 > 按 metadata 判开发者对日常请求恒为假。真要留后门，走内网 RPC 或另加显式标记。
 
+### `OAuthTypeSelect` 的真实用途：避开自死锁
+
+它看起来只是"省一把锁"，实际是**一整类服务的唯一可行级别**：某个服的 handler 处理到一半会
+回头 RPC 调另一个服（拉玩家档案、落库、结算），而那边一律 `players.Get(uid)` 进**同一个**
+玩家锁。同进程共用一份 `players` 管理器时，入口若已持锁，嵌套的 `players.Get` 就永远等不到——
+那把锁是 `sync.Mutex`、**不可重入且没有超时**。
+
+所以「自己不碰玩家数据、所有落库交给别的服」的服务，**整个服降到 `OAuthTypeSelect`**，
+包内不许出现 `c.Player`。
+踩过：一个接口卡满 10s RPC 超时后，该玩家**所有**请求（含心跳、重登）全部跟着超时。
+
+> ⚠ 已移除 actor 模式（`refactor(players)!`）之后这条**没变**——"持锁期间不能对自己再 Get"
+> 与用哪种调度实现无关。
+
+### 🔴 `OAuthTypeSelect` 不刷心跳：长时间停在这一级的玩家会被判掉线
+
+`handlerCaller` **只在 `OAuthTypePlayer` 分支调 `p.KeepAlive()`**，而
+`players.Options.ConnectedTime`（默认 120s）到点就判断线。于是：玩家整段时间只发 Select 级请求
+（客户端心跳又被网关 `transform.C2SHeartbeat` 就地回掉、根本不进玩家协程）→
+**整 120 秒后连接必掉**，症状是客户端满屏"超时未收到响应"，分钟数分毫不差。
+
+**这是框架的已知缺陷**（Select 同样代表玩家正在活动，心跳就该刷）。在框架修掉之前，
+业务侧只能在那个服的 `Caller` 里每个请求自己调一次 keepalive 顶着；框架修了要把那段删掉。
+
+> 判断自己是否会踩：**这个服有没有可能连续 `ConnectedTime` 秒只收到 Select 级请求**。
+> 会 → 现在就得自己刷。
+
 ---
 
 # 数据层铁律（updater 协作）
@@ -172,7 +204,7 @@ Authorize.SetMaster(servicePath, serviceMethod)   // 标记 GM/开发者接口�
 ## 🔴 事务只覆盖 operator，不覆盖你对结构体字段的直接赋值
 
 updater 的事务（失败回滚 / 成功落库）**只覆盖 operator**（`Add`/`Sub`/`Set`/`Del`）。
-你对 proto 结构体字段的**直接赋值**，事务不知道、也回滚不掉——handler 失败时 operator 被撤，
+你对数据结构体字段的**直接赋值**，事务不知道、也回滚不掉——handler 失败时 operator 被撤，
 直接改的那份已落在**常驻内存的在线玩家对象**上，回滚不到也没进库 → 内存与库不一致，
 **污染该玩家直到重新加载**。
 
@@ -203,7 +235,7 @@ updater 的事务（失败回滚 / 成功落库）**只覆盖 operator**（`Add`
 
 ```go
 cur  := xxxGet(c)      // 只读：判断、算消耗
-next := xxxClone(c)    // 要改 → 先深拷贝（proto.Clone/Merge，别用 *ptr 值拷，会触发 copylocks）
+next := xxxClone(c)    // 要改 → 先深拷贝（别用 *ptr 值拷：结构体带锁时会触发 copylocks）
 c.Player.Sub(...)      // 扣料（可能在提交期失败）
 next.Exp += n          // 改副本
 xxxSave(c, next)       // 回写；提交期才装进 dataset，失败则原数据不受影响
@@ -216,22 +248,32 @@ xxxSave(c, next)       // 回写；提交期才装进 dataset，失败则原数�
 并把周期/兜底判定一并收进去：
 
 ```go
-func (r *Role) GetPurchase(p *Player, id int32, rule []int64) (*pb.ShopShelf, error) {
-    if v := r.Purchase[id]; v != nil && (v.Expire <= 0 || v.Expire >= p.Unix()) {
-        dst := &pb.ShopShelf{}
-        protoMerge(dst, v)                            // 命中 → 深拷贝
-        return dst, nil
+// Shelf 是存档里的一个 map 子对象（值为指针）；调用方永远拿不到 store 里的那一份
+func (r *Role) GetShelf(p *Player, id int32, rule []int64) (*Shelf, error) {
+    if v := r.Shelves[id]; v != nil && (v.Expire <= 0 || v.Expire >= p.Unix()) {
+        return cloneShelf(v), nil                    // 命中 → 深拷贝
     }
     expire, err := p.Times.ExpireWithArray(rule...)   // 未有/已过期 → 重置后的新记录
     if err != nil {
         return nil, err
     }
-    return &pb.ShopShelf{Value: 0, Expire: expire}, nil
+    return &Shelf{Value: 0, Expire: expire}, nil
 }
 ```
 
 两个收益叠加：调用方**拿不到 store 指针**，且**拿到的一定是当前周期**（没有"漏判周期后
 继续累加上个周期计数"的机会）。
+
+**要不要配 `GetXxx`，看 map 的值类型**（别一刀切，全配是过度设计）：
+
+| 值类型 | `store.M[k]` 拿到什么 | 结论 |
+|---|---|---|
+| **指针**（`map[int32]*Progress`） | store 里那一份的地址，改它就是改常驻内存 | **必须**配返回副本的 `GetXxx` |
+| **标量**（`map[int32]int64`、`map[int32]string`） | 值拷贝，改它碰不到 store | **不用**配（写回照旧走 `Set`/`Add`） |
+
+深拷贝用数据结构自带的克隆/合并能力（用 protobuf 的项目即 `proto.Merge`），**别逐字段拷**
+——结构体加字段时克隆自动跟上，不会漏。⚠ 当心语义反转的一对：`Wrap(t)` 通常是 `&T{inner:t}`（**改它就是改原对象**），
+`Clone(t)` 才是深拷贝。
 
 ### 同一个错误的各种外衣
 
@@ -356,6 +398,65 @@ u.Dirty(ops...)          // ← 把推送放回去，否则客户端收不到本
 策划改配置全服立刻生效，老号不需要任何数据迁移（真实案例：初始法阵始终不落库，
 老号库里没有该字段也能正常使用）。想要这个性质就别在 `Init` 里写 `Set`。
 
+## 🔴 要在同一 handler 里写"另一张表"：优先 `Mount`，不要直连 DB
+
+典型场景：发完奖还要标记"已领取"、核销一笔订单、占用一个兑换码。直连 DB 写那张表
+（绕过 Updater）会留下一个**必然发生的**不一致窗口：直写**立即生效**，而 Updater 要到
+handler 返回后才 `Data→Verify→Submit`；一旦提交期失败回滚（容量满、余额不足、creator 报错），
+就成了**"标记已领、东西没发"**。
+
+按优先级：
+
+1. **首选 `u.Mount(&model, ids...)` 把那张表拉进同一个事务**——改动进的是同一个 BulkWrite，
+   由框架 Submit 末尾一次提交，真原子，**不需要 Verify**。
+   代价是那张表的模型要实现 `updater.MountModel`。细节见 updater 仓库的 `CLAUDE.md`，
+   跨项目通用的四条是：
+
+   - 🔴 **挂载走的是与全局句柄相同的 operator 流水线**：`Update`/`Insert`/`Delete` 都只是**入队**，
+     verify 才写内存、submit 才进 bulkWrite，请求失败自动回滚。它们返回 `*operator.Operator`
+     （nil 表示出错，原因在 `u.Error`），**不是 error**。
+   - 🔴 **`Receive` 不是 `Insert`**：前者只把手上已有的记录塞进内存缓存、不产 operator；
+     后者产 `TypesNew`，会把**从库里查出来的已有记录当新记录再写一遍**（踩过）。
+     条件/批量查询挂载做不到（它只按 `_id` 取数），只能直接查库——但查出来的结果一律
+     `Receive` 进去，后续读写才全是缓存命中。
+   - **卸载粒度是整张表**：同一玩家可能同时有多条在途记录，摘掉一条会把另一条的缓存一起端掉。
+     短命（请求内用完）`defer Unmount`；长命（跨请求，如下单→支付→回来核销）**不卸载**，
+     靠玩家下线时 `Destroy` 刷盘，但单条走到终态要 `Remove`，否则长在线玩家会一直堆历史记录。
+   - ⚠ **要写的字段必须在模型 schema 里声明**：`dataset.Document.Set` 查不到字段名就**直接丢掉**
+     （只打一行 Alert）。直连 DB 写 map 时没人在乎有没有声明，**一改成挂载就会静静少写一个字段**。
+     给每张 MountModel 补一个"字段声明齐全"的单测钉住。
+
+2. **退而求其次：直写之前手动 `u.Verify()`**，失败即 `return err`（此时直写还没执行、Updater 也
+   随 handler 返回 error 回滚，两边都不落）。⚠ **这只是把窗口缩小、没有关掉**：Verify 过了之后
+   落库仍可能失败，而直写那条已经写出去了。只在"那张表实在做不成 MountModel"时用。
+
+3. **不需要管的**：那张表与玩家数据**没有原子性要求**时照旧直写（纯状态位、外部系统状态的本地
+   镜像、打点日志）。
+
+⚠ **有一种情况仍然只能直写**：这一趟末尾要 `return error`，但要记的是**已经发生的事实**
+（外部平台回了"已取消/核销失败"）。进事务的话它会随 error 一起回滚，那个终态永远记不下来，
+每次都要再问一遍外部系统。这类直写之后**内存里那份要跟着同步**（用 ORM 的
+"更新后回填整份文档"能力，别照着回包手抄几个字段——以后加字段会漏）。
+它**不违反**"取到的指针一律只读"：那条铁律防的是"改了内存却没进库/会被回滚"，
+而这里库上一行刚写完、这条改动本来也不该回滚。
+
+## 🔴 iid 推导不出 IType 的集合：模型必须自己覆盖 `IType()`
+
+`Updater.Add/Sub` 是**按 iid 全局路由**到 handle 的。所以一旦某个集合的"iid"其实是**别的业务的
+配置表 id**（活动 id、任务 id、商品 id……），路由就不成立，三条同时生效：
+
+1. **模型必须自己实现 `IType(int32) int32`** 返回那个内部号；
+2. **不能走 `Updater.Add/Sub`**，要先拿 `u.Collection(IType)` 或对应的业务访问器；
+3. 别为了让 iid "推得出来"去污染道具前缀映射表——那张表是给真道具用的。
+
+⚠ 坑在于 `updater.ModelIType` 是**可选**接口，而业务的模型基类通常已经实现了一个
+"按 iid 前缀推导"的 `IType()`——**类型断言恒成立、返回值却是 0**。不覆盖就一路静默到运行期才炸：
+`Collection` 拿不到 IType，**所有写操作报 `ErrITypeNotExist`**，而同一批集合里早写了覆盖的那些
+一切正常，看起来完全像是偶发。
+
+> 真实事故：一张表改名后漏了这个覆盖，整条发货链失败；同批的另外六张表早就都写了。
+> **新建这类集合时，把"有没有覆盖 IType"当成 checklist 第一项。**
+
 ## 提前拿到"这次发放的最终结果"：优先用 `Player.Verify()`
 
 溢出截断、重复自动分解这类信息在 **Parse 期**才产生，而 Parse 默认发生在 handler 返回
@@ -366,7 +467,7 @@ u.Dirty(ops...)          // ← 把推送放回去，否则客户端收不到本
   但**不落库、不清 dirty、不发成功事件**，读完让框架照常收尾即可，没有"忘了把推送放回去"
   的风险（库注释明写「Verify 之后再 Submit 是安全的」：status 已被消耗，
   Submit 的收敛循环直接跳过）；
-- 只在**接口内还要单独写库**时才手动 `Submit()`（如领邮件后改邮件状态：先 Verify/Submit
+- 只在**接口内还要单独写库、且那张表做不成 `MountModel`** 时才手动 `Submit()`（能挂载就挂载，见上一节）（如领邮件后改邮件状态：先 Verify/Submit
   确认道具发得出去，再写自己那张表，避免"表已改、道具没发"）——此时**务必
   `u.Dirty(ops...)` 把返回值放回去**，见上一节；
 - `Verify()` 返回的 error 必须 `return`：Parse 的错误不置 `u.Error`，靠 handler 回非零
@@ -444,6 +545,54 @@ func (doc *Document) Set(k string, v any) {
 > `soulrelics.1` 变成 `SoulRelics.1`，而 `update.Transform` 对含 `.` 的 key 原样下发，
 > 等于往库里写一个大小写不符的野字段。改这段代码前先看那两条单测。
 
+## 派生结算（"够了就自动升/自动结算"）挂 `EventTypeSubmit`，不要挂 `Listener`
+
+一类很常见的需求：某个量变化后要顺带做点别的——经验够了升级、材料够了自动合成、
+按时间补足的资源要结算。**位置选错就必然算错**，两段式是唯一正确的形状：
+
+```text
+IType.Listener(u, op)          ← 只做一件事：把"变了的那个 id"记进中间件
+    ↓
+Middleware.Emit(u, EventTypeSubmit)   ← 在这里读最新值、判定、追加新的 operator
+```
+
+- **Listener 里读不到新值**：它跑在 operator **入队那一刻**（`mayChange`），此时还没 Parse，
+  读到的是**旧值**——判"够不够"必然算错。而且同一请求里对同一 id 可能 `Add` 多次
+  （十连抽、批量发奖），每次都判一遍还会重复触发。
+  `EventTypeSubmit` 在 `data→verify` 之后触发，那时 Parse 已把增量应用进内存，读到的才是终值。
+- **Listener 里只认"增加"那一类 operator**：派生结算自己也要 `Sub`/`Set`，不过滤就是自我递归。
+- **中间件用完即摘**（`Emit` 返回 `false`）：Submit 是**收敛循环**，追加 operator 会让它再跑一轮，
+  不摘就空转到 100 轮上限报错。之后再有变化时 Listener 会重新 `LoadOrCreate` 建一个。
+- 🔴 **失败必须静默跳过，不能返回 error**：在 Submit 阶段报错会让**整个请求回滚**，
+  代价远大于"这次先不结算、下次再说"。所以派生结算内部要**先全量校验再动手**，不留半截操作。
+- ⚠ **它只由"变化"驱动**：存量已经够、但本次没有任何变化的玩家不会被触发（改配置门槛后尤其明显）。
+  需要兜底就另留一个手动接口，别指望自动那条覆盖全部。
+
+> 用 `u.Middleware.LoadOrCreate(u, name, creator)` 拿中间件实例：同一请求内多次记录复用同一个，
+> 天然去重。
+
+---
+
+## 时间与周期：`[Start, Expire)` 左闭右开，判过期一律 `now >= expire`
+
+`times.Expire` / `Cycle.Expire` / `Player.Times.Expire` 返回的**是区间右端点，那一刻本身已不属于
+本届**（周期表的口径是"本届结束时刻 == 下届开始时刻"）：
+
+| 判定 | 写法 |
+|------|------|
+| 仍在有效期 | `now < expire`（DB 侧 `expire > now`） |
+| 已过期 | `now >= expire` |
+
+与 JWT `exp`、HTTP `Expires`、Redis `EXPIREAT`、`context.Deadline` 一致。
+
+> **别写成 `expire < now`**：那要到 expire 之后一秒才算过期，整届晚一个单位结束。
+> cosgo `d4f8faa` 之前 `Expire` 返回的是"本届最后一纳秒"，秒截断后 1 纳秒被放大成 1 秒，
+> 才需要那种写法；现已回归惯例，**旧项目升级 cosgo 后要把所有 `<` 改成 `<=`**。
+
+> **换算成"天"时，减 1 要减在时间轴上、不是减一天**：`end.Add(-1).Sign(0)` —— 让时刻先退回
+> "仍属于本届的最后一刻"再取日期签名。expire 不一定落在 0 点，无脑把 end 那天整天排掉，
+> 会把当天 0 点到 end 之间的记录全丢掉。
+
 ---
 
 ## 条件验证（players/condition）
@@ -507,6 +656,35 @@ p.Emit(key int32, val int32, args ...int32)
   必须套 `players.Get(uid, func(p){ p.Send(...) })`。
 - 跨玩家操作（交易、好友）用 `c.Mutex().Lock/Async` 同时锁定多个玩家（框架侧是 `players.Locker`），
   不要嵌套 `players.Get`。
+
+### 🔴 handler 里动别人：唯一入口是 `c.GetPlayer`
+
+handler 要改**别的玩家**（送礼、好友互踢、组队、公会）时只能用 **`c.GetPlayer(uid, handle)`**
+（`context/locker.go`）。自己 `players.Get(对方)` 是标准 **ABBA 死锁**：两个玩家互相操作时
+双方**永久卡死**——不是超时报错，是这两个玩家此后所有请求都挂住。
+
+`c.GetPlayer` 做的正是避开它：目标是别人时先 `Submit` → operator 转存进 `Player.Pending`
+→ `Release` → `Unlock`，**让出自己的锁**再去锁对方，回来重新 `Lock`+`Reset`。
+
+**代价必须知道**：一次 `c.GetPlayer` 会让自己的 Updater 走完整的 Submit → Release → Reset，
+**中途真的提交一次数据库**并重新 Emit `EventTypeReset`。它不是"顺便看一眼别人"的轻量操作，
+**循环里对一批人挨个调是错的**——那种场合用 `c.Mutex()`（批量锁，一次取齐，不会死锁）。
+
+### `players.Get` / `Load` / `Login` 各自什么时候能用
+
+| | 语义 | 谁能用 |
+|---|---|---|
+| `players.Get(uid,h)` | 只取在线玩家，不在内存回 `ErrNotOnline` | **只在没有 Context、也不持任何玩家锁的入口第一层**：内网 RPC 接收端、运营接口、daemon |
+| `players.Load(uid,init,h)` | 不在线则实时读写库；`init=false` = **只占锁位不加载数据**（回调里 `p.Updater` 是 nil） | 后台直连库改档这类"不读内存数据、但要与该玩家其它操作互斥"的场景 |
+| `players.Login(uid,test,meta,h)` | ⚠ **是真正的登录**：`test` 只管写不写库，内部 `init=true` 拉全量 + `Connected` **标在线**（在线数 +1、发 `EventConnect`） | **只有登录接口**。拿它当"补数据"用就是一次**假上线** |
+
+⚠ 第二个参数别看错：`Load` 是 `init`、`Login` 是 `test`，语义完全不同。
+"只占锁位"是 `Load(uid,false,h)`，**不是** `Login(uid,false,...)`。
+
+> 真实事故：某项目写过一个 `helper.GetPlayer(c, uid, handle)`，两处都做反了——攥着自己的锁直接
+> `players.Get(别人)`（ABBA），离线时用 `players.Login` 把对方**假上线**。它零调用者却比没有更危险：
+> 名字一样、签名还更顺手，下一个写社交的人很容易挑中它。**跨玩家这件事由框架统一处理，
+> 项目侧不要再造第二个入口。**
 - `p.Status` 是**无锁 CAS 状态机**（disconnect/offline/recycling 的 CAS 都在玩家锁之外），
   持有玩家锁也不能裸读；要读就 `atomic.LoadInt32` 一次存局部变量——两次读之间 daemon
   可能已经翻了状态。
@@ -525,6 +703,80 @@ return err, nil  // 裸 error 没经过 Serialize，客户端按协议解只能�
 
 **handler 返回 `[]byte` 会跳过 Message 封装**：框架只做 `Submit()` 后原样透传，不再封装
 code/time/dirty。需要自定义协议体时才这么用。
+
+### handler 返回值语义
+
+| 返回 | 客户端收到 |
+|------|-----------|
+| `error` | 默认错误码 + 错误信息，**Updater 自动回滚** |
+| 框架的 `Error(msg, code...)` | 指定错误码（不指定则默认码），同样回滚 |
+| 任意业务数据（`interface{}`） | code=0 + 数据 + 本次数据变更 |
+| `[]byte` | 原样透传，跳过 Message 封装 |
+
+推论：**handler 内不需要"预校验余额够不够"再动手**——扣不动时提交期会失败并整体回滚。
+把余额校验和实际扣减写成两段，反而多一处会走偏的口径。
+
+## 主动推送：绕开 `Context.Send` 就得自己补两个 metadata
+
+`c.Send`（内部 `Context.NewSender`）会自动补好推送该有的元信息。**凡是自己拼 metadata 往网关投
+的推送**（tick 协程、内网 RPC 接收端、daemon）都得自己带，漏一个的症状都极具迷惑性：
+
+| key | 值 | 不带会怎样 |
+|---|---|---|
+| `_res_flag` | `message.FlagNoreply` | 客户端见到"既不是应答、又没标不必回执"的包会**自动回执**，那条回执进发送队列等一个永远不来的回包 → 若干秒后报"超时未收到响应"。**推几条就多几条超时**，而业务数据确实到了，完全看不出是推送的锅 |
+| `_rid` | 触发本次推送的**客户端请求序号** | 客户端靠它把推送归到那一次请求上。丢了不报错，只是客户端分不清"这东西是我刚才那下点击换来的" |
+
+跨服时 `_rid` 要**随 RPC 透传**：触发操作的请求打在 A 服，而真正推送的是 B 服，B 手上没有那个序号。
+真正主动的推送（广播、定时投递）本来就没有对应请求，留空即可。
+
+### 🔴 tick / daemon 驱动的推送：路由必须在"拿玩家信息那一刻"一起取走
+
+`c.Send` 在没有 Player 时靠请求 metadata 里的会话标识定位连接——**tick 协程手里根本没有请求**，
+这条路从原理上就覆盖不到（日志只有一句"GUID 与 SocketId 均为空"，服务端一切正常、客户端什么都收不到）。
+
+所以：**取玩家信息的那一次（RPC 拉档案 / 持锁那一刻）就把网关地址 + 会话标识一起取回来自己存着**，
+之后按它直接投网关。踩过两次，症状都是"服务端日志全对、客户端一片空白"。
+
+推论——**推送本身不属于"玩家数据"**：网关只要「网关地址 + 任一会话标识」就能投到那条连接上，
+不需要玩家对象。这让"不碰玩家数据的服"也能自己推消息，不必绕一趟回主服代发。
+
+> ⚠ 会话标识优先级由网关决定（通常"认死一条连接的 id"优先于"账号级 guid"）。
+> **认死连接的那个必须取当次请求的活值，不能用早先存下的快照**——顶号/重连之后，
+> 上一代的数据会被推给刚上来的另一个人。
+
+### ⚠ 网关的连接池往往是**独立实例**，包级函数一个都不能用
+
+网关一般用 `cosnet.New()` 另起一个实例（而非 `cosnet.Default`），因为它要对所持实例做全局性动作：
+关掉默认心跳改由 session 接管、遍历整池计数、注册 Replaced/Disconnect/Authentication 回调。
+共用全局池的话，同进程里别人建的连接会被卷进来、被网关的心跳判超时断掉。
+
+由此：`cosnet.Get(id)` / `cosnet.On(...)` 这类**包级函数查的都是 `Default`，在这里恒不生效且不报错**，
+必须用网关实例上的同名方法。两处都真踩过：按 id 直投恒查不到（"长连接不在线,消息丢弃"，
+而客户端明明连着）；注册在 `Default` 上的错误回调**从来没被触发过**，错误事件静悄悄。
+
+## 多服拆分：同进程能跑、拆进程才炸的一类问题
+
+同一个进程里 `cosgo.Use` 起多个服（主服 + 若干专用服）时，下面几件事**在同进程下全部正常**，
+拆进程那天才集体失效，且**没有一个会报编译错或启动错**。写多服的项目把这段当 checklist：
+
+| 症状 | 根因 | 规矩 |
+|---|---|---|
+| 那个服拿不到玩家、推送哑掉 | 直接 `players.Get(uid)` —— 拆开后那个进程里根本没有这个玩家对象，只会拿到 `ErrNotOnline` | **不碰玩家数据的服不许 import `players`**，一切经 RPC 找主服；连"推一条消息""刷一下心跳"这种不改数据的事也不行 |
+| 内网调用报 `can not found any client:<名字>` | 配置的 `[service]` 段没登记本进程能访问哪些服务 | 新加一个服，除了 `cosgo.Use` 还要在配置里登记。**服务端注册好了、代码也编得过，极难往配置上想**（踩过） |
+| 回包格式静默退回默认、自定义信封失效 | 序列化/模块的注册靠 `init()`，而那个包只是"恰好被别人 import 进来了" | 每个服在自己的 module 里用**导入锚点**显式钉住（`var _ = xxx.Loading`），不要依赖别人替你把包链接进来 |
+
+### 内网 RPC 的两个坑
+
+**坑 1：内网回包的信封和客户端回包不是一套。**
+序列化层要按"这是不是客户端请求"分流：内网调用方拿到的是 RPC 约定的信封，
+按客户端那套封装的话，调用方只能读到 code、数据恒空。
+踩过 `code=0 data=<nil>`，看着像对方没干活，实际是序列化把数据丢了。
+**格式由调用方声明（如 `Accept` 头），服务端不猜**——按返回值类型自动切的话，
+哪天有人换了某个接口的返回类型，格式就静默变了，而调用方可能是你改不动的外部系统。
+
+**坑 2：内网 RPC 改了玩家数据，要自己推变更通知。**
+客户端请求那条链由序列化层自动把本次 operator 打包成"数据变更"塞进回包，**内网 RPC 没人代劳**。
+只推了业务事件、没推变更时的症状是：**东西确实落了库，但客户端本地一件没多、下次登录才冒出来**。
 
 ## 接入约定
 
@@ -558,7 +810,7 @@ code/time/dirty。需要自定义协议体时才这么用。
 | `players/README.md` | 玩家生命周期、7 个状态迁移、事件、内存回收 |
 | `options/README.md` | 运行时配置、`Setting` 可插拔函数（GetIType/GetIMax/Renewal） |
 | `modules/{rank,graph,chat,locator}/README.md` | 排行榜 / 社交图谱 / 聊天 / 全服定位 |
-| `updater` 仓库的 `CLAUDE.md` | **updater 内部实现**：四种数据模型、IType 路由、RAMType、Dirty 追踪、operator 流水线、熔断。改数据层前必读 |
+| `updater` 仓库的 `CLAUDE.md` | **updater 内部实现**：四种数据模型、IType 路由、RAMType、Dirty 追踪、operator 流水线、`Mount` 临时挂载、熔断。改数据层前必读 |
 
 ## Language
 
