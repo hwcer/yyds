@@ -9,6 +9,8 @@ import (
 
 type raceHandle struct{}
 
+type benchData struct{ X int }
+
 func (raceHandle) Handle(c *CS, d any) {
 	c.ITypes.Add(1001, 60, 0, "race-item")
 	c.ITypes.Add(1002, 20, 0, "race-unit")
@@ -28,9 +30,7 @@ func TestReloadRace(t *testing.T) {
 	if err := os.WriteFile(file, []byte(`{"x":1}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	data := &struct {
-		X int `json:"x"`
-	}{}
+	data := &benchData{}
 	if err := Reload(data, file); err != nil {
 		t.Fatalf("首次加载失败:%v", err)
 	}
@@ -54,6 +54,11 @@ func TestReloadRace(t *testing.T) {
 				}
 				if s.Process.Get("race") == nil {
 					t.Error("快照不完整:Process 缺条目")
+					return
+				}
+				//Payload(业务静态数据)与 ITypes/Process 必须同世代发布
+				if d, ok := s.Payload.(*benchData); !ok || d.X != 1 {
+					t.Error("快照不完整:Data 缺失或未解析")
 					return
 				}
 				//兼容转发路径一并压测

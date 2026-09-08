@@ -33,13 +33,16 @@ var snap atomic.Pointer[CS]
 
 func init() {
 	snap.Store(&CS{ITypes: ITypes{}, Process: Process{}})
-}
-
-// CS 一世代配置快照：IType 注册表 + 各 Handle 的预处理产物(Process)。
-// 由 Reload 构建，发布后只读。Handle 接口以 *CS 收发，业务实现无需感知发布细节。
+} // CS 一世代配置快照：IType 注册表 + 各 Handle 的预处理产物(Process) +
+// 业务静态数据(Payload)。
+// 由 Reload 构建，发布后只读。Handle 接口以 *CS 收发(其 d 参数即 c.Payload)，
+// 业务实现无需感知发布细节。
 type CS struct {
 	ITypes
 	Process Process
+	// Payload 业务方传给 Reload 的静态数据对象(通常是 xlsx 导出表的解析结构体)，
+	// 随快照整体原子发布 —— 业务侧不再需要自建全局指针/发布机制。
+	Payload any
 }
 
 // Load 返回当前快照。快照发布后不可变，可放心持有；
@@ -50,24 +53,25 @@ func Load() *CS {
 
 // Reload 重新加载静态数据并原子发布新快照。
 // 构建全程在私有 CS 上进行，任一步失败都不影响线上正在使用的旧快照。
-func Reload(data any, path string) (err error) {
+func Reload(payload any, path string) (err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	c := &CS{ITypes: ITypes{}, Process: Process{}}
+	//Payload 与 ITypes/Process 同快照发布：读者拿到的业务数据与派生表永远同世代。
+	c := &CS{ITypes: ITypes{}, Process: Process{}, Payload: payload}
 	path = cosgo.Abs(path)
 	files, err := os.Stat(path)
 	if err != nil {
 		return
 	}
 	if files.IsDir() {
-		err = c.ReloadFromMultiple(data, path)
+		err = c.ReloadFromMultiple(payload, path)
 	} else {
-		err = c.ReloadFromSingle(data, path)
+		err = c.ReloadFromSingle(payload, path)
 	}
 	if err != nil {
 		return
 	}
-	if !c.verify(data) {
+	if !c.verify(payload) {
 		if cosgo.Debug() {
 			logger.Alert("配置检查未通过!请检查日志")
 		} else {
@@ -75,7 +79,7 @@ func Reload(data any, path string) (err error) {
 		}
 	}
 	for _, v := range handles {
-		v.Handle(c, data)
+		v.Handle(c, payload)
 	}
 	snap.Store(c)
 	return
