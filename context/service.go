@@ -11,6 +11,7 @@ import (
 	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/yyds/config"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
@@ -81,7 +82,8 @@ var handlerFilter server.HandlerFilter = func(node *registry.Node) bool {
 }
 
 var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Context) (reply any, err error) {
-	c := &Context{Context: sc}
+	//Config 在入口一次性取整份快照:请求内 Payload/Process/ITypes 同世代(见 Context.Config 注释)
+	c := &Context{Context: sc, Config: config.Load()}
 	path := c.ServiceMethod()
 	if !gwcfg.HasServiceMethod(path) {
 		return c.handle(node) //内网通信不启用玩家数据

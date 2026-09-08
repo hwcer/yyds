@@ -11,13 +11,13 @@ type raceHandle struct{}
 
 type benchData struct{ X int }
 
-func (raceHandle) Handle(c *CS, d any) {
+func (raceHandle) Handle(c *Snapshot, d any) {
 	c.ITypes.Add(1001, 60, 0, "race-item")
 	c.ITypes.Add(1002, 20, 0, "race-unit")
 	c.Process.Set("race", map[int32]int32{1001: 1})
 }
 
-func (raceHandle) Verify(c *CS, d any) []error { return nil }
+func (raceHandle) Verify(c *Snapshot, d any) []error { return nil }
 
 // TestReloadRace 锁定热更的发布语义：读者与 Reload 并发时不得出现数据竞争
 // (-race 下必须通过)，且读者任一时刻读到的都是完整快照(ITypes 与 Process 同世代，

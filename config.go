@@ -6,10 +6,11 @@ import "github.com/hwcer/yyds/config"
 // 旧版是 `var Config = config.Config` 的实例门面(热更时整体换字段，无同步)，
 // config 包改为原子快照发布后，这里只保留函数转发。
 
-type CS = config.CS
+type Snapshot = config.Snapshot
+type CS = config.Snapshot //旧名兼容，同 Snapshot
 type Handle = config.Handle
 
-func Load() *config.CS { return config.Load() }
+func Load() *config.Snapshot { return config.Load() }
 
 func Is(iid int32, it ...int32) bool { return config.Is(iid, it...) }
 

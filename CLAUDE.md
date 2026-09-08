@@ -42,7 +42,7 @@ yyds 不自己造轮子，它把下面这些仓库组装成游戏服。**修 bug
 
 ```text
 cosgo.Start
-  ├─ 业务 config.Module.Init()   → 加载配置表
+  ├─ 业务 config.Module.Init()   → 加载配置表(原子快照发布，见「配置快照」)
   ├─ yyds.Module.Init()          → options.Initialize、校验 appid/sid、
   │                                 置运营开关、向 master 上报、注册 Metadata
   │     └─ ServerStartHandle     → master 回包交业务层解析（见下）
@@ -81,6 +81,7 @@ cosgo.EventTypLoaded             → players.Start（预加载活跃玩家）
      authorize: 判定 OAuthType
         ↓ cosrpc
 [yyds/context.handlerCaller]        ← 请求生命周期的中枢，读它就懂了一半
+     ⓪ c.Config = config.Load()   → 整份配置快照钉死在本请求上（见「配置快照」）
      ① 内网 RPC（非客户端路径）→ 直接进 handler，不加载玩家数据
      ② players.Serviceable()   → 未启动/关闭中/维护中一律拒绝
      ③ 按 OAuthType 分级放行
@@ -96,6 +97,62 @@ cosgo.EventTypLoaded             → players.Start（预加载活跃玩家）
 
 **收尾是框架做的**：handler 返回后框架自动 `Submit()` 并把数据变更塞进回包。
 **业务 handler 不要自己 `Submit()`**（见「提前拿结果」一节）。
+
+## 配置快照（config.Snapshot）与请求级同源
+
+静态配置是 **copy-on-write 快照**：`Reload` 在私有 `Snapshot` 上完成全部构建
+（读文件、verify、逐个 Handle 预处理），最后 `atomic.Store` 一次发布；读者无锁，
+任意时刻拿到的都是某一世代的完整视图，旧快照发布后永不修改。`-race` 干净。
+
+```go
+type Snapshot struct {
+    ITypes             // iid → IType 注册表(Is/GetIType/GetIMax/GetName)
+    Process            // Handle 预处理产物(概率表/索引)，各业务自定键名
+    Payload any        // 业务传给 Reload 的静态数据(xlsx 导出表解析对象)
+}
+```
+
+**取配置的三种姿势，按一致性需求选：**
+
+| 方式 | 世代保证 | 适用 |
+|------|---------|------|
+| `c.Config` / 经 Context 传参的取数函数 | **整请求同源**：Payload+Process+ITypes 同一世代 | 一次请求内多张表/派生表联动计算（金额、限购、发货） |
+| `config.Load()`（全局实时） | 单次读完整，多次读可能跨世代 | 零散单点查表 |
+| Handle 里构建、`c.Process.Set` 发布的派生表 | 与所在快照同世代 | 概率表、索引等预处理产物 |
+
+🔴 **优先走 `c.Config`**：请求入口（`handlerCaller`）已经把整份快照钉在
+`Context.Config` 上，成本是一次原子读。业务封装取数函数时留一个
+`ctx ...*context.Context` 变参：传了 ctx 就取 `ctx[0].Config`（请求同源），
+不传退回 `config.Load()`——零散调用点不用改，关键流程把 ctx 传进去即可：
+
+```go
+func Data(ctx ...*context.Context) *MyTables {
+    var snap *config.Snapshot
+    if len(ctx) > 0 {
+        snap = ctx[0].Config           // 请求级：同源
+    } else {
+        snap = config.Load()           // 全局实时：单次读完整
+    }
+    if d, ok := snap.Payload.(*MyTables); ok {
+        return d
+    }
+    return myEmpty
+}
+```
+
+**派生数据（预处理表）一律挂 `Process`，不要自建包级缓存**：Handle 收到的
+`c` 就是正在构建的快照，`c.Process.Set(key, v)` 放进去的产物与 Payload 同世代发布；
+热更后旧快照整体退役，不存在"新表配旧索引"的错配，也不存在对在线 map 的并发写。
+自建包级 `var dict = map...` 在 Handle 里重建，等于绕开快照发布——读者拿旧引用
+读新 map（或反之），轻则脏读，重则 `concurrent map write` fatal。
+
+> 派生数据的使用方同样优先从 `c.Config.Process.Get(key)` 取，保证与本次请求的
+> Payload 同源；包级 `config.Load().Process.Get(key)` 只用于无请求上下文的场景
+> （定时任务、启动期）。
+
+**兼容别名**：`CS = Snapshot`（历史叫法，新代码用 `Snapshot`）。
+配置模块接入方式：业务实现 `cosgo.Reload` 接口，内部调 `config.Reload(payload, dir)`，
+`payload` 会被解析并挂上 `Snapshot.Payload` 原子发布。
 
 ## 接口注册（registry）
 
@@ -815,3 +872,7 @@ code/time/dirty。需要自定义协议体时才这么用。
 ## Language
 
 代码注释、错误信息、文档一律中文，保持此约定。
+
+注释与文档**不点名具体项目**：框架是通用库，"如 areyouok/bong 这类项目"这种指涉
+对其他读者毫无信息量还显得莫名其妙。要说明兼容性/历史背景，写"存量引用"、"历史原因"
+即可；项目名只出现在项目自己的仓库里。

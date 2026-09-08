@@ -19,7 +19,7 @@ import (
 
 // 静态数据加载，热更
 //
-// 发布模型是 copy-on-write 快照：Reload 在私有 CS 上完成全部构建(读文件、verify、
+// 发布模型是 copy-on-write 快照：Reload 在私有 Snapshot 上完成全部构建(读文件、verify、
 // 逐个 Handle 预处理)，最后通过一次 atomic Store 整体发布；读者(请求 goroutine)
 // 无锁读取，任意时刻拿到的都是某一世代的完整快照，旧快照发布后永不修改。
 //
@@ -29,15 +29,20 @@ import (
 var mutex sync.RWMutex //仅串行化 Reload 自身；读者无锁走 atomic 快照
 
 // snap 当前配置快照。
-var snap atomic.Pointer[CS]
+var snap atomic.Pointer[Snapshot]
 
 func init() {
-	snap.Store(&CS{ITypes: ITypes{}, Process: Process{}})
-} // CS 一世代配置快照：IType 注册表 + 各 Handle 的预处理产物(Process) +
+	snap.Store(&Snapshot{ITypes: ITypes{}, Process: Process{}})
+}
+
+// CS 是 Snapshot 的旧名别名，仅为兼容存量引用；新代码一律用 Snapshot。
+type CS = Snapshot
+
+// Snapshot 一世代配置快照：IType 注册表 + 各 Handle 的预处理产物(Process) +
 // 业务静态数据(Payload)。
-// 由 Reload 构建，发布后只读。Handle 接口以 *CS 收发(其 d 参数即 c.Payload)，
+// 由 Reload 构建，发布后只读。Handle 接口以 *Snapshot 收发(其 d 参数即 c.Payload)，
 // 业务实现无需感知发布细节。
-type CS struct {
+type Snapshot struct {
 	ITypes
 	Process Process
 	// Payload 业务方传给 Reload 的静态数据对象(通常是 xlsx 导出表的解析结构体)，
@@ -47,17 +52,17 @@ type CS struct {
 
 // Load 返回当前快照。快照发布后不可变，可放心持有；
 // 同一段逻辑要多次访问时取一次局部变量即可，视图天然一致。
-func Load() *CS {
+func Load() *Snapshot {
 	return snap.Load()
 }
 
 // Reload 重新加载静态数据并原子发布新快照。
-// 构建全程在私有 CS 上进行，任一步失败都不影响线上正在使用的旧快照。
+// 构建全程在私有 Snapshot 上进行，任一步失败都不影响线上正在使用的旧快照。
 func Reload(payload any, path string) (err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	//Payload 与 ITypes/Process 同快照发布：读者拿到的业务数据与派生表永远同世代。
-	c := &CS{ITypes: ITypes{}, Process: Process{}, Payload: payload}
+	c := &Snapshot{ITypes: ITypes{}, Process: Process{}, Payload: payload}
 	path = cosgo.Abs(path)
 	files, err := os.Stat(path)
 	if err != nil {
@@ -86,7 +91,7 @@ func Reload(payload any, path string) (err error) {
 }
 
 // ReloadFromSingle 从单个文件中加载配置
-func (cs *CS) ReloadFromSingle(d any, file string) (err error) {
+func (cs *Snapshot) ReloadFromSingle(d any, file string) (err error) {
 	var in []byte
 	if file != "" {
 		in, err = os.ReadFile(cosgo.Abs(file))
@@ -109,7 +114,7 @@ func (cs *CS) ReloadFromSingle(d any, file string) (err error) {
 }
 
 // ReloadFromMultiple 从多个文件中加载数据
-func (cs *CS) ReloadFromMultiple(d any, dir string) error {
+func (cs *Snapshot) ReloadFromMultiple(d any, dir string) error {
 	//vf := reflect.Indirect(reflect.ValueOf(gd.Data))
 	modelType, err := schema.Parse(d)
 	if err != nil {
@@ -144,7 +149,7 @@ func (cs *CS) ReloadFromMultiple(d any, dir string) error {
 	return nil
 }
 
-func (cs *CS) verify(data any) (result bool) {
+func (cs *Snapshot) verify(data any) (result bool) {
 	result = true
 	for _, v := range handles {
 		if errs := v.Verify(cs, data); len(errs) > 0 {

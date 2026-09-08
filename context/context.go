@@ -6,6 +6,7 @@ import (
 
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/gateway/gwcfg"
+	"github.com/hwcer/yyds/config"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -17,6 +18,13 @@ type Context struct {
 	// 不要存进闭包或全局跨请求使用:锁一释放,daemon 随时可能把这个对象释放掉。
 	// 各方法的加锁要求见 player.Player 的类型注释。
 	Player *player.Player
+
+	// Config 请求入口处一次性取到的**整份配置快照**。
+	// 🔴 一次请求内需要配置**同源**(业务表 Payload + 派生表 Process + ITypes
+	// 同一世代)时从这里取：热更恰好落在请求中间，也不会前半段旧表、后半段新表。
+	// 零散的单点读取走 config.Load() 也无妨 —— 快照不可变，任意一次读都是
+	// 某世代的完整视图，只是不保证同请求内多次读是同一世代。
+	Config *config.Snapshot
 }
 
 // Uid 角色ID
