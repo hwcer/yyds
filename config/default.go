@@ -1,31 +1,21 @@
 package config
 
-var Config = &CS{ITypes: ITypes{}, Process: Process{}}
-
-func Is(iid int32, it int32) bool {
-	return Config.ITypes.GetIType(iid) == it
+func Is(iid int32, it ...int32) bool {
+	return Load().ITypes.Is(iid, it...)
 }
 
 func Has(k int32) bool {
-	_, ok := Config.ITypes[k]
-	return ok
+	return Load().ITypes.Has(k)
 }
 
 func GetIMax(iid int32) (r int64) {
-	return Config.GetIMax(iid)
+	return Load().ITypes.GetIMax(iid)
 }
 
 func GetIType(iid int32) (r int32) {
-	return Config.GetIType(iid)
+	return Load().ITypes.GetIType(iid)
 }
 
 func GetName(iid int32) (r string) {
-	if i := Config.ITypes.get(iid); i != nil {
-		r = i.Name
-	}
-	return
-}
-
-func Reload(data any, path string) (err error) {
-	return Config.Reload(data, path)
+	return Load().ITypes.GetName(iid)
 }

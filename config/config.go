@@ -4,33 +4,53 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hwcer/cosgo"
-	"github.com/hwcer/cosgo/schema"
-	"github.com/hwcer/logger"
 	"go/ast"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
+	"sync/atomic"
+
+	"github.com/hwcer/cosgo"
+	"github.com/hwcer/cosgo/schema"
+	"github.com/hwcer/logger"
 )
 
 // 静态数据加载，热更
+//
+// 发布模型是 copy-on-write 快照：Reload 在私有 CS 上完成全部构建(读文件、verify、
+// 逐个 Handle 预处理)，最后通过一次 atomic Store 整体发布；读者(请求 goroutine)
+// 无锁读取，任意时刻拿到的都是某一世代的完整快照，旧快照发布后永不修改。
+//
+// 🔴 快照一旦发布，不得原地写 ITypes/Process 里的任何 map —— 那是 concurrent
+// map write(runtime fatal，不可 recover)。要更新数据就构建新快照整体发布。
 
-// 保存整理过后的配置或者概率表
-var mutex sync.RWMutex
+var mutex sync.RWMutex //仅串行化 Reload 自身；读者无锁走 atomic 快照
 
+// snap 当前配置快照。
+var snap atomic.Pointer[CS]
+
+func init() {
+	snap.Store(&CS{ITypes: ITypes{}, Process: Process{}})
+}
+
+// CS 一世代配置快照：IType 注册表 + 各 Handle 的预处理产物(Process)。
+// 由 Reload 构建，发布后只读。Handle 接口以 *CS 收发，业务实现无需感知发布细节。
 type CS struct {
 	ITypes
 	Process Process
 }
 
-// Register 注册配置检查程序
-func (cs *CS) Register(i ...Handle) {
-	handles = append(handles, i...)
+// Load 返回当前快照。快照发布后不可变，可放心持有；
+// 同一段逻辑要多次访问时取一次局部变量即可，视图天然一致。
+func Load() *CS {
+	return snap.Load()
 }
 
-func (cs *CS) Reload(data any, path string) (err error) {
+// Reload 重新加载静态数据并原子发布新快照。
+// 构建全程在私有 CS 上进行，任一步失败都不影响线上正在使用的旧快照。
+func Reload(data any, path string) (err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	c := &CS{ITypes: ITypes{}, Process: Process{}}
@@ -57,7 +77,7 @@ func (cs *CS) Reload(data any, path string) (err error) {
 	for _, v := range handles {
 		v.Handle(c, data)
 	}
-	Config.ITypes, Config.Process = c.ITypes, c.Process
+	snap.Store(c)
 	return
 }
 
