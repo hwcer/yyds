@@ -38,6 +38,14 @@ func (this *Channel) Leave(name, value string) {
 	this.SetMetadata(s, value)
 }
 
+// Kick 踢出频道中的指定玩家(如会长踢人),uid 为被踢玩家的角色ID
+// 与 Join/Leave 一样挂在**当前请求者**的响应 metadata 上,由网关回包时执行;
+// 值编码为[频道值,被踢UID],网关经 UID->GUID 映射定位被踢者会话
+func (this *Channel) Kick(name, value string, uid string) {
+	s := strings.Join([]string{gwcfg.ServicePlayerChannelKick, name}, "")
+	this.SetMetadata(s, this.Name(value, uid))
+}
+
 // Delete 删除频道，如果消息不为空，先广播后删除
 func (this *Channel) Delete(name, value string, path string, args any, req values.Metadata) {
 	this.broadcast(gwcfg.MessageChannelDelete, name, value, path, args, req)
