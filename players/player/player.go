@@ -112,10 +112,11 @@ func (p *Player) Send(v any, req values.Metadata) {
 		return
 	}
 
-	//网关按 socketId 与 GUID 二选一定位连接,两者都空才是真的投不出去。
-	//Guid 取不到通常意味着角色数据不可读(见 Guid 的说明),但只要请求带了 SocketId 仍能投递
+	//网关按 socketId > GUID > UID 的优先级定位连接,三者都空才是真的投不出去。
+	//Guid 取不到通常意味着角色数据不可读(见 Guid 的说明),此时 UID 兜底:
+	//网关经 UID->GUID 映射仍能定位会话
 	guid := p.Guid()
-	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
+	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" && p.uid == "" {
 		logger.Debug("player guid empty and no socket id:%s", p.Uid())
 		return
 	}

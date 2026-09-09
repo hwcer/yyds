@@ -74,10 +74,10 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		this.Player.Send(v, req)
 		return
 	}
-	//网关按 socketId 与 GUID 二选一定位连接,两者都空就投递不出去 ——
-	//必须在这里拦掉而不是发出去等它静默丢弃
-	if req[gwcfg.ServiceMetadataGUID] == "" && req[gwcfg.ServiceMetadataSocketId] == "" {
-		logger.Alert("消息推送失败,GUID 与 SocketId 均为空,path:%v", path)
+	//网关按 socketId > GUID > UID 的优先级定位连接(UID 走全局映射反查),
+	//三者都空就投递不出去 —— 必须在这里拦掉而不是发出去等它静默丢弃
+	if req[gwcfg.ServiceMetadataSocketId] == "" && req[gwcfg.ServiceMetadataGUID] == "" && req[gwcfg.ServiceMetadataUID] == "" {
+		logger.Alert("消息推送失败,SocketId/GUID/UID 均为空,path:%v", path)
 		return
 	}
 	if req[selector.MetaDataAddress] == "" {
