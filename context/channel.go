@@ -26,24 +26,26 @@ func (this *Channel) Name(name, value string) string {
 	return string(roomByte)
 }
 
+// metadata 频道命令统一编码:key = 命令前缀 + ["name","value"],频道身份由key表达;
+// value 仅 Kick 使用(被踢玩家UID),Join/Leave 为空
+func (this *Channel) metadata(prefix, name, value string) string {
+	return strings.Join([]string{prefix, this.Name(name, value)}, "")
+}
+
 // Join 加入频道
 func (this *Channel) Join(name, value string) {
-	s := strings.Join([]string{gwcfg.ServicePlayerChannelJoin, name}, "")
-	this.SetMetadata(s, value)
+	this.SetMetadata(this.metadata(gwcfg.ServicePlayerChannelJoin, name, value), "")
 }
 
 // Leave  退出频道
 func (this *Channel) Leave(name, value string) {
-	s := strings.Join([]string{gwcfg.ServicePlayerChannelLeave, name}, "")
-	this.SetMetadata(s, value)
+	this.SetMetadata(this.metadata(gwcfg.ServicePlayerChannelLeave, name, value), "")
 }
 
 // Kick 踢出频道中的指定玩家(如会长踢人),uid 为被踢玩家的角色ID
-// 与 Join/Leave 一样挂在**当前请求者**的响应 metadata 上,由网关回包时执行;
-// 值编码为[频道值,被踢UID],网关经 UID->GUID 映射定位被踢者会话
+// 与 Join/Leave 一样挂在**当前请求者**的响应 metadata 上,由网关回包时执行
 func (this *Channel) Kick(name, value string, uid string) {
-	s := strings.Join([]string{gwcfg.ServicePlayerChannelKick, name}, "")
-	this.SetMetadata(s, this.Name(value, uid))
+	this.SetMetadata(this.metadata(gwcfg.ServicePlayerChannelKick, name, value), uid)
 }
 
 // Delete 删除频道，如果消息不为空，先广播后删除
