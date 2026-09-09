@@ -10,7 +10,7 @@ require (
 	github.com/hwcer/cosnet v1.4.5-0.20260827022805-535de6de921f
 	github.com/hwcer/cosrpc v1.4.3-0.20260829022637-3056019a1349
 	github.com/hwcer/cosweb v1.4.3-0.20260814024851-f480f70bdd1a
-	github.com/hwcer/gateway v0.2.3-0.20260909065938-815946350d66
+	github.com/hwcer/gateway v0.2.3-0.20260909071612-786c6cb0765e
 	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
 	github.com/hwcer/pubsub v0.0.0-20260731031827-7640c645c73c
 	github.com/hwcer/pubsub/transport v0.0.0-20260731031827-7640c645c73c
@@ -45,6 +45,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/hwcer/coswss v0.4.2 // indirect
 	github.com/hwcer/pubsub/cosnet v0.0.0-20260731031802-4eab632bf8fe // indirect
 	github.com/hwcer/pubsub/redis v0.0.0-20260731031802-4eab632bf8fe // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
