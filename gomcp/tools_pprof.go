@@ -82,7 +82,7 @@ func runtimeStats(ctx context.Context, req *mcp.CallToolRequest, args runtimeArg
 	if ms.NumGC > 0 {
 		n := min(uint32(len(ms.PauseNs)), ms.NumGC)
 		var sum uint64
-		for i := uint32(0); i < n; i++ {
+		for i := range n {
 			sum += ms.PauseNs[(ms.NumGC-i-1)%uint32(len(ms.PauseNs))]
 		}
 		pauseAvg = float64(sum) / float64(n) / 1e6

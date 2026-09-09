@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 
 	"github.com/hwcer/logger"
@@ -34,12 +35,7 @@ func (its ITypes) Is(iid int32, it ...int32) bool {
 	if i == 0 {
 		return false
 	}
-	for _, v := range it {
-		if i == v {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(it, i)
 }
 
 func (its ITypes) Has(k int32) bool {
@@ -114,7 +110,7 @@ func (its ITypes) Parse(name string, items any, iType int32, iMax int32) (errs [
 	return
 }
 
-func (its ITypes) reflectIType(name string, id int32, i interface{}) int32 {
+func (its ITypes) reflectIType(name string, id int32, i any) int32 {
 	if v, ok := i.(iType); ok {
 		return v.GetIType()
 	}
@@ -126,14 +122,14 @@ func (its ITypes) reflectIType(name string, id int32, i interface{}) int32 {
 	v, _ := strconv.Atoi(s[0:2])
 	return int32(v)
 }
-func (its ITypes) reflectIMax(id int32, i interface{}) int32 {
+func (its ITypes) reflectIMax(id int32, i any) int32 {
 	if v, ok := i.(iMax); ok {
 		return v.GetIMax()
 	}
 	return 0
 }
 
-func (its ITypes) reflectIName(id int32, i interface{}) string {
+func (its ITypes) reflectIName(id int32, i any) string {
 	if v, ok := i.(iName); ok {
 		return v.GetName()
 	}

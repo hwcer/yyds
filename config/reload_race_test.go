@@ -37,10 +37,8 @@ func TestReloadRace(t *testing.T) {
 
 	done := make(chan struct{})
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 8 {
+		wg.Go(func() {
 			for {
 				select {
 				case <-done:
@@ -67,9 +65,9 @@ func TestReloadRace(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
-	for i := 0; i < 300; i++ {
+	for i := range 300 {
 		if err := Reload(data, file); err != nil {
 			t.Fatalf("第%v次热更失败:%v", i, err)
 		}

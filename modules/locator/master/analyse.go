@@ -16,9 +16,9 @@ func init() {
 type Analyse struct {
 }
 
-func (this *Analyse) Caller(node *registry.Node, c *cosweb.Context) interface{} {
+func (this *Analyse) Caller(node *registry.Node, c *cosweb.Context) any {
 	method := node.Method()
-	f := method.(func(*Analyse, *cosweb.Context) interface{})
+	f := method.(func(*Analyse, *cosweb.Context) any)
 	return f(this, c)
 }
 
@@ -28,7 +28,7 @@ type AnalysePageArgs struct {
 	ETime string `json:"ETime"` //结束时间
 }
 
-func (this *Analyse) Page(c *cosweb.Context) interface{} {
+func (this *Analyse) Page(c *cosweb.Context) any {
 	sid := c.GetInt32("sid", cosweb.RequestDataTypeQuery)
 
 	args := &AnalysePageArgs{}

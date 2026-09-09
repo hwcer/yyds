@@ -1,8 +1,8 @@
 package handle
 
 import (
-	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/cosrpc/server"
+	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/yyds/modules/locator/model"
 )
@@ -28,7 +28,7 @@ var Service = server.Service(gwcfg.ServiceTypeLocator)
 // 参数校验 —— 服务间调用同样会传错。
 //
 // 对外的 HTTP 入口在 master/ 包(cosweb + CORS,把请求代理到游戏服),与本包不是一回事。
-func Register(i interface{}, prefix ...string) {
+func Register(i any, prefix ...string) {
 	var arr []string
 	if len(prefix) > 0 {
 		arr = append(arr, prefix...)

@@ -144,16 +144,11 @@ func releaseAll(dict []*player.Player) (failed int32) {
 	if len(dict) == 0 {
 		return
 	}
-	n := migrateWorker()
-	if n > len(dict) {
-		n = len(dict)
-	}
+	n := min(migrateWorker(), len(dict))
 	c := make(chan *player.Player)
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for p := range c {
 				//panic 也算失败:那个玩家的数据没保存成功,得计进去
 				ok := false
@@ -162,7 +157,7 @@ func releaseAll(dict []*player.Player) (failed int32) {
 					atomic.AddInt32(&failed, 1)
 				}
 			}
-		}()
+		})
 	}
 	for _, p := range dict {
 		c <- p

@@ -156,7 +156,7 @@ func (cs *Snapshot) verify(data any) (result bool) {
 			result = false
 			vf := reflect.TypeOf(v)
 			var name string
-			if vf.Kind() == reflect.Ptr {
+			if vf.Kind() == reflect.Pointer {
 				name = vf.Elem().Name()
 			} else {
 				name = vf.Name()

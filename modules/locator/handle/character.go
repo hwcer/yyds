@@ -19,12 +19,12 @@ func init() {
 type character struct {
 }
 
-func (this *character) Caller(node *registry.Node, handle *cosrpc.Context) interface{} {
-	f := node.Method().(func(*character, *cosrpc.Context) interface{})
+func (this *character) Caller(node *registry.Node, handle *cosrpc.Context) any {
+	f := node.Method().(func(*character, *cosrpc.Context) any)
 	return f(this, handle)
 }
 
-func (this *character) Count(c *cosrpc.Context) interface{} {
+func (this *character) Count(c *cosrpc.Context) any {
 	guid := c.GetString("guid")
 	if guid == "" {
 		return c.Error("guid required")
@@ -36,7 +36,7 @@ func (this *character) Count(c *cosrpc.Context) interface{} {
 	return n
 }
 
-func (this *character) Find(c *cosrpc.Context) interface{} {
+func (this *character) Find(c *cosrpc.Context) any {
 	guid := c.GetString("guid")
 	if guid == "" {
 		return c.Error("guid required")
@@ -74,7 +74,7 @@ type CharactersArgs struct {
 //
 // guid（账号 ID）与 create 不下发：调用方要的是「这个角色长什么样」，
 // 不是「他属于哪个账号」。少给一个字段，少一处泄漏面。
-func (this *character) Gets(c *cosrpc.Context) interface{} {
+func (this *character) Gets(c *cosrpc.Context) any {
 	args := &CharactersArgs{}
 	if err := c.Bind(args); err != nil {
 		return err
@@ -93,7 +93,7 @@ func (this *character) Gets(c *cosrpc.Context) interface{} {
 	return rows
 }
 
-func (this *character) Create(c *cosrpc.Context) interface{} {
+func (this *character) Create(c *cosrpc.Context) any {
 	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
 		return err
@@ -131,7 +131,7 @@ func (this *character) Create(c *cosrpc.Context) interface{} {
 }
 
 // Online 角色上线
-func (this *character) Online(c *cosrpc.Context) interface{} {
+func (this *character) Online(c *cosrpc.Context) any {
 
 	args := &model.Character{}
 	if err := c.Bind(args); err != nil {
@@ -182,7 +182,7 @@ func (this *character) Online(c *cosrpc.Context) interface{} {
 }
 
 // Update 更新角色信息
-func (this *character) Update(c *cosrpc.Context) interface{} {
+func (this *character) Update(c *cosrpc.Context) any {
 	v := &model.Character{}
 	if err := c.Bind(v); err != nil {
 		return err

@@ -60,9 +60,8 @@ func TestSubmitConcurrentNoDuplicate(t *testing.T) {
 
 	const n = 50
 	var wg sync.WaitGroup
-	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func() { defer wg.Done(); _ = b.Submit(7) }()
+	for range n {
+		wg.Go(func() { _ = b.Submit(7) })
 	}
 	wg.Wait()
 

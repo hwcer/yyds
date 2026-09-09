@@ -149,10 +149,7 @@ func (this *Chat) Read(t uint64, size int, filter Filter) (n uint64, r []Message
 	// 原子读取当前状态
 	tail := atomic.LoadUint64(&this.tail)
 	head := atomic.LoadUint64(&this.head)
-	count := tail - head
-	if count > uint64(this.cap) {
-		count = uint64(this.cap)
-	}
+	count := min(tail-head, uint64(this.cap))
 
 	// 从尾指针开始向前遍历，获取最新消息
 	current := tail
