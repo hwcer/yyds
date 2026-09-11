@@ -74,10 +74,10 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 		this.Player.Send(v, req)
 		return
 	}
-	//网关按 socketId > GUID > UID 的优先级定位连接(UID 走全局映射反查),
-	//三者都空就投递不出去 —— 必须在这里拦掉而不是发出去等它静默丢弃
-	if req[gwcfg.ServiceMetadataSocketId] == "" && req[gwcfg.ServiceMetadataGUID] == "" && req[gwcfg.ServiceMetadataUID] == "" {
-		logger.Alert("消息推送失败,SocketId/GUID/UID 均为空,path:%v", path)
+	//网关按 socketId > UID 定位推送目标(UID 直查会话表,表键就是 uid;GUID 只做认证,
+	//不参与定位),两者都空就投递不出去 —— 必须在这里拦掉而不是发出去等它静默丢弃
+	if req[gwcfg.ServiceMetadataSocketId] == "" && req[gwcfg.ServiceMetadataUID] == "" {
+		logger.Alert("消息推送失败,SocketId/UID 均为空,path:%v", path)
 		return
 	}
 	if req[selector.MetaDataAddress] == "" {
@@ -102,17 +102,18 @@ func (this *Context) NewSender(path string, req values.Metadata) values.Metadata
 			req.Set(gwcfg.ServiceMetadataRequestId, rid)
 		}
 	}
-	//带上**发起这次请求的那条连接**。网关按 socketId 与 GUID 二选一定位,认 socketId 时
+	//带上**发起这次请求的那条连接**。网关按 socketId 与会话(UID)二选一定位,认 socketId 时
 	//代次隔离是白送的:顶号或重连之后那条连接要么还在(推送与确认包一起回到它)、要么已销毁
-	//(丢弃),绝不会改投新端。按 GUID 投才会——上一代连接的数据推给刚上来的另一个人,
+	//(丢弃),绝不会改投新端。按会话投才会——上一代连接的数据推给刚上来的另一个人,
 	//而那次请求的确认包走的是请求自己的 socket,一次响应被劈成两半。
 	if _, ok := req[gwcfg.ServiceMetadataSocketId]; !ok {
 		if sockId := this.GetMetadata(gwcfg.ServiceMetadataSocketId); sockId != "" {
 			req.Set(gwcfg.ServiceMetadataSocketId, sockId)
 		}
 	}
-	//GUID / UID / 网关地址:网关定位连接与校验归属要用。有 Player 时 player.Send 会用
-	//玩家对象上的值覆盖掉这里的(那份更权威),没有 Player 时就靠这里装的这份。
+	//GUID 只是随行身份信息(网关只拿它认证,不参与定位);真正定位会话的是 UID。
+	//有 Player 时 player.Send 会用玩家对象上的值覆盖掉这里的(那份更权威),
+	//没有 Player 时就靠这里装的这份。
 	if _, ok := req[gwcfg.ServiceMetadataGUID]; !ok {
 		if guid := this.GUid(); guid != "" {
 			req.Set(gwcfg.ServiceMetadataGUID, guid)

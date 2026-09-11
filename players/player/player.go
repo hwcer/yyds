@@ -112,12 +112,13 @@ func (p *Player) Send(v any, req values.Metadata) {
 		return
 	}
 
-	//网关按 socketId > GUID > UID 的优先级定位连接,三者都空才是真的投不出去。
-	//Guid 取不到通常意味着角色数据不可读(见 Guid 的说明),此时 UID 兜底:
-	//网关经 UID->GUID 映射仍能定位会话
+	//网关按 socketId > UID 定位推送目标:请求驱动的推送认 socketId(回到发起它的那条连接,
+	//代次隔离);没有 socketId 的(定时器/跨玩家等主动推送)由网关按 UID 直查会话表
+	//(表键就是 uid)。GUID 只做认证,不参与定位。
+	//uid 恒非空(Player 构造即有),此守卫只是防御,正常永远走不到
 	guid := p.Guid()
-	if guid == "" && req[gwcfg.ServiceMetadataSocketId] == "" && p.uid == "" {
-		logger.Debug("player guid empty and no socket id:%s", p.Uid())
+	if req[gwcfg.ServiceMetadataSocketId] == "" && p.uid == "" {
+		logger.Debug("player uid and socket id both empty:%s", p.Uid())
 		return
 	}
 	if _, ok := req[binder.HeaderContentType]; !ok {
@@ -126,7 +127,8 @@ func (p *Player) Send(v any, req values.Metadata) {
 	req.Set(selector.MetaDataAddress, utils.IPv4Decode(p.Gateway))
 	req.Set(gwcfg.ServiceMetadataUID, p.uid)
 	if guid != "" {
-		req.Set(gwcfg.ServiceMetadataGUID, guid) //空值别写进去,免得网关拿它当有效标识
+		//随行身份信息:网关 send 不消费它(定位靠 socketId/UID),留给日志与业务钩子
+		req.Set(gwcfg.ServiceMetadataGUID, guid)
 	}
 	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGate, gwcfg.MessageSend, v, nil); err != nil {
 		//不能吞掉:推送失败在客户端表现为"没收到",服务端不留痕就完全查不出来
