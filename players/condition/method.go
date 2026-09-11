@@ -4,12 +4,12 @@ import "github.com/hwcer/updater"
 
 // MethodHandle 自定义取值方法接口，用于 TypeMethod 类型
 type MethodHandle interface {
-	Value(u *updater.Updater, value Value) int64
-	Target(u *updater.Updater, value Value)
+	Value(u *updater.Updater, value Target) int64
+	Target(u *updater.Updater, value Target)
 }
 
 // MethodValue 简单取值函数，通过 SetMethod 注册后自动包装为 MethodHandle
-type MethodValue func(u *updater.Updater, value Value) int64
+type MethodValue func(u *updater.Updater, value Target) int64
 
 var methodRegister = map[int32]MethodHandle{}
 
@@ -32,7 +32,7 @@ type defaultMethodValue struct {
 	fun MethodValue
 }
 
-func (this *defaultMethodValue) Value(u *updater.Updater, value Value) int64 {
+func (this *defaultMethodValue) Value(u *updater.Updater, value Target) int64 {
 	return this.fun(u, value)
 }
-func (this *defaultMethodValue) Target(u *updater.Updater, value Value) {}
+func (this *defaultMethodValue) Target(u *updater.Updater, value Target) {}

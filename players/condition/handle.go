@@ -16,7 +16,7 @@ func init() {
 }
 
 // value 获取任务当前进度，若实现了 Judge 接口则对原始值与 ARGS 进行比较后返回
-func value(u *updater.Updater, target Value) (r int64) {
+func value(u *updater.Updater, target Target) (r int64) {
 	if f, ok := handles[target.GetCondition()]; ok {
 		r = f(u, target)
 	} else {
@@ -30,15 +30,8 @@ func value(u *updater.Updater, target Value) (r int64) {
 
 // verify 验证目标条件是否达成
 func verify(u *updater.Updater, target Target) error {
-	var ok bool
-	var val int64
-	switch target.GetCondition() {
-	case TypeNone:
-		ok = true
-	default:
-		val = value(u, target)
-		ok = taskTargetCompare(target, val)
-	}
+	val := value(u, target)
+	ok := taskTargetCompare(target, val)
 	if ok {
 		return nil
 	}
@@ -48,15 +41,10 @@ func verify(u *updater.Updater, target Target) error {
 	return ErrGoalNotAchieved
 }
 
-func taskTargetHandleNone(u *updater.Updater, target Value) (r int64) {
-	if d, ok := target.(GetVal); ok {
-		r = d.GetVal()
-	} else {
-		u.Error = ErrTargetMethodNotFound
-	}
-	return
+func taskTargetHandleNone(u *updater.Updater, target Target) (r int64) {
+	return int64(target.GetGoal())
 }
-func taskTargetHandleEvents(_ *updater.Updater, target Value) (r int64) {
+func taskTargetHandleEvents(_ *updater.Updater, target Target) (r int64) {
 	if d, ok := target.(GetVal); ok {
 		r = d.GetVal()
 	} else {
@@ -64,7 +52,7 @@ func taskTargetHandleEvents(_ *updater.Updater, target Value) (r int64) {
 	}
 	return
 }
-func taskTargetHandleMethod(u *updater.Updater, target Value) int64 {
+func taskTargetHandleMethod(u *updater.Updater, target Target) int64 {
 	key := target.GetKey()
 	if i := GetMethod(key); i != nil {
 		return i.Value(u, target)
@@ -73,12 +61,12 @@ func taskTargetHandleMethod(u *updater.Updater, target Value) int64 {
 	return 0
 }
 
-func taskTargetHandleData(u *updater.Updater, target Value) int64 {
+func taskTargetHandleData(u *updater.Updater, target Target) int64 {
 	return u.Val(target.GetKey())
 }
 
 // daily week
-func taskTargetHandleWeekly(u *updater.Updater, target Value) (r int64) {
+func taskTargetHandleWeekly(u *updater.Updater, target Target) (r int64) {
 	k := target.GetKey()
 	week := times.Weekly(0)
 	r, u.Error = Options.Count(u, k, week, nil)
@@ -86,7 +74,7 @@ func taskTargetHandleWeekly(u *updater.Updater, target Value) (r int64) {
 }
 
 // daily history
-func taskTargetHandleHistory(u *updater.Updater, target Value) (r int64) {
+func taskTargetHandleHistory(u *updater.Updater, target Target) (r int64) {
 	var ts [2]int64
 	if i, ok := target.(GetTimes); ok {
 		ts = i.GetTimes()

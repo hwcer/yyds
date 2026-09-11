@@ -32,7 +32,7 @@ func (v *Verifier) Auto(target Target) {
 }
 
 // Target 预读数据,手动验证
-func (v *Verifier) Target(target Value) {
+func (v *Verifier) Target(target Target) {
 	switch target.GetCondition() {
 	case TypeData:
 		v.u.Select(target.GetKey())
@@ -45,7 +45,7 @@ func (v *Verifier) Target(target Value) {
 }
 
 // Value 查询值
-func (v *Verifier) Value(target Value) int64 {
+func (v *Verifier) Value(target Target) int64 {
 	return value(v.u, target)
 }
 

@@ -19,16 +19,11 @@ const (
 	JudgeRange    = 11 // 范围：ARGS[0] <= val <= ARGS[1]
 )
 
-// Value 根据条件获取对应计数
-type Value interface {
-	GetKey() int32       // 数据键，如 daily id, item id 等
-	GetCondition() int32 // 条件类型，决定取值方式
-}
-
 // Target 验证计数是否达到目标值
 type Target interface {
-	Value
-	GetGoal() int32 // 任务达成目标值
+	GetKey() int32       // 数据键，如 daily id, item id 等
+	GetGoal() int64      // 任务达成目标值 ,21亿不够用，老项目注意改配置
+	GetCondition() int32 // 条件类型，决定取值方式
 }
 
 // Judge ARGS参数判断方式
