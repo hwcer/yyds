@@ -26,7 +26,7 @@ func New(cap int, factory Factory) *Chat {
 		factory = &defaultFactory{}
 	}
 	i := &Chat{cap: cap, factory: factory}
-	i.rows = make([]Message, cap)
+	i.rows = make([]atomic.Pointer[Message], cap)
 	return i
 }
 
@@ -42,11 +42,14 @@ func New(cap int, factory Factory) *Chat {
 // 2. 消息的生命周期由缓冲区大小和写入速度决定
 // 3. 无锁设计依赖于指针操作的原子性，适用于读多写少的场景
 type Chat struct {
-	cap     int       // 环形缓冲区大小
-	rows    []Message // 环形缓冲区，存储消息的数组
-	head    uint64    // 头指针，指向最早的消息位置
-	tail    uint64    // 尾指针，指向下一个要存储的位置
-	factory Factory   // 用户工厂函数
+	cap int // 环形缓冲区大小
+	// rows 槽位原子:Write 的普通槽位写与 Read 的并发裸读是数据竞争,
+	// 且 Message 是接口(双字),撕裂读是内存模型 UB;Store/Load 还附带
+	// release/acquire,保证读者看到的消息字段已完整构造
+	rows    []atomic.Pointer[Message]
+	head    uint64  // 头指针，指向最早的消息位置
+	tail    uint64  // 尾指针，指向下一个要存储的位置
+	factory Factory // 用户工厂函数
 }
 
 // Write 添加消息
@@ -89,8 +92,8 @@ func (this *Chat) Write(text string, args map[string]any, channel *Channel) (Mes
 	m := this.factory.New(tail, text, args, channel)
 	// 计算存储位置
 	index := (tail - 1) % uint64(this.cap)
-	// 存储消息到新位置
-	this.rows[index] = m
+	// 存储消息到新位置(槽位原子 Store,顺带发布消息字段的构造结果)
+	this.rows[index].Store(&m)
 
 	// 检查是否需要移动头指针
 	head := atomic.LoadUint64(&this.head)
@@ -158,10 +161,11 @@ func (this *Chat) Read(t uint64, size int, filter Filter) (n uint64, r []Message
 		index := (current - 1 + uint64(this.cap)) % uint64(this.cap)
 		current = index
 
-		m := rows[index]
-		if m == nil {
+		mp := rows[index].Load()
+		if mp == nil {
 			continue
 		}
+		m := *mp
 
 		if m.GetId() <= t {
 			break

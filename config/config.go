@@ -61,22 +61,32 @@ func Load() *Snapshot {
 func Reload(payload any, path string) (err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
+	//🔴 不能原地复用调用方的 payload：已发布旧快照的 Payload 就是它,
+	//ReloadFromSingle/Multiple 的 json.Unmarshal 会原地写它,与并发读者
+	//构成数据竞争(-race 实报,见 reload_race_test)。每次热更为 payload
+	//建新实例再挂到新快照上——文件是完整数据源,旧快照发布后不可变。
+	//payload 必须是非 nil 指针(原本 json.Unmarshal 也要求指针)
+	rv := reflect.ValueOf(payload)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return errors.New("config.Reload: payload 必须是非 nil 指针")
+	}
+	d := reflect.New(rv.Type().Elem()).Interface()
 	//Payload 与 ITypes/Process 同快照发布：读者拿到的业务数据与派生表永远同世代。
-	c := &Snapshot{ITypes: ITypes{}, Process: Process{}, Payload: payload}
+	c := &Snapshot{ITypes: ITypes{}, Process: Process{}, Payload: d}
 	path = cosgo.Abs(path)
 	files, err := os.Stat(path)
 	if err != nil {
 		return
 	}
 	if files.IsDir() {
-		err = c.ReloadFromMultiple(payload, path)
+		err = c.ReloadFromMultiple(d, path)
 	} else {
-		err = c.ReloadFromSingle(payload, path)
+		err = c.ReloadFromSingle(d, path)
 	}
 	if err != nil {
 		return
 	}
-	if !c.verify(payload) {
+	if !c.verify(d) {
 		if cosgo.Debug() {
 			logger.Alert("配置检查未通过!请检查日志")
 		} else {
@@ -84,7 +94,7 @@ func Reload(payload any, path string) (err error) {
 		}
 	}
 	for _, v := range handles {
-		v.Handle(c, payload)
+		v.Handle(c, d)
 	}
 	snap.Store(c)
 	return

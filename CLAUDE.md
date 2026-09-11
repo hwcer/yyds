@@ -154,6 +154,11 @@ func Data(ctx ...*context.Context) *MyTables {
 配置模块接入方式：业务实现 `cosgo.Reload` 接口，内部调 `config.Reload(payload, dir)`，
 `payload` 会被解析并挂上 `Snapshot.Payload` 原子发布。
 
+🔴 `payload` 必须是**非 nil 指针**，且每次 Reload 会为它建**新实例**——调用方
+手里的对象不再被原地更新，读数据一律走 `config.Load().Payload`。原因：已发布旧
+快照的 Payload 就是调用方对象，原地 Unmarshal 与并发读者是数据竞争（-race 实报过）；
+文件是完整数据源，不在文件里的字段每次热更都会归零。
+
 ## 接口注册（registry）
 
 ```go

@@ -5,16 +5,16 @@ go 1.26.0
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
-	github.com/hwcer/cosgo v1.8.4-0.20260904100637-05162b06213a
-	github.com/hwcer/cosmo v1.4.2-0.20260910034736-4004d0c7bfe9
-	github.com/hwcer/cosnet v1.4.5-0.20260904133133-a8b7e0f7dced
-	github.com/hwcer/cosrpc v1.4.3-0.20260904133137-5a8eb5419ca0
-	github.com/hwcer/cosweb v1.4.3-0.20260904133140-fcf1c4742bf0
-	github.com/hwcer/gateway v0.2.3-0.20260909081022-d0119226bfa9
-	github.com/hwcer/logger v0.2.9-0.20260626033726-42e0a5927245
-	github.com/hwcer/pubsub v0.0.0-20260731031827-7640c645c73c
-	github.com/hwcer/pubsub/transport v0.0.0-20260731031827-7640c645c73c
-	github.com/hwcer/updater v1.5.1-0.20260904100747-8268e8c869f7
+	github.com/hwcer/cosgo v1.8.4-0.20260911040231-26107219a59b
+	github.com/hwcer/cosmo v1.4.2-0.20260910161838-3c1517e5162f
+	github.com/hwcer/cosnet v1.4.5-0.20260911060444-a40608f5f305
+	github.com/hwcer/cosrpc v1.4.3-0.20260911071227-a9322ed7dbbf
+	github.com/hwcer/cosweb v1.4.3-0.20260911071159-bdce28cd6397
+	github.com/hwcer/gateway v0.2.3-0.20260911071342-3603d6072457
+	github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9
+	github.com/hwcer/pubsub v0.0.0-20260911071232-126c2bf0b0fc
+	github.com/hwcer/pubsub/transport v0.0.0-20260911071232-126c2bf0b0fc
+	github.com/hwcer/updater v1.5.1-0.20260910161901-9b1c3df70ec2
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
@@ -45,8 +45,8 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hwcer/pubsub/cosnet v0.0.0-20260731031802-4eab632bf8fe // indirect
-	github.com/hwcer/pubsub/redis v0.0.0-20260731031802-4eab632bf8fe // indirect
+	github.com/hwcer/pubsub/cosnet v0.0.0-20260911071232-126c2bf0b0fc // indirect
+	github.com/hwcer/pubsub/redis v0.0.0-20260911071232-126c2bf0b0fc // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
@@ -96,7 +96,6 @@ require (
 	go.mongodb.org/mongo-driver/v2 v2.7.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
