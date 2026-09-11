@@ -146,8 +146,8 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v1.8.4-0.20260911040231-26107219a59b h1:iz/D2dftiHC0uSOzFIvxcaarE3YunQlZt3jOx0ITy5o=
-github.com/hwcer/cosgo v1.8.4-0.20260911040231-26107219a59b/go.mod h1:TwhT8qyaLcRkMinP6NrSt6TnID/RV/h7Om1W0L/ovmg=
+github.com/hwcer/cosgo v1.8.4-0.20260911081808-b88bf9e06a9e h1:uLXxGjf482gUUbffXWB1C3yRgPV7QICWZDa4ooTLGCc=
+github.com/hwcer/cosgo v1.8.4-0.20260911081808-b88bf9e06a9e/go.mod h1:TwhT8qyaLcRkMinP6NrSt6TnID/RV/h7Om1W0L/ovmg=
 github.com/hwcer/cosmo v1.4.2-0.20260910161838-3c1517e5162f h1:cjE0CG34CPjgRDNApplhiea1mpOD+mUsbZGAoogt+Ak=
 github.com/hwcer/cosmo v1.4.2-0.20260910161838-3c1517e5162f/go.mod h1:GdHFCD7KljCzsohCCoBnHrvc3L1KYAd770/uz/suik8=
 github.com/hwcer/cosnet v1.4.5-0.20260911060444-a40608f5f305 h1:179BoQh96WS67zepm/q8ECDCE3sLGGBT3k+MOPADo38=
