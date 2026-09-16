@@ -19,7 +19,8 @@ func (this *middleware) Emit(u *updater.Updater, t updater.EventType) bool {
 		return true
 	}
 	for _, tar := range this.dict {
-		if u.Error = verify(u, tar); u.Error != nil {
+		if err := verify(u, tar); err != nil {
+			u.Errorf(err)
 			return false
 		}
 	}

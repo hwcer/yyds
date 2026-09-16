@@ -163,7 +163,8 @@ func (p *Player) Loading(test bool) (err error) {
 		}
 	}()
 	if p.Updater == nil {
-		p.Updater = updater.New(p)
+		//玩家域即 Default 域;包级 New() 现在是造域(返回 *Manage),实例经 Manage.New(e) 取
+		p.Updater = updater.Default.New(p)
 	}
 	if err = p.Updater.Loading(p.createComponents); err != nil {
 		return err
@@ -182,6 +183,11 @@ func (p *Player) Key() string {
 }
 
 func (p *Player) Uid() string {
+	return p.uid
+}
+
+// Id 数据属主标识,实现 updater.Entity（Updater.Entity 重构后 New(e) 的准入接口）
+func (p *Player) Id() string {
 	return p.uid
 }
 

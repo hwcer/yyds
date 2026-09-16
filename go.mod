@@ -5,16 +5,16 @@ go 1.26.0
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
-	github.com/hwcer/cosgo v1.8.4-0.20260911081808-b88bf9e06a9e
-	github.com/hwcer/cosmo v1.4.2-0.20260910161838-3c1517e5162f
-	github.com/hwcer/cosnet v1.4.5-0.20260911060444-a40608f5f305
-	github.com/hwcer/cosrpc v1.4.3-0.20260911071227-a9322ed7dbbf
-	github.com/hwcer/cosweb v1.4.3-0.20260911071159-bdce28cd6397
-	github.com/hwcer/gateway v0.2.3-0.20260911081826-0b4fc67ea4dc
+	github.com/hwcer/cosgo v1.8.4-0.20260916091516-7d4abbb6f7b5
+	github.com/hwcer/cosmo v1.4.2-0.20260916105202-f1d44bf0a1ae
+	github.com/hwcer/cosnet v1.4.5-0.20260916105202-24605374d8b0
+	github.com/hwcer/cosrpc v1.4.3-0.20260912010641-a3f2ce8f6bc5
+	github.com/hwcer/cosweb v1.4.3-0.20260912010644-a01b16e4fb97
+	github.com/hwcer/gateway v0.2.3-0.20260912011046-f5a207bd0dea
 	github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9
-	github.com/hwcer/pubsub v0.0.0-20260911071232-126c2bf0b0fc
+	github.com/hwcer/pubsub v0.0.0-20260912010740-f5319c8f3076
 	github.com/hwcer/pubsub/transport v0.0.0-20260911071232-126c2bf0b0fc
-	github.com/hwcer/updater v1.5.1-0.20260910161901-9b1c3df70ec2
+	github.com/hwcer/updater v1.5.1-0.20260916103943-20f5a7762b40
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )

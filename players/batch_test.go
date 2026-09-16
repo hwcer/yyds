@@ -82,7 +82,7 @@ func TestLockerAggregatesSkipShell(t *testing.T) {
 func TestLockerReusesInMemoryPlayer(t *testing.T) {
 	uid := testUid(3)
 	want := player.New(uid, false)
-	want.Updater = updater.New(want) //New 出来的 now 是零值,只有 Reset 会设
+	want.Updater = updater.Default.New(want) //New 出来的 now 是零值,只有 Reset 会设
 	manage.LoadOrStore(want.Key(), want)
 
 	var got *player.Player
