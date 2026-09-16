@@ -154,6 +154,8 @@ github.com/hwcer/cosmo v1.4.2-0.20260912010635-d45f9d037d21 h1:2NcH35DnGnyKJAb7l
 github.com/hwcer/cosmo v1.4.2-0.20260912010635-d45f9d037d21/go.mod h1:3/pItuEzLl8welQ4JdG+FOuKgjq57wmz3/HdAEw9Rwc=
 github.com/hwcer/cosmo v1.4.2-0.20260916105202-f1d44bf0a1ae h1:g+ju5liWfFMnfzCFKxC9mk7Hq+xOMNbtlFo/2ERUU6o=
 github.com/hwcer/cosmo v1.4.2-0.20260916105202-f1d44bf0a1ae/go.mod h1:Nboqk/0FWEMtqlTbB04hyx24UMhUcXRS26P6otK3pxY=
+github.com/hwcer/cosmo v1.4.2-0.20260916132054-a048dbb9d9ef h1:pyNagFxWHDXe/hEUKxdu/pZfv30IlJjEK36JrcN9GgE=
+github.com/hwcer/cosmo v1.4.2-0.20260916132054-a048dbb9d9ef/go.mod h1:Nboqk/0FWEMtqlTbB04hyx24UMhUcXRS26P6otK3pxY=
 github.com/hwcer/cosnet v1.4.5-0.20260912010638-accbbe7c0c42 h1:1DFq9MS6g1UUXnh26RVzufUTNTyjUsjYWzyZgnpOS6U=
 github.com/hwcer/cosnet v1.4.5-0.20260912010638-accbbe7c0c42/go.mod h1:+Ch3aAy/+vnJMbPiymV8JOnzYIpcH69e1OjO2e5k9Es=
 github.com/hwcer/cosnet v1.4.5-0.20260916105202-24605374d8b0 h1:+Ekzvda5LdYxjtbG+uNJ7KaqV9v20UYNACgndcbpock=
