@@ -25,7 +25,10 @@ func loading() (err error) {
 	var record int64
 	tx := Options.Preload.TX()
 
-	if err = tx.Count(&record).Error; err != nil {
+	// 🔴 cosmo 新版 DB.Error 是 *values.Message，直接装 error 接口是 typed-nil
+	// （非 nil 接口包 nil 指针，err != nil 为真而 %v 打 <nil>），必须走 Err() 取真 error。
+	if e := tx.Err(); e != nil {
+		err = e
 		return
 	}
 	if record == 0 {
@@ -49,8 +52,8 @@ func loading() (err error) {
 		return true
 	})
 	close(progress.c)
-	if tx.Error != nil {
-		err = tx.Error
+	if e := tx.Err(); e != nil {
+		err = e
 	}
 	//🔴 必须无条件 Wait:done 的关闭原先只由 Printf 里「value >= total && len(c)==0」触发,
 	//而 Count 与 Range 是两次查询,期间有玩家被删就会出现 rows < record → value 永远到不了
