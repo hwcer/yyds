@@ -6,7 +6,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
 	github.com/hwcer/cosgo v1.8.4-0.20260916091516-7d4abbb6f7b5
-	github.com/hwcer/cosmo v1.4.2-0.20260916132054-a048dbb9d9ef
+	github.com/hwcer/cosmo v1.4.2-0.20260917110138-5a5733af5870
 	github.com/hwcer/cosnet v1.4.5-0.20260916105202-24605374d8b0
 	github.com/hwcer/cosrpc v1.4.3-0.20260912010641-a3f2ce8f6bc5
 	github.com/hwcer/cosweb v1.4.3-0.20260912010644-a01b16e4fb97
