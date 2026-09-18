@@ -6,15 +6,15 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
 	github.com/hwcer/cosgo v1.8.4-0.20260916091516-7d4abbb6f7b5
-	github.com/hwcer/cosmo v1.4.2-0.20260917110138-5a5733af5870
+	github.com/hwcer/cosmo v1.4.2-0.20260918131239-d11d61be48a5
 	github.com/hwcer/cosnet v1.4.5-0.20260916105202-24605374d8b0
-	github.com/hwcer/cosrpc v1.4.3-0.20260912010641-a3f2ce8f6bc5
-	github.com/hwcer/cosweb v1.4.3-0.20260912010644-a01b16e4fb97
-	github.com/hwcer/gateway v0.2.3-0.20260912011046-f5a207bd0dea
+	github.com/hwcer/cosrpc v1.4.3-0.20260918130441-97b3b2b95d1b
+	github.com/hwcer/cosweb v1.4.3-0.20260918130441-656e5f95b184
+	github.com/hwcer/gateway v0.2.3-0.20260916105524-068071407faa
 	github.com/hwcer/logger v0.2.9-0.20260910161556-c8faab738be9
-	github.com/hwcer/pubsub v0.0.0-20260912010740-f5319c8f3076
-	github.com/hwcer/pubsub/transport v0.0.0-20260911071232-126c2bf0b0fc
-	github.com/hwcer/updater v1.5.1-0.20260916103943-20f5a7762b40
+	github.com/hwcer/pubsub v0.0.0-20260918130441-9045f39b8bde
+	github.com/hwcer/pubsub/transport v0.0.0-20260918130441-9045f39b8bde
+	github.com/hwcer/updater v1.5.1-0.20260918130458-b82a0b41ee39
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
@@ -45,8 +45,8 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hwcer/pubsub/cosnet v0.0.0-20260911071232-126c2bf0b0fc // indirect
-	github.com/hwcer/pubsub/redis v0.0.0-20260911071232-126c2bf0b0fc // indirect
+	github.com/hwcer/pubsub/cosnet v0.0.0-20260918130441-9045f39b8bde // indirect
+	github.com/hwcer/pubsub/redis v0.0.0-20260918130441-9045f39b8bde // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
