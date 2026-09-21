@@ -146,8 +146,8 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v1.8.4-0.20260919143343-8f808be6d2f5 h1:sJNbbTWrDvE6dn23Nb1JbLKy7aehAlXfVwY8Cqcxps0=
-github.com/hwcer/cosgo v1.8.4-0.20260919143343-8f808be6d2f5/go.mod h1:RtiJ04/yrHSzqSLD+o/pLJYcrQGr+ywSlwhdDTUU1GE=
+github.com/hwcer/cosgo v1.8.4-0.20260921070442-d9c7eaa706c8 h1:kYrlOBTP4Lw5Tu/qtSMQxhIiGlYB87OK+MYGuDAPFWI=
+github.com/hwcer/cosgo v1.8.4-0.20260921070442-d9c7eaa706c8/go.mod h1:NbT/COc/u9IKPOyTK+xvMdvGg+EiqJwVSzRo1PK99MI=
 github.com/hwcer/cosmo v1.4.2-0.20260920015530-91eb6ab22f07 h1:zpBJsdv7X5eYvCcWdOXlLog2WFCHGqN7aCHse6KqfWg=
 github.com/hwcer/cosmo v1.4.2-0.20260920015530-91eb6ab22f07/go.mod h1:GVCcpuMrZm21Xz2EhjWrLmTB7Cu+fHRgBDDr1o2mlTk=
 github.com/hwcer/cosnet v1.4.5-0.20260920015518-cf307ae3a015 h1:YgwvO5qyEqB6M5qCnMoLEZ9sUI2d86VTg/YnVFNP2kk=
@@ -158,8 +158,8 @@ github.com/hwcer/cosweb v1.4.3-0.20260919130730-3a8ca3a6132d h1:Obs2bCYNjbYJOfuz
 github.com/hwcer/cosweb v1.4.3-0.20260919130730-3a8ca3a6132d/go.mod h1:5f+U+SXLDQU83J7HQHXFpMch2DVG6ZVFXrKVVAneo44=
 github.com/hwcer/gateway v0.2.3-0.20260920015533-b899fc4aeb65 h1:ttozqZud737VamomMj6zGiSF1+tTKMjkPs177jnlKdI=
 github.com/hwcer/gateway v0.2.3-0.20260920015533-b899fc4aeb65/go.mod h1:iWnoNo0efFqxqEfSgrklHoglw4de4dJlW9fvL7PUpe8=
-github.com/hwcer/logger v0.2.9-0.20260919134140-418ce5b2863d h1:Vg3KUFKet/RLVqmTGLeKSlu3aJxyqncU7MSCh7fDktI=
-github.com/hwcer/logger v0.2.9-0.20260919134140-418ce5b2863d/go.mod h1:EjeW8zyZPytb4WuWt81dSvlOvdnQ358hD1TwSC3xVW8=
+github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3 h1:N6q/4Nt6LlpoAwBTz2/jjtRp5NEVxa6ydGmBpEcl0R8=
+github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3/go.mod h1:EjeW8zyZPytb4WuWt81dSvlOvdnQ358hD1TwSC3xVW8=
 github.com/hwcer/pubsub v0.0.0-20260919124547-e38503bbb70d h1:VyUhujK9FCTO5Dtx7/T0KpGBVwbzN/oIr/zf7DhQsz0=
 github.com/hwcer/pubsub v0.0.0-20260919124547-e38503bbb70d/go.mod h1:zqSDhDEvIiNxyjNli4LAEO8pyguREToXUN87KiGQ/yo=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260919124547-e38503bbb70d h1:pLxvQ4VfQHCM6TQLRAPOWckYflEZFYu6GSqZcsb3Fzs=
