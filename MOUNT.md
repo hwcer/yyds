@@ -89,3 +89,10 @@ Collection.New(v) → TypesNew op（op.Result=[v]）→ collectionHandleNew 原�
 | ProjectElf `StageLiteBattle`（进战会话挂载，explore lite-battle session） | ModelIType 开关 / Operators() 组包 / 直插预生成词条 |
 | ProjectElf `StageMount`（stage 会话从 Cache+直写整体迁 Mount，battle 会话内嵌为主字段） | 选型判据 / 零扰动迁移法 / 同 OID 删+插坑 |
 | 回归手法：Mongo 探针直读落库态 | 「提交期落库」的验证不能靠内存读——重启/回收才会暴露 |
+
+## 附：cosmo 错误 API 现状（v1.4.2+，2026-09-21）
+
+- `Errorf(nil)` 判 nil 跳过、**不再生成 `values.Message(nil)`**——早期「成功路径 `db.Error`
+  装 typed-nil、`return tx.Error` 假报错」的隐患从源头消除，下游不再需要强制 `Err()` 防护。
+- 驱动层错误已由 `NormalizeError` 统一转换（可直接读 Code / Args）；`Errorf` 仍是
+  `Error` 字段的唯一写入口。
