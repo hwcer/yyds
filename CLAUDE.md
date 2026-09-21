@@ -502,6 +502,11 @@ handler 返回后才 `Data→Verify→Submit`；一旦提交期失败回滚（�
 它**不违反**"取到的指针一律只读"：那条铁律防的是"改了内存却没进库/会被回滚"，
 而这里库上一行刚写完、这条改动本来也不该回滚。
 
+> 📘 **机制深潜见 [MOUNT.md](MOUNT.md)**：operator 去向开关（ModelIType / 纯服务端数据不声明 IType）、
+> `Operators()` 读取窗口、写路径三坑（未知 OID / Insert 自带 _id / 删+插同 OID 静默 0 行）、
+> Mount vs 直写选型与零扰动迁移法、`Collection.New` 直插 vs `Add` 工厂（预生成词条的唯一通道）、
+> Attach.Unmarshal 的切片类型匹配。
+
 ## 🔴 iid 推导不出 IType 的集合：模型必须自己覆盖 `IType()`
 
 `Updater.Add/Sub` 是**按 iid 全局路由**到 handle 的。所以一旦某个集合的"iid"其实是**别的业务的
