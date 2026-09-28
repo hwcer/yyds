@@ -5,16 +5,16 @@ go 1.26.0
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
-	github.com/hwcer/cosgo v1.8.4-0.20260921070442-d9c7eaa706c8
-	github.com/hwcer/cosmo v1.4.2-0.20260920015530-91eb6ab22f07
-	github.com/hwcer/cosnet v1.4.5-0.20260920015518-cf307ae3a015
-	github.com/hwcer/cosrpc v1.4.3-0.20260919131230-b06927f4b7d9
-	github.com/hwcer/cosweb v1.4.3-0.20260919130730-3a8ca3a6132d
-	github.com/hwcer/gateway v0.2.3-0.20260920015533-b899fc4aeb65
+	github.com/hwcer/cosgo v1.8.4-0.20260928015829-93729f09c8f8
+	github.com/hwcer/cosmo v1.4.2-0.20260920082107-67cc097c032d
+	github.com/hwcer/cosnet v1.4.5-0.20260928020043-1a6bdf6a99a2
+	github.com/hwcer/cosrpc v1.4.3-0.20260920082138-cf3cc1379c60
+	github.com/hwcer/cosweb v1.4.3-0.20260920082144-5a3eb58fbf6c
+	github.com/hwcer/gateway v0.2.3-0.20260928020057-e4bda08eb61e
 	github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3
-	github.com/hwcer/pubsub v0.0.0-20260919124547-e38503bbb70d
-	github.com/hwcer/pubsub/transport v0.0.0-20260919124547-e38503bbb70d
-	github.com/hwcer/updater v1.5.1-0.20260920015536-881c2ad26a6d
+	github.com/hwcer/pubsub v0.0.0-20260920082343-816f154f6954
+	github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954
+	github.com/hwcer/updater v1.5.1-0.20260928020100-16b6c756b771
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
@@ -45,8 +45,8 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hwcer/pubsub/cosnet v0.0.0-20260919124547-e38503bbb70d // indirect
-	github.com/hwcer/pubsub/redis v0.0.0-20260919124547-e38503bbb70d // indirect
+	github.com/hwcer/pubsub/cosnet v0.0.0-20260920082343-816f154f6954 // indirect
+	github.com/hwcer/pubsub/redis v0.0.0-20260920082343-816f154f6954 // indirect
 	github.com/juju/ratelimit v1.0.2 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/kavu/go_reuseport v1.5.0 // indirect
