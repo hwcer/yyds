@@ -10,7 +10,7 @@ require (
 	github.com/hwcer/cosnet v1.4.5-0.20260928020043-1a6bdf6a99a2
 	github.com/hwcer/cosrpc v1.4.3-0.20260920082138-cf3cc1379c60
 	github.com/hwcer/cosweb v1.4.3-0.20260920082144-5a3eb58fbf6c
-	github.com/hwcer/gateway v0.2.3-0.20260928020057-e4bda08eb61e
+	github.com/hwcer/gateway v0.2.3-0.20260928022510-7b896a03dd77
 	github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3
 	github.com/hwcer/pubsub v0.0.0-20260920082343-816f154f6954
 	github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954
