@@ -5,8 +5,8 @@ go 1.26.0
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
-	github.com/hwcer/cosgo v1.8.4-0.20260928102218-22f89e4dbb23
-	github.com/hwcer/cosmo v1.4.2-0.20260920082107-67cc097c032d
+	github.com/hwcer/cosgo v1.8.4-0.20260928162937-0959603166cf
+	github.com/hwcer/cosmo v1.4.2-0.20260928170328-00b3339c84b1
 	github.com/hwcer/cosnet v1.4.5-0.20260928020043-1a6bdf6a99a2
 	github.com/hwcer/cosrpc v1.4.3-0.20260920082138-cf3cc1379c60
 	github.com/hwcer/cosweb v1.4.3-0.20260920082144-5a3eb58fbf6c
@@ -14,7 +14,7 @@ require (
 	github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3
 	github.com/hwcer/pubsub v0.0.0-20260920082343-816f154f6954
 	github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954
-	github.com/hwcer/updater v1.5.1-0.20260928020100-16b6c756b771
+	github.com/hwcer/updater v1.5.1-0.20260928172007-51bdc862cfa3
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
