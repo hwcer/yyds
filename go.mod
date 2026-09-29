@@ -6,15 +6,15 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
 	github.com/hwcer/cosgo v1.8.4-0.20260928162937-0959603166cf
-	github.com/hwcer/cosmo v1.4.2-0.20260928170328-00b3339c84b1
-	github.com/hwcer/cosnet v1.4.5-0.20260928125441-a4b473555ab4
-	github.com/hwcer/cosrpc v1.4.3-0.20260920082138-cf3cc1379c60
-	github.com/hwcer/cosweb v1.4.3-0.20260920082144-5a3eb58fbf6c
+	github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451
+	github.com/hwcer/cosnet v1.4.5-0.20260929012553-1e6600cd247f
+	github.com/hwcer/cosrpc v1.4.3-0.20260929012557-83c5014dc7fd
+	github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc
 	github.com/hwcer/gateway v0.2.3-0.20260929012609-d39953edbbc0
 	github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3
-	github.com/hwcer/pubsub v0.0.0-20260920082343-816f154f6954
+	github.com/hwcer/pubsub v0.0.0-20260928130025-91840971fde7
 	github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954
-	github.com/hwcer/updater v1.5.1-0.20260928172007-51bdc862cfa3
+	github.com/hwcer/updater v1.5.1-0.20260929012612-e12b4e0e624a
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
