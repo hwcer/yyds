@@ -32,10 +32,11 @@ type callArgs struct {
 	Path string         `json:"path" jsonschema:"客户端接口路径,如 /shop/getter、/debug/add"`
 	Args map[string]any `json:"args,omitempty" jsonschema:"接口入参,JSON 对象"`
 	Guid string         `json:"guid,omitempty" jsonschema:"账号 guid;仅 /roles /create /select 等未选角接口需要"`
+	IP   string         `json:"ip,omitempty" jsonschema:"伪装的客户端 IP;order/create 等接口带给 master 验参,默认 127.0.0.1"`
 }
 
 func handleCall(ctx context.Context, req *mcp.CallToolRequest, args callArgs) (*mcp.CallToolResult, any, error) {
-	r, err := Call(args.Uid, args.Path, args.Args, &CallOptions{Guid: args.Guid})
+	r, err := Call(args.Uid, args.Path, args.Args, &CallOptions{Guid: args.Guid, ClientIP: args.IP})
 	if err != nil {
 		return nil, nil, err
 	}

@@ -96,8 +96,9 @@ func prepare(uid string, gateway uint64) (uint64, error) {
 
 // CallOptions 调用可选项。
 type CallOptions struct {
-	Guid    string //OAuthTypeOAuth 级别的接口(如 /roles /create /select)需要
-	Gateway uint64 //网关标识,留空时自动取玩家当前网关,玩家离线则用 gomcp.Gateway
+	Guid     string //OAuthTypeOAuth 级别的接口(如 /roles /create /select)需要
+	Gateway  uint64 //网关标识,留空时自动取玩家当前网关,玩家离线则用 gomcp.Gateway
+	ClientIP string //伪装的客户端 IP;order/create 等接口会把它带给 master 验参,空则默认 127.0.0.1
 }
 
 // Call 以指定 uid 的身份调用一个 handle 接口。
@@ -141,6 +142,14 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	}
 	if opt.Guid != "" {
 		req[gwcfg.ServiceMetadataGUID] = opt.Guid
+	}
+	//客户端 IP:players daemon 会把 ServiceMetadataAddress 写进 p.Address,
+	//order/create 等接口随单传给 master 验参(ORDER_CLIENT_IP_EMPTY)。开发工具
+	//默认填本机回环,可经 CallOptions.ClientIP 覆盖。
+	if opt.ClientIP != "" {
+		req[gwcfg.ServiceMetadataAddress] = opt.ClientIP
+	} else {
+		req[gwcfg.ServiceMetadataAddress] = "127.0.0.1"
 	}
 	if gate > 0 {
 		req[gwcfg.ServiceMetadataGateway] = strconv.FormatUint(gate, 10)
