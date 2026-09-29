@@ -158,8 +158,8 @@ github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc h1:QrR2X+l3SFP646mx
 github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc/go.mod h1:eIUgoTPkakXQPn8KstRn/rEDOro0dLKDXiFDnFTTDmA=
 github.com/hwcer/gateway v0.2.3-0.20260929012609-d39953edbbc0 h1:Q3w8KYy5iRv9Scp8caNklYd8Ny4eIVGwXaKLA4QHO5E=
 github.com/hwcer/gateway v0.2.3-0.20260929012609-d39953edbbc0/go.mod h1:QK4Tvsua/wwZOR+/+dql9ebyYu9WIlGS8T+zCPaa1xc=
-github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3 h1:N6q/4Nt6LlpoAwBTz2/jjtRp5NEVxa6ydGmBpEcl0R8=
-github.com/hwcer/logger v0.2.9-0.20260920081328-3986f6f383d3/go.mod h1:EjeW8zyZPytb4WuWt81dSvlOvdnQ358hD1TwSC3xVW8=
+github.com/hwcer/logger v0.2.9-0.20260929015922-b9e86c661538 h1:k6SqhablhdEdgrNPC6Y9zPk7542CcGpJmTqUlINlrvQ=
+github.com/hwcer/logger v0.2.9-0.20260929015922-b9e86c661538/go.mod h1:EjeW8zyZPytb4WuWt81dSvlOvdnQ358hD1TwSC3xVW8=
 github.com/hwcer/pubsub v0.0.0-20260928130025-91840971fde7 h1:TMiNW3BW6JWJNDgB3rBrEmV9tor6p3CJepI/LltMfZM=
 github.com/hwcer/pubsub v0.0.0-20260928130025-91840971fde7/go.mod h1:edkWLRQ08oyWtik4Cgb+vKHuGUlHSFisPZ2gt/hcoGk=
 github.com/hwcer/pubsub/cosnet v0.0.0-20260920082343-816f154f6954 h1:fqur9lU7VgGTeGr+9xkfd7PRkfOXzu5Sg+qoG9C7vLw=
@@ -168,8 +168,8 @@ github.com/hwcer/pubsub/redis v0.0.0-20260920082343-816f154f6954 h1:NrvvmND+ynIO
 github.com/hwcer/pubsub/redis v0.0.0-20260920082343-816f154f6954/go.mod h1:mJUnNaBZKIUkOArc1oxdwPw+1Vqdls+1Ad6iHJpHn8M=
 github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954 h1:C2dGS1mjM+BKvFKDO21HFpgd6p4JYFuPMnzqr5Vfk24=
 github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954/go.mod h1:XnCB7P4o9Wj4YW0C3VoFHGnI08GiEPHCRfsC6LUOEXY=
-github.com/hwcer/updater v1.5.1-0.20260929012612-e12b4e0e624a h1:Js7rUkPO4m/ogymx1htn8eOu20Hqk9fjbGISsJWr8mI=
-github.com/hwcer/updater v1.5.1-0.20260929012612-e12b4e0e624a/go.mod h1:yE4nSVXJlMdwBIaMxO7Rk+EqFSAoyCRdHb8LwQaTurY=
+github.com/hwcer/updater v1.5.1-0.20260929021054-12c47c4c08b6 h1:V95F4VvjQyuUxVw1CSMYyr1h72Gd0RhYyXWJ4D1brLg=
+github.com/hwcer/updater v1.5.1-0.20260929021054-12c47c4c08b6/go.mod h1:yE4nSVXJlMdwBIaMxO7Rk+EqFSAoyCRdHb8LwQaTurY=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/json-iterator/go v1.1.9/go.mod h1:KdQUCv79m/52Kvf8AW2vK1V8akMuk1QjK/uOdHXbAo4=
 github.com/juju/ratelimit v1.0.2 h1:sRxmtRiajbvrcLQT7S+JbqU0ntsb9W2yhSdNN8tWfaI=
