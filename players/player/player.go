@@ -247,15 +247,15 @@ func (p *Player) Initialize() error {
 func (p *Player) On(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
 	return p.Emitter.On(t, args, handle)
 }
-func (p *Player) Emit(t int32, v int32, args ...int32) {
-	p.Emitter.Emit(t, v, args...)
+
+// Eager 注册急切监听：Emit 调用返回前当场执行（不等提交期）。
+// 语义与限制见 emitter.Emitter.Eager——只做校验/只读判定，禁止写玩家数据。
+func (p *Player) Eager(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
+	return p.Emitter.Eager(t, args, handle)
 }
 
-// Dispatch 立即派发事件（同步执行监听器，不进提交期缓冲）。语义与限制见
-// emitter.Emitter.Dispatch——只给"请求进行中要同步结论"的校验类场合用，
-// 监听器禁止写玩家数据。
-func (p *Player) Dispatch(t int32, v int32, args ...int32) {
-	p.Emitter.Dispatch(t, v, args...)
+func (p *Player) Emit(t int32, v int32, args ...int32) {
+	p.Emitter.Emit(t, v, args...)
 }
 
 // Listen 使用name注册监听避免重复,同名覆盖参数和回调

@@ -14,17 +14,18 @@ type Listener interface {
 type Context struct {
 	args     []int32 //任务匹配参数
 	name     string  //可选去重
+	eager    bool    //急切监听：Emit 当场执行，不等提交期
 	listener Listener
 	callback Callback
 	Filter   FilterFunc //过滤函数
 	Attach   values.Values
 }
 
-func NewContext(args []int32, callback Callback) *Context {
-	return &Context{args: args, callback: callback, Attach: values.Values{}}
+func NewContext(args []int32, callback Callback, eager bool) *Context {
+	return &Context{args: args, eager: eager, callback: callback, Attach: values.Values{}}
 }
-func NewContextWithListener(name string, args []int32, l Listener) *Context {
-	return &Context{name: name, args: args, listener: l, Attach: values.Values{}}
+func NewContextWithListener(name string, args []int32, l Listener, eager bool) *Context {
+	return &Context{name: name, args: args, eager: eager, listener: l, Attach: values.Values{}}
 }
 
 func (l *Context) Args() (r []int32) {
