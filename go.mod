@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
-	github.com/hwcer/cosgo v1.8.4-0.20260928162937-0959603166cf
+	github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8
 	github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451
 	github.com/hwcer/cosnet v1.4.5-0.20260929012553-1e6600cd247f
 	github.com/hwcer/cosrpc v1.4.3-0.20260929012557-83c5014dc7fd

@@ -146,8 +146,8 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v1.8.4-0.20260928162937-0959603166cf h1:YOS/XxSo6G694wPmQ/wMHDi2gTrA0WMlMnV42aVIGfA=
-github.com/hwcer/cosgo v1.8.4-0.20260928162937-0959603166cf/go.mod h1:NbT/COc/u9IKPOyTK+xvMdvGg+EiqJwVSzRo1PK99MI=
+github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8 h1:VXwqYrKa+uYYrf8lwrQCw4+urj+v8GkWM9RX1Nqhv78=
+github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8/go.mod h1:NbT/COc/u9IKPOyTK+xvMdvGg+EiqJwVSzRo1PK99MI=
 github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451 h1:Kgo0IfagYHjzmeD2604IMlVsebVhCyBen0Hubc4NkmE=
 github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451/go.mod h1:k6zw/tc/C05bwK4kLYzozWUgxmWaABc3FPcPJBvDgjI=
 github.com/hwcer/cosnet v1.4.5-0.20260929012553-1e6600cd247f h1:JjdRpDMS5wqpA6T91aFyrh/N+QCm/uMeyvl5qcMlIec=
