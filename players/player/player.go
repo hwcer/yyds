@@ -251,6 +251,13 @@ func (p *Player) Emit(t int32, v int32, args ...int32) {
 	p.Emitter.Emit(t, v, args...)
 }
 
+// Dispatch 立即派发事件（同步执行监听器，不进提交期缓冲）。语义与限制见
+// emitter.Emitter.Dispatch——只给"请求进行中要同步结论"的校验类场合用，
+// 监听器禁止写玩家数据。
+func (p *Player) Dispatch(t int32, v int32, args ...int32) {
+	p.Emitter.Dispatch(t, v, args...)
+}
+
 // Listen 使用name注册监听避免重复,同名覆盖参数和回调
 func (p *Player) Listen(name string, t int32, args []int32, handle emitter.Listener) (r *emitter.Context, err error) {
 	return p.Emitter.Listen(name, t, args, handle)
