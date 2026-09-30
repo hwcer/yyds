@@ -3,14 +3,11 @@ package condition
 import (
 	"errors"
 	"github.com/hwcer/cosgo/times"
-	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/updater"
 )
 
-var (
-	ErrGoalNotAchieved      = values.Error("goal not achieved")
-	ErrTargetMethodNotFound = values.Error("任务数据模型未实现接口(GetVal),即时任务无法通过验证")
-)
+// 哨兵错误已上移至 yyds/errors(ErrGoalNotAchieved / ErrTargetMethodNotFound),
+// 保持 values.Error 构造,错误码不变。
 
 // Options 全局配置，使用前需设置 Count 函数以支持 Weekly/History 类型的统计查询
 var Options = &struct {

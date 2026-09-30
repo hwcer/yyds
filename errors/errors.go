@@ -2,16 +2,10 @@ package errors
 
 import (
 	"github.com/hwcer/cosgo/values"
-	"github.com/hwcer/updater"
 )
 
-func init() {
-	updater.ErrCodeArgsIllegal = ErrArgEmpty.Code
-	updater.ErrCodeItemNotEnough = ErrItemNotEnough.Code
-	updater.ErrCodeItemNotExist = ErrItemNotExist.Code
-	updater.ErrCodeITypeNotExist = ErrITypeNotExist.Code
-	updater.ErrCodeObjectIdEmpty = ErrObjectIdEmpty.Code
-}
+// updater 的业务错误已哨兵化(9000~9005),不再经 ErrCode* 注入换码;
+// 框架错误与本侧错误码冲突时,由本侧在 handler 边界翻译,不在 init 期改码。
 
 var (
 	ErrLogin            = values.Errorf(1, "not login")         //请重新登录
@@ -27,8 +21,10 @@ var (
 	ErrNotOnline        = values.Errorf(14, "user not online")           //不在线
 	ErrServerClosed     = values.Errorf(15, "server closed")
 	ErrServerMaintain   = values.Errorf(16, "server maintain") //服务器维护中,由业务层置位
+
 	//本进程没有玩家容器(players.Standalone),却走到了要玩家数据的路径。
 	//多半是把 Player 级的路由注册进了这类服务 —— 见 players.Standalone
+
 	ErrServerStandalone = values.Errorf(17, "server has no player container")
 
 	ErrLoginAgain    = values.Errorf(101, "please login again") //需要重新登录
@@ -48,4 +44,5 @@ var (
 	ErrITypeNotExist = values.Errorf(128, "itype not exist")
 	ErrObjectIdEmpty = values.Errorf(129, "oid empty")
 
+	ErrGoalNotAchieved = values.Errorf(130, "goal not achieved")
 )
