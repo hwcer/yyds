@@ -52,3 +52,18 @@ type Errorf interface {
 type GetCompare interface {
 	GetCompare() int32
 }
+
+// JudgeCompare 返回成功裁决的value个数
+func JudgeCompare(judge Judge, value ...int32) (r int32) {
+	if judge == nil {
+		return 0
+	}
+	j := judge.GetJudge()
+	args := judge.GetArgs()
+	for _, v := range value {
+		if taskJudgeCompare(j, v, args) {
+			r += 1
+		}
+	}
+	return
+}

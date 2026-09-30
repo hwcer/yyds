@@ -703,11 +703,18 @@ c.Player.Condition.Auto(cfg)  // 自动版：内部含预读登记，失败时�
 ## 事件监听（players/emitter）
 
 ```go
-p.Listen(name string, key int32, args []int32, handle emitter.Listener) (*emitter.Context, error)
-p.On(key int32, args []int32, handle emitter.Callback) *emitter.Context
+p.Listen(name string, key int32, judge condition.Judge, handle emitter.Listener) (*emitter.Context, error)
+p.On(key int32, judge condition.Judge, handle emitter.Callback) *emitter.Context
 p.Emit(key int32, val int32, args ...int32)
 ```
 
+- **`judge` 是裁决器**（通常传 `condition.Array`，nil 表示不裁决）：注册了非 `JudgeNone`
+  的裁决时，事件 args 逐个过 `JudgeCompare`，**匹配计数取代 val 传给回调**。
+- **派发时机由注册方声明**（全局 `players.On(t, h, eager...)` 同理）：
+  默认惰性——业务事件（`p.Emit`）在 updater 提交期随事务派发（失败请求事件丢弃）；
+  系统事件（连接/断线/顶号）由 daemon 直发，当场全量执行。
+  `eager=true` 急切——随 Emit 当场执行，用于请求中途的只读校验/拦单（u.Errorf 立刻
+  反映到 Updater.Error 供调用方拦截）；**禁止写玩家数据**（副作用不随请求回滚）。
 - **`name` 同名自动去重**（覆盖旧监听），业务层不必自己维护去重状态——这是 `Listen` 相对
   `On` 的主要价值。命名约定用「模块名_业务id」（`break_1`、`task_233`），同模块多个并行
   监听才不会互相覆盖。

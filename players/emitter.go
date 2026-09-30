@@ -14,26 +14,14 @@ const (
 
 // 全局事件
 
-func On(t int32, handle emitter.EventsFunc) {
-	emitter.Events.Listen(t, handle)
+// On 注册全局事件监听。eager 传 true 为急切监听:随 Emit 当场执行;
+// 默认(惰性)对系统事件(连接/断线等)当场执行、对业务事件(p.Emit)在 updater 提交期派发。
+// 急切监听在请求未过验证时就可能运行,只做只读校验/拦单,禁止写玩家数据(副作用不随请求回滚)。
+func On(t int32, handle emitter.EventsFunc, eager ...bool) {
+	emitter.Listen(t, handle, eager...)
 }
 
-// Eager 注册急切全局监听：随 Player.Emit 当场执行（不等提交期）。
-// 只做校验/只读判定（如拦单）；副作用不随请求回滚，禁止写玩家数据。
-func Eager(t int32, handle emitter.EventsFunc) {
-	emitter.Events.Eager(t, handle)
-}
-
-func Listen(t int32, handle emitter.EventsFunc) {
-	emitter.Events.Listen(t, handle)
-}
-
-// SetFilter 全局任务条件判断方式
-func SetFilter(t int32, f emitter.FilterFunc) {
-	emitter.Filters.Register(t, f)
-}
-
-// SetMonitor 注册事件监控，触发每一个事件
-func SetMonitor(f emitter.MonitorFunc) {
-	emitter.Monitor.Register(f)
+// Listen 注册全局事件监听,等同 On
+func Listen(t int32, handle emitter.EventsFunc, eager ...bool) {
+	emitter.Listen(t, handle, eager...)
 }

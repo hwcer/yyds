@@ -59,9 +59,9 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 	// 不同端不同协议顶号
 	if status == player.StatusConnected {
 		if oldGateway == gateway {
-			emitter.Events.Emit(p.Updater, EventReconnect)
+			emitter.Emit(p.Updater, EventReconnect)
 		} else {
-			emitter.Events.Emit(p.Updater, EventReplace)
+			emitter.Emit(p.Updater, EventReplace)
 		}
 		return
 	} else if status == player.StatusNone || status == player.StatusDisconnect || status == player.StatusOffline {
@@ -76,7 +76,7 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 		p.Message = &player.Message{}
 	}
 	playersOnline.Add(1)
-	emitter.Events.Emit(p.Updater, EventConnect)
+	emitter.Emit(p.Updater, EventConnect)
 	return
 }
 
@@ -97,7 +97,7 @@ func disconnect(p *player.Player) bool {
 	playersOnline.Add(-1)
 	p.Lock()
 	defer p.Unlock()
-	emitter.Events.Emit(p.Updater, EventDisconnect)
+	emitter.Emit(p.Updater, EventDisconnect)
 	return true
 }
 
@@ -113,7 +113,7 @@ func offline(p *player.Player) bool {
 	p.KeepAlive(0)
 	p.Lock()
 	defer p.Unlock()
-	emitter.Events.Emit(p.Updater, EventOffline)
+	emitter.Emit(p.Updater, EventOffline)
 	return true
 }
 

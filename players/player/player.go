@@ -244,23 +244,18 @@ func (p *Player) Initialize() error {
 	return nil
 }
 
-func (p *Player) On(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
-	return p.Emitter.On(t, args, handle)
-}
-
-// Eager 注册急切监听：Emit 调用返回前当场执行（不等提交期）。
-// 语义与限制见 emitter.Emitter.Eager——只做校验/只读判定，禁止写玩家数据。
-func (p *Player) Eager(t int32, args []int32, handle emitter.Callback) (r *emitter.Context) {
-	return p.Emitter.Eager(t, args, handle)
+// On 注册玩家事件监听(提交期派发)。judge 为裁决参数(如 condition.Array),可为 nil 表示不裁决
+func (p *Player) On(t int32, judge condition.Judge, handle emitter.Callback) (r *emitter.Context) {
+	return p.Emitter.On(t, judge, handle)
 }
 
 func (p *Player) Emit(t int32, v int32, args ...int32) {
 	p.Emitter.Emit(t, v, args...)
 }
 
-// Listen 使用name注册监听避免重复,同名覆盖参数和回调
-func (p *Player) Listen(name string, t int32, args []int32, handle emitter.Listener) (r *emitter.Context, err error) {
-	return p.Emitter.Listen(name, t, args, handle)
+// Listen 使用name注册监听避免重复,同名覆盖参数和回调(提交期派发)
+func (p *Player) Listen(name string, t int32, judge condition.Judge, handle emitter.Listener) (r *emitter.Context, err error) {
+	return p.Emitter.Listen(name, t, judge, handle)
 }
 func (p *Player) Connected() bool {
 	return atomic.LoadInt32(&p.Status) == StatusConnected
@@ -287,7 +282,7 @@ func (p *Player) KeepAlive(t int64) {
 // AddItems  无脑添加道具
 // items类型itemGroup,itemProbability,[]itemGroup,[]itemProbability
 // multi[分子,分母]
-func (p *Player) AddItems(items interface{}, multi ...int64) {
+func (p *Player) AddItems(items any, multi ...int64) {
 	//概率
 	power := [2]int64{1, 0}
 	if len(multi) > 0 {
@@ -334,7 +329,7 @@ func (p *Player) AddItems(items interface{}, multi ...int64) {
 // SubItems  无脑扣除道具
 // items类型itemGroup,[]itemGroup
 // multi[分子,分母]
-func (p *Player) SubItems(items interface{}, multi ...int64) {
+func (p *Player) SubItems(items any, multi ...int64) {
 	//物品
 	power := [2]int64{1, 0}
 	if len(multi) > 0 {

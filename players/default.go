@@ -86,10 +86,10 @@ func Terminate(p *player.Player) bool {
 	//Connected 欠 Disconnect+Offline,Disconnect 只欠 Offline,None/Offline 不欠
 	if from == player.StatusConnected {
 		playersOnline.Add(-1)
-		emitter.Events.Emit(p.Updater, EventDisconnect)
+		emitter.Emit(p.Updater, EventDisconnect)
 	}
 	if from == player.StatusConnected || from == player.StatusDisconnect {
-		emitter.Events.Emit(p.Updater, EventOffline)
+		emitter.Emit(p.Updater, EventOffline)
 	}
 	return true
 }

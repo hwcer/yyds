@@ -16,14 +16,23 @@ func init() {
 }
 
 // value 获取任务当前进度，若实现了 Judge 接口则对原始值与 ARGS 进行比较后返回
+// 如果使用了裁决（Judge） 返回值是裁决结果(0/1)
+// 自定义统计函数（TypeMethod）不会裁决，因为是不是需要裁决可以也应该在统计函数中自己决定
 func value(u *updater.Updater, target Target) (r int64) {
-	if f, ok := handles[target.GetCondition()]; ok {
+	t := target.GetCondition()
+	if f, ok := handles[t]; ok {
 		r = f(u, target)
 	} else {
 		logger.Alert("Condition unknown,Condition:%v,Key:%v", target.GetCondition(), target.GetKey())
 	}
-	if j, ok := target.(Judge); ok {
-		r = taskJudgeCompare(j.GetJudge(), r, j.GetArgs())
+	if judge, ok := target.(Judge); ok && t != TypeMethod {
+		if j := judge.GetJudge(); j == JudgeNone {
+			//保持原值，不进行裁决
+		} else if taskJudgeCompare(j, int32(r), judge.GetArgs()) {
+			r = 1
+		} else {
+			r = 0
+		}
 	}
 	return
 }
@@ -70,7 +79,10 @@ func taskTargetHandleWeekly(u *updater.Updater, target Target) (r int64) {
 	k := target.GetKey()
 	week := times.Weekly(0)
 	r, err := Options.Count(u, k, week, nil)
-	u.Errorf(err)
+	if err != nil {
+		_ = u.Errorf(err)
+	}
+
 	return
 }
 
@@ -90,41 +102,41 @@ func taskTargetHandleHistory(u *updater.Updater, target Target) (r int64) {
 		et = times.Unix(ts[1])
 	}
 	r, err := Options.Count(u, k, st, et)
-	u.Errorf(err)
+	if err != nil {
+		_ = u.Errorf(err)
+	}
 	return
 }
 
-// taskJudgeCompare 根据 Judge 类型将 val 与 args 比较，匹配返回1，否则返回0
-func taskJudgeCompare(judge int32, val int64, args []int32) int64 {
+// taskJudgeCompare 根据 Judge 类型将 val 与 args 比较，返回成功或者失败
+func taskJudgeCompare(judge int32, val int32, args []int32) bool {
 	var ok bool
 	switch judge {
 	case JudgeNone:
-		return val // JudgeNone 直接返回原始值，绝大多数查询值并不使用Judge来比较
+		ok = true
 	case JudgeEqual:
-		ok = len(args) > 0 && val == int64(args[0])
+		ok = len(args) > 0 && val == args[0]
 	case JudgeGte:
-		ok = len(args) > 0 && val >= int64(args[0])
+		ok = len(args) > 0 && val >= (args[0])
 	case JudgeLte:
-		ok = len(args) > 0 && val <= int64(args[0])
+		ok = len(args) > 0 && val <= (args[0])
 	case JudgeContains:
 		for _, arg := range args {
-			if val == int64(arg) {
+			if val == (arg) {
 				ok = true
 				break
 			}
 		}
 	case JudgeRange:
-		ok = len(args) > 1 && val >= int64(args[0]) && val <= int64(args[1])
+		ok = len(args) > 1 && val >= (args[0]) && val <= (args[1])
 	default:
 		//与上面 value() 对未知 Condition 的处理对称：fail-closed 之后表现是"条件永远不达成"，
 		//不打日志就只能靠猜。绝大多数是配表 Judge 列填错。
 		logger.Alert("Judge unknown,Judge:%v,Val:%v,Args:%v", judge, val, args)
-		return 0 // 未知的 Judge 类型直接返回0
+		ok = false // 未知的 Judge 类型直接返回0
 	}
-	if ok {
-		return 1
-	}
-	return 0
+
+	return ok
 }
 
 // taskTargetCompare 目标比较

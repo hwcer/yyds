@@ -3,6 +3,7 @@ package emitter
 import (
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/players/condition"
 )
 
 type Callback func(att values.Values, val int32) bool //满足条件后的更新器,返回false移除监听
@@ -12,37 +13,31 @@ type Listener interface {
 }
 
 type Context struct {
-	args     []int32 //任务匹配参数
-	name     string  //可选去重
-	eager    bool    //急切监听：Emit 当场执行，不等提交期
+	name     string          //可选去重
+	judge    condition.Judge //裁决参数是否匹配
 	listener Listener
 	callback Callback
-	Filter   FilterFunc //过滤函数
 	Attach   values.Values
 }
 
-func NewContext(args []int32, callback Callback, eager bool) *Context {
-	return &Context{args: args, eager: eager, callback: callback, Attach: values.Values{}}
+func NewContext(judge condition.Judge, callback Callback) *Context {
+	return &Context{judge: judge, callback: callback, Attach: values.Values{}}
 }
-func NewContextWithListener(name string, args []int32, l Listener, eager bool) *Context {
-	return &Context{name: name, args: args, eager: eager, listener: l, Attach: values.Values{}}
+func NewContextWithListener(name string, judge condition.Judge, l Listener) *Context {
+	return &Context{name: name, judge: judge, listener: l, Attach: values.Values{}}
 }
 
-func (l *Context) Args() (r []int32) {
-	if n := len(l.args); n > 0 {
-		r = make([]int32, n)
-		copy(r, l.args)
-	}
-	return
+func (l *Context) Judge() condition.Judge {
+	return l.judge
 }
 
 func (l *Context) Name() string {
 	return l.name
 }
 
-func (l *Context) caller(u *updater.Updater, t int32, v int32, args []int32) bool {
-	if !l.compare(t, args) {
-		return true
+func (l *Context) caller(u *updater.Updater, v int32, args []int32) bool {
+	if l.judge != nil && l.judge.GetJudge() != condition.JudgeNone {
+		v = condition.JudgeCompare(l.judge, args...)
 	}
 	if l.callback != nil {
 		return l.callback(l.Attach, v)
@@ -50,14 +45,4 @@ func (l *Context) caller(u *updater.Updater, t int32, v int32, args []int32) boo
 		return l.listener.Listener(u, l.Attach, v)
 	}
 	return false // 无回调的监听无意义，移除
-}
-
-func (l *Context) compare(t int32, args []int32) bool {
-	if len(l.args) == 0 {
-		return true
-	}
-	if l.Filter != nil {
-		return l.Filter(l.args, args)
-	}
-	return Filters.Compare(t, l.args, args)
 }
