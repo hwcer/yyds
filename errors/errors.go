@@ -4,8 +4,11 @@ import (
 	"github.com/hwcer/cosgo/values"
 )
 
-// updater 的业务错误已哨兵化(9000~9005),不再经 ErrCode* 注入换码;
-// 框架错误与本侧错误码冲突时,由本侧在 handler 边界翻译,不在 init 期改码。
+// updater 的业务错误已哨兵化(框架级 500 系,业务级 501~506;ErrCode* 换码变量已移除)。
+// 项目定制错误码的正解:**init 期直接设置哨兵本体的 Code**(如
+// updater.ErrItemNotEnough.Code = 202),运行期一律 Clone 带参 —— 码表集中在
+// 项目启动期,不在调用点散落换码。yyds 框架自身不改 updater 的哨兵码;
+// 框架错误码与项目码冲突时,由项目在 init 期统一规划。
 
 var (
 	ErrLogin            = values.Errorf(1, "not login")         //请重新登录
