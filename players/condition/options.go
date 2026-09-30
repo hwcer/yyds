@@ -2,12 +2,13 @@ package condition
 
 import (
 	"errors"
+
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/updater"
 )
 
-// 哨兵错误已上移至 yyds/errors(ErrGoalNotAchieved / ErrTargetMethodNotFound),
-// 保持 values.Error 构造,错误码不变。
+// 哨兵错误 ErrGoalNotAchieved 已上移至 yyds/errors(显式编号 130);
+// 原 ErrTargetMethodNotFound 在 handleNone 重写后已无引用,随之移除。
 
 // Options 全局配置，使用前需设置 Count 函数以支持 Weekly/History 类型的统计查询
 var Options = &struct {

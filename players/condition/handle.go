@@ -4,6 +4,7 @@ import (
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/errors"
 )
 
 func init() {
@@ -47,7 +48,7 @@ func verify(u *updater.Updater, target Target) error {
 	if ef, _ := target.(Errorf); ef != nil {
 		return ef.Errorf(val)
 	}
-	return ErrGoalNotAchieved
+	return errors.ErrGoalNotAchieved
 }
 
 func taskTargetHandleNone(u *updater.Updater, target Target) (r int64) {
