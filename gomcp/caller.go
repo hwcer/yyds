@@ -64,7 +64,12 @@ const Gateway uint64 = 1 << 62
 //
 //	玩家已在内存 —— 沿用它当前的 gateway(为零则用 gomcp.Gateway),避免被判定顶号
 //	玩家不在内存 —— 用 players.Login 载入并置为在线,之后由空闲回收机制自然释放
-func prepare(uid string, gateway uint64) (uint64, error) {
+//
+// 🔴 Login 的 meta 必须带 ServiceMetadataAddress:玩家一经 Login 即 Connected,
+// 后续请求在 handlerCaller 里走「已在线」分支、不会重进 Connected,p.Address
+// 只能随这次 Login 落上。缺了它,req 里带再多地址也没人消费,order/create
+// 传给 master 的 client_ip 恒空(ORDER_CLIENT_IP_EMPTY)。
+func prepare(uid string, gateway uint64, clientIP string) (uint64, error) {
 	if uid == "" {
 		return gateway, nil //无需玩家身份的接口
 	}
@@ -85,6 +90,7 @@ func prepare(uid string, gateway uint64) (uint64, error) {
 	}
 	meta := map[string]string{
 		gwcfg.ServiceMetadataGateway: strconv.FormatUint(gate, 10),
+		gwcfg.ServiceMetadataAddress: clientIP,
 		binder.HeaderAccept:          binder.Json.Name(),
 		binder.HeaderContentType:     binder.Json.Name(),
 	}
@@ -127,7 +133,15 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	}
 	per, _ := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
 
-	gate, err := prepare(uid, opt.Gateway)
+	//客户端 IP:players daemon 会把 ServiceMetadataAddress 写进 p.Address,
+	//order/create 等接口随单传给 master 验参(ORDER_CLIENT_IP_EMPTY)。开发工具
+	//默认填本机回环,可经 CallOptions.ClientIP 覆盖。归一一次,prepare 的 Login
+	// meta 与本次 RPC 的 req 共用。
+	ip := opt.ClientIP
+	if ip == "" {
+		ip = "127.0.0.1"
+	}
+	gate, err := prepare(uid, opt.Gateway, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -137,19 +151,12 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 		gwcfg.ServiceMetadataServerId:   strconv.Itoa(int(options.Game.Sid)),
 		gwcfg.ServiceMetadataPermission: strconv.Itoa(int(per)),
 		gwcfg.ServiceMetadataDeveloper:  "1", //开发工具身份,放行 master 级(/debug/*)接口
+		gwcfg.ServiceMetadataAddress:    ip,
 		binder.HeaderContentType:        binder.Json.Name(),
 		binder.HeaderAccept:             binder.Json.Name(),
 	}
 	if opt.Guid != "" {
 		req[gwcfg.ServiceMetadataGUID] = opt.Guid
-	}
-	//客户端 IP:players daemon 会把 ServiceMetadataAddress 写进 p.Address,
-	//order/create 等接口随单传给 master 验参(ORDER_CLIENT_IP_EMPTY)。开发工具
-	//默认填本机回环,可经 CallOptions.ClientIP 覆盖。
-	if opt.ClientIP != "" {
-		req[gwcfg.ServiceMetadataAddress] = opt.ClientIP
-	} else {
-		req[gwcfg.ServiceMetadataAddress] = "127.0.0.1"
 	}
 	if gate > 0 {
 		req[gwcfg.ServiceMetadataGateway] = strconv.FormatUint(gate, 10)
