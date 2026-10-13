@@ -71,6 +71,11 @@ const Gateway uint64 = 1 << 62
 // 传给 master 的 client_ip 恒空(ORDER_CLIENT_IP_EMPTY)。
 func prepare(uid string, gateway uint64, clientIP string) (uint64, error) {
 	if uid == "" {
+		//OAuth 级接口(/oauth /create /select)链路里 online.Create/Select 要网关标挂会话，
+		//MCP 越过网关直调时自己就是网关——不落标会 "gateway is empty"
+		if gateway == 0 {
+			gateway = Gateway
+		}
 		return gateway, nil //无需玩家身份的接口
 	}
 	gate := gateway
