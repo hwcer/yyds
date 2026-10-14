@@ -131,7 +131,7 @@ var handlerCaller server.HandlerCaller = func(node *registry.Node, sc *cosrpc.Co
 		if p.Error != nil {
 			return p.Error
 		}
-		//Status 是无锁 CAS 状态机(disconnect/offline/recycling 的 CAS 都在玩家锁之外),
+		//Status 是原子 CAS 状态机(disconnect/offline 的 CAS 在玩家锁内、recycling 在锁外),
 		//持有玩家锁也不能裸读;只读一次存局部变量,两次读之间 daemon 可能已经翻了状态
 		status := atomic.LoadInt32(&p.Status)
 		//拒绝态必须在 KeepAlive 之前判,否则刷新心跳会把踢下线无声撤销

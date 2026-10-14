@@ -5,7 +5,7 @@ import (
 	"github.com/hwcer/updater"
 )
 
-// triggers 触发所有事件时立即响应，可以提前做一些事情
+// triggers 触发所有业务事件时立即响应，可以提前做一些事情
 
 var triggers []triggerFunc
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/logger"
-	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -86,10 +85,10 @@ func Terminate(p *player.Player) bool {
 	//Connected 欠 Disconnect+Offline,Disconnect 只欠 Offline,None/Offline 不欠
 	if from == player.StatusConnected {
 		playersOnline.Add(-1)
-		emitter.Emit(p.Updater, EventDisconnect)
+		Emit(p, EventDisconnect)
 	}
 	if from == player.StatusConnected || from == player.StatusDisconnect {
-		emitter.Emit(p.Updater, EventOffline)
+		Emit(p, EventOffline)
 	}
 	return true
 }

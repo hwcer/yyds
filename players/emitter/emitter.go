@@ -32,12 +32,13 @@ func (e *Emitter) On(t int32, judge condition.Judge, handle Callback) (r *Contex
 	return
 }
 
-// Emit 触发事件：急切监听（注册时声明 eager=true 的）**当场执行**；
+// Emit 触发业务事件：急切监听（注册时声明 eager=true 的）**当场执行**；
 // 惰性监听进缓冲，updater 提交期随事务派发（失败请求事件丢弃）。
 // 什么时候收到反馈由**监听方注册时声明**，触发方无需关心。
 //
-// 🔴 不能调包级 emitter.Emit：那是系统事件入口，会把惰性监听一并立即执行——
-// 此处请求尚未过验证，提前跑惰性（可能写数据）破坏"随事务派发"的语义。
+// 🔴 系统事件（连接/断线等玩家生命周期）不走 emitter：一律走 updater
+//（players.Emit → u.Emit，见 players/events.go）；此处请求尚未过验证，
+// 提前跑惰性（可能写数据）破坏"随事务派发"的语义。
 func (e *Emitter) Emit(name int32, v int32, args ...int32) {
 	vs := make([]int32, 0, len(args)+1)
 	vs = append(vs, v)

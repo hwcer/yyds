@@ -5,6 +5,7 @@ import (
 	"github.com/hwcer/updater"
 )
 
+// 全局业务事件
 type EventsFunc func(u *updater.Updater, vs ...int32)
 
 var events = map[int32][]EventsFunc{}
@@ -32,24 +33,6 @@ func Listen(t int32, handle EventsFunc, eager ...bool) {
 		}
 		events[t] = append(events[t], handle)
 	}
-}
-
-// Emit 系统事件入口（daemon/Terminate 的连接、断线、顶号等）：
-// trigger + 急切/惰性监听**全部立即执行**。
-//
-// 这些事件发出时没有在途请求——不存在"等 updater 提交期"的那一天，不立即跑惰性监听
-// 它就永远收不到（离线结算正是惰性监听，且断线时刻的写入经 bulkWrite 随 Destroy 落库，
-// 没有回滚问题）。业务路径的派发不走这里：Player.Emit 只跑急切监听并缓冲惰性到提交期
-// （见 Emitter.Emit），那时请求还没过验证，提前跑惰性会影响业务正确性。
-func Emit(u *updater.Updater, t int32, args ...int32) {
-	//没有数据的玩家(Load init=false 留下的空壳)不产生事件:框架侧虽然不解引用 u,
-	//但业务注册的监听几乎一定会,把 nil 交出去等于让业务崩
-	if u == nil {
-		return
-	}
-	trigger(u, t, args...)
-	dispatch(u, t, args, true)
-	dispatch(u, t, args, false)
 }
 
 // dispatch 按 eager 标记派发（eagerOnly=true 跑急切监听，false 跑惰性监听）。

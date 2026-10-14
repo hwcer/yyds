@@ -19,6 +19,7 @@ import (
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/players/inbox"
 	"github.com/hwcer/yyds/players/condition"
 	"github.com/hwcer/yyds/players/emitter"
 )
@@ -68,7 +69,8 @@ type Player struct {
 	Status    int32               //在线状态
 	Times     *Times              //时间控制器
 	Condition *condition.Verifier //全局条件验证器
-	Emitter   *emitter.Emitter    //全局事件
+	Emitter   *emitter.Emitter    //全局事件（业务）
+	Inbox     *inbox.Inbox        //系统事件收件箱（见 players/inbox）
 	Message   *Message            //最后一次发包的 MESSAGE
 	Gateway   uint64              //网关地址
 	Address   string              //客户端地址(ip)
@@ -81,6 +83,7 @@ func (p *Player) createComponents() {
 	p.Times = &Times{p: p}
 	p.Condition = condition.New(p.Updater)
 	p.Emitter = emitter.New(p.Updater)
+	p.Inbox = inbox.New(p.Updater)
 }
 
 // Send 推送消息
@@ -214,6 +217,7 @@ func (p *Player) Destroy() error {
 	if p.Updater == nil {
 		p.Pending = Pending{}
 		p.Emitter = nil
+		p.Inbox = nil
 		return nil
 	}
 	if err := p.Updater.Destroy(); err != nil {

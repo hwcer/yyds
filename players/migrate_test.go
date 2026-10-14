@@ -5,6 +5,10 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/players/inbox"
+	"github.com/hwcer/yyds/players/player"
 )
 
 // TestMigratePostNeverBlocks 🔴 投递**绝不能阻塞** daemon。
@@ -14,13 +18,13 @@ import (
 func TestMigratePostNeverBlocks(t *testing.T) {
 	old := migrate
 	t.Cleanup(func() { migrate = old })
-	migrate = make(chan func(), 2) //故意不起 worker:投满两个之后就该拒
+	migrate = make(chan *migrateTask, 2) //故意不起 worker:投满两个之后就该拒
 
-	if !migratePost(func() {}) || !migratePost(func() {}) {
+	if !migratePost(&migrateTask{}) || !migratePost(&migrateTask{}) {
 		t.Fatal("队列没满就拒绝投递")
 	}
 	done := make(chan bool, 1)
-	go func() { done <- migratePost(func() {}) }()
+	go func() { done <- migratePost(&migrateTask{}) }()
 	select {
 	case ok := <-done:
 		if ok {
@@ -39,7 +43,7 @@ func TestMigratePostWithoutPool(t *testing.T) {
 	migrate = nil
 
 	done := make(chan bool, 1)
-	go func() { done <- migratePost(func() {}) }()
+	go func() { done <- migratePost(&migrateTask{}) }()
 	select {
 	case ok := <-done:
 		if ok {
@@ -50,16 +54,19 @@ func TestMigratePostWithoutPool(t *testing.T) {
 	}
 }
 
-// TestMigrateCallRecovers 逐个任务 recover:一个玩家迁移时 panic,不能带走整个 worker。
+// TestMigrateTaskRunRecovers 任务自带 recover:一个玩家迁移时 panic,不能带走整个 worker。
 //
 // 🔴 搬进执行池之前这些动作跑在 daemon 里,由 worker() 那层 recover 兜着 —— 代价是当轮剩下的
 // 迁移全部作废。按任务隔离之后,一个坏玩家只影响他自己;不隔离的话是 worker 协程直接消失,
 // 剩下的玩家从此没人释放,而且悄无声息。
-func TestMigrateCallRecovers(t *testing.T) {
-	migrateCall(func() { panic("boom") }) //没被 recover 的话这里就把测试打挂了
+func TestMigrateTaskRunRecovers(t *testing.T) {
+	p := newInboxPlayer("t9")
+	pending := &migrateTask{p: p, handles: []migrateFunc{func(*player.Player) { panic("boom") }}}
+	pending.run() //没被 recover 的话这里就把测试打挂了
 
 	ran := false
-	migrateCall(func() { ran = true })
+	ok := &migrateTask{p: p, handles: []migrateFunc{func(*player.Player) { ran = true }}}
+	ok.run()
 	if !ran {
 		t.Fatal("panic 之后后续任务应当照常执行")
 	}
@@ -83,11 +90,12 @@ func TestReleaseAllEmpty(t *testing.T) {
 func TestMigrateProcessDrainsOnStop(t *testing.T) {
 	old := migrate
 	t.Cleanup(func() { migrate = old })
-	migrate = make(chan func(), 16)
+	migrate = make(chan *migrateTask, 16)
 
 	var n int32
+	p := newInboxPlayer("t10")
 	for i := 0; i < 5; i++ {
-		migrate <- func() { atomic.AddInt32(&n, 1) }
+		migrate <- &migrateTask{p: p, handles: []migrateFunc{func(*player.Player) { atomic.AddInt32(&n, 1) }}}
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() //进入循环时 ctx 已经 Done,模拟"信号先到、队列还有货"
@@ -112,11 +120,12 @@ func TestMigrateProcessDrainsOnStop(t *testing.T) {
 func TestMigrateDrain(t *testing.T) {
 	old := migrate
 	t.Cleanup(func() { migrate = old })
-	migrate = make(chan func(), 16)
+	migrate = make(chan *migrateTask, 16)
 
 	var n int32
+	dp := newInboxPlayer("t11")
 	for i := 0; i < 3; i++ {
-		migrate <- func() { atomic.AddInt32(&n, 1) }
+		migrate <- &migrateTask{p: dp, handles: []migrateFunc{func(*player.Player) { atomic.AddInt32(&n, 1) }}}
 	}
 	migrateDrain()
 	if got := atomic.LoadInt32(&n); got != 3 {
@@ -138,4 +147,20 @@ func TestMigrateDrainWithoutPool(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("nil 队列上排空被阻塞")
 	}
+}
+
+// testInboxEntity/newInboxPlayer 任务包测试夹具：裸 Player + 固定时刻 Reset 的 Updater
+// + 手动挂 Async（生产由 createComponents 挂载）。now 零值的 Unix() 是公元元年的
+// 负数，CD 门闸会恒真误闸——夹具必须先 Reset 固定时刻。
+type testInboxEntity struct{ id string }
+
+func (e *testInboxEntity) Id() string { return e.id }
+
+func newInboxPlayer(id string) *player.Player {
+	p := player.New(id, false)
+	u := updater.Default.New(&testInboxEntity{id: id})
+	u.Reset(time.Unix(1000, 0))
+	p.Updater = u
+	p.Inbox = inbox.New(u)
+	return p
 }

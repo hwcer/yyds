@@ -14,7 +14,7 @@ require (
 	github.com/hwcer/logger v0.2.9-0.20260929015922-b9e86c661538
 	github.com/hwcer/pubsub v0.0.0-20260928130025-91840971fde7
 	github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954
-	github.com/hwcer/updater v1.5.1-0.20261001132654-af572512c365
+	github.com/hwcer/updater v1.5.1-0.20261014084202-dcbc7bc55c2d
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/smallnest/rpcx v1.9.4
 )
@@ -22,7 +22,7 @@ require (
 require (
 	github.com/akutz/memconn v0.1.0 // indirect
 	github.com/alitto/pond v1.9.2 // indirect
-	github.com/apache/thrift v0.23.0 // indirect
+	github.com/apache/thrift v0.24.0 // indirect
 	github.com/cenk/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
