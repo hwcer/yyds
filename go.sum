@@ -158,8 +158,12 @@ github.com/hwcer/cosrpc v1.4.3-0.20260929012557-83c5014dc7fd h1:2dU++dJlR+rzzsxw
 github.com/hwcer/cosrpc v1.4.3-0.20260929012557-83c5014dc7fd/go.mod h1:rZEzw/2gd4UgNRlmiKo/LoSk5VsSdi5aDaaSl2K+CYo=
 github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc h1:QrR2X+l3SFP646mxwhfiK9ZemXtV3exeQE6YFRMJBg4=
 github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc/go.mod h1:eIUgoTPkakXQPn8KstRn/rEDOro0dLKDXiFDnFTTDmA=
+github.com/hwcer/coswss v0.4.3-0.20260919124110-4afe71b0b891 h1:f93YgRxEUPwAo1Fj0gWRqWpnNiDI64RZZmQSdzEHqjE=
+github.com/hwcer/coswss v0.4.3-0.20260919124110-4afe71b0b891/go.mod h1:VBkpWEvL5kC/ioK/ad8bidx+hA/oHn11xjAAiT0roXA=
 github.com/hwcer/gateway v0.2.3-0.20260929012609-d39953edbbc0 h1:Q3w8KYy5iRv9Scp8caNklYd8Ny4eIVGwXaKLA4QHO5E=
 github.com/hwcer/gateway v0.2.3-0.20260929012609-d39953edbbc0/go.mod h1:QK4Tvsua/wwZOR+/+dql9ebyYu9WIlGS8T+zCPaa1xc=
+github.com/hwcer/gateway v0.2.3-0.20261014110556-ab7c418dd1df h1:2SdFc380YIhhkT4INhaKSxt6j2xkoNRsPXmy58JthBk=
+github.com/hwcer/gateway v0.2.3-0.20261014110556-ab7c418dd1df/go.mod h1:R6Iv3uCgOz53tQihur3hAbV+F7AaleVk8Yqz7ykdlPc=
 github.com/hwcer/logger v0.2.9-0.20260929015922-b9e86c661538 h1:k6SqhablhdEdgrNPC6Y9zPk7542CcGpJmTqUlINlrvQ=
 github.com/hwcer/logger v0.2.9-0.20260929015922-b9e86c661538/go.mod h1:EjeW8zyZPytb4WuWt81dSvlOvdnQ358hD1TwSC3xVW8=
 github.com/hwcer/pubsub v0.0.0-20260928130025-91840971fde7 h1:TMiNW3BW6JWJNDgB3rBrEmV9tor6p3CJepI/LltMfZM=
