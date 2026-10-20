@@ -89,6 +89,22 @@ func (this *Context) Send(path string, v any, req values.Metadata) {
 	}
 }
 
+// Broadcast 全服广播：推给选定网关上所有**已选角**的会话，不建频道房间、无需 Join。
+// 与 Channel.Broadcast(频道房间)相对；序列化默认按本次请求协商(同 Send)，
+// req 显式指定 Content-Type 时以 req 为准。漏收无害，失败留痕不报错。
+func (this *Context) Broadcast(path string, v any, req values.Metadata) {
+	if req == nil {
+		req = values.Metadata{}
+	}
+	req[gwcfg.ServiceMessagePath] = path
+	if _, ok := req[binder.HeaderContentType]; !ok {
+		req[binder.HeaderContentType] = this.Binder(binder.HeaderAccept, binder.HeaderContentType).Name()
+	}
+	if err := client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGate, gwcfg.MessageBroadcast, v, nil); err != nil {
+		logger.Debug("全服广播失败,path:%v,err:%v", path, err)
+	}
+}
+
 func (this *Context) NewSender(path string, req values.Metadata) values.Metadata {
 	if req == nil {
 		req = values.Metadata{}
