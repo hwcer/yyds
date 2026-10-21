@@ -9,12 +9,34 @@ import (
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosrpc/client"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/gateway/gwcfg"
-	yydscontext "github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
 )
+
+// serviceFromPath 从路径第一段取服务名；不认识的回落 game（向后兼容无前缀路径）。
+// 🔴 前缀决定调用谁的接口——/game/shop/getter 打 game、/world/team/list 打 world、
+// /social/guild/info 打 social；不带前缀的 /shop/getter 视为 game（兼容旧用法）。
+func serviceFromPath(path string) (svc string, method string) {
+	name := strings.TrimPrefix(path, "/")
+	if i := strings.Index(name, "/"); i > 0 {
+		first := name[:i]
+		if _, ok := server.Default.Registry.Get(first); ok {
+			return first, "/" + name[i+1:]
+		}
+	}
+	return gwcfg.ServiceTypeGame, path
+}
+
+// lookupService 从全局注册表按服务名取服务表；不存在的返回 nil。
+func lookupService(name string) *registry.Service {
+	if svc, ok := server.Default.Registry.Get(name); ok {
+		return svc
+	}
+	return nil
+}
 
 // resolve 把客户端路径解析成 cosrpc 的 serviceMethod。
 //
@@ -25,10 +47,14 @@ import (
 //
 // 优先按外网接口解析,其次内部接口。两者都没有就直接报错——rpcx 对不存在的方法
 // 会回一句误导性极强的 "can't find service game",不如在这里拦住并指路。
-func resolve(path string) (string, error) {
+func resolve(svc, path string) (string, error) {
 	outer := gwcfg.GetServiceMethod(path)
 	var hitOuter, hitInner bool
-	yydscontext.Service.Range(func(node *registry.Node) bool {
+	table := lookupService(svc)
+	if table == nil {
+		return "", fmt.Errorf("服务未注册:%s", svc)
+	}
+	table.Range(func(node *registry.Node) bool {
 		switch name := serviceMethod(node.Name()); {
 		case strings.EqualFold(name, outer):
 			hitOuter = true
@@ -132,11 +158,19 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	}
 	path = strings.ToLower(path)
 
-	method, err := resolve(path)
+	svc, methodPath := serviceFromPath(path)
+	method, err := resolve(svc, methodPath)
 	if err != nil {
 		return nil, err
 	}
-	per, _ := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
+	//🔴 非 game 服务强制 Select：框架口径是"只有 game 有 Player 级"（玩家容器只在
+	// game 进程），但非 game 进程不加载项目的 gateway/authorize.go，Authorize 表
+	// 是框架默认值（Player）——会把 Select 级请求当 Player 级送进 players.Get，
+	// 在没有玩家容器的进程里报 code 17 "server has no player container"。
+	per := gwcfg.OAuthTypeSelect
+	if svc == gwcfg.ServiceTypeGame {
+		per, _ = gwcfg.Authorize.Get(svc, methodPath)
+	}
 
 	//客户端 IP:players daemon 会把 ServiceMetadataAddress 写进 p.Address,
 	//order/create 等接口随单传给 master 验参(ORDER_CLIENT_IP_EMPTY)。开发工具
@@ -146,19 +180,28 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	if ip == "" {
 		ip = "127.0.0.1"
 	}
-	gate, err := prepare(uid, opt.Gateway, ip)
-	if err != nil {
-		return nil, err
+	//🔴 仅 game 服务做玩家准备（Login/网关绑定）——world/social 没有 players 容器，
+	//prepare 会报 "server has no player container"。它们是 Select 级接口，uid 由
+	//metadata 直接下发，不需要加载玩家对象。
+	var gate uint64
+	if svc == gwcfg.ServiceTypeGame {
+		if gate, err = prepare(uid, opt.Gateway, ip); err != nil {
+			return nil, err
+		}
 	}
 
 	req := map[string]string{
 		gwcfg.ServiceMetadataUID:        uid,
-		gwcfg.ServiceMetadataServerId:   strconv.Itoa(int(options.Game.Sid)),
 		gwcfg.ServiceMetadataPermission: strconv.Itoa(int(per)),
 		gwcfg.ServiceMetadataDeveloper:  "1", //开发工具身份,放行 master 级(/debug/*)接口
 		gwcfg.ServiceMetadataAddress:    ip,
 		binder.HeaderContentType:        binder.Json.Name(),
 		binder.HeaderAccept:             binder.Json.Name(),
+	}
+	//🔴 仅 game 服务带本服 sid 定向（selector 按它分组）；world/social 等服务
+	//的节点池按各自键注册（world=zid、social=sid），带 game 的 sid 会投错区或不命中。
+	if svc == gwcfg.ServiceTypeGame {
+		req[gwcfg.ServiceMetadataServerId] = strconv.Itoa(int(options.Game.Sid))
 	}
 	if opt.Guid != "" {
 		req[gwcfg.ServiceMetadataGUID] = opt.Guid
@@ -178,7 +221,7 @@ func Call(uid, path string, args any, opts ...*CallOptions) (r map[string]any, e
 	}
 
 	reply := make([]byte, 0)
-	if err = client.CallWithMetadata(req, nil, gwcfg.ServiceTypeGame, method, body, &reply); err != nil {
+	if err = client.CallWithMetadata(req, nil, svc, method, body, &reply); err != nil {
 		return nil, err
 	}
 	if len(reply) == 0 {

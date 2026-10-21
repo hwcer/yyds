@@ -13,9 +13,9 @@ import (
 
 	"github.com/hwcer/cosgo"
 	"github.com/hwcer/cosgo/registry"
+	"github.com/hwcer/cosrpc/server"
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/gateway/gwcfg"
-	yydscontext "github.com/hwcer/yyds/context"
 	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players"
 	"github.com/hwcer/yyds/players/player"
@@ -280,6 +280,7 @@ type routesArgs struct {
 }
 
 type routeItem struct {
+	Service string `json:"service,omitempty"`
 	Path       string `json:"path"`               //handle_call 用这个
 	Method     string `json:"method"`             //完整 serviceMethod
 	Permission string `json:"permission"`         //鉴权级别
@@ -311,15 +312,18 @@ var permissionName = map[gwcfg.OAuthType]string{
 
 func routes() []*routeItem {
 	r := make([]*routeItem, 0, 128)
-	yydscontext.Service.Range(func(node *registry.Node) bool {
+	server.Default.Registry.Range(func(svc *registry.Service) bool {
+	svc.Range(func(node *registry.Node) bool {
 		method := serviceMethod(node.Name())
 		path := clientPath(node.Name())
-		per, full := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
+		svcName := strings.TrimPrefix(svc.Name(), "/")
+		per, full := gwcfg.Authorize.Get(svcName, path)
 		name := permissionName[per]
 		if name == "" {
 			name = fmt.Sprintf("Unknown(%d)", per)
 		}
 		r = append(r, &routeItem{
+			Service:    svcName,
 			Path:       path,
 			Method:     method,
 			Internal:   !gwcfg.HasServiceMethod(method),
@@ -327,6 +331,8 @@ func routes() []*routeItem {
 			Master:     gwcfg.Authorize.IsMaster(full),
 		})
 		return true
+	})
+	return true //继续下一个服务表
 	})
 	sort.Slice(r, func(i, j int) bool { return r[i].Path < r[j].Path })
 	return r
@@ -355,7 +361,11 @@ func clientPath(name string) string {
 //
 // 注意 Service.Name() 返回的已经带前导斜杠("/game"),不要再自己拼。
 func serviceMethod(name string) string {
-	return slash(strings.TrimPrefix(name, slash(yydscontext.Service.Name())))
+	//全名带服务前缀(/game/xxx)，剥掉第一段（不再绑死 game 表）
+	if i := strings.Index(name[1:], "/"); i >= 0 {
+		return slash(name[i+1:])
+	}
+	return slash(name)
 }
 
 func slash(s string) string {

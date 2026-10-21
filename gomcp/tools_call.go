@@ -7,7 +7,6 @@ import (
 
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/gateway/gwcfg"
-	yydscontext "github.com/hwcer/yyds/context"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -81,8 +80,10 @@ func handleDescribe(ctx context.Context, req *mcp.CallToolRequest, args describe
 	if r.Permission == "" {
 		r.Permission = fmt.Sprintf("Unknown(%d)", per)
 	}
-	yydscontext.Service.Range(func(node *registry.Node) bool {
-		//node.Name() 带 ServiceType 前缀(/game),换算成 serviceMethod 后再比
+	svcName, _ := serviceFromPath(method)
+	if table := lookupService(svcName); table != nil {
+		table.Range(func(node *registry.Node) bool {
+		//node.Name() 带 ServiceType 前缀,换算成 serviceMethod 后再比
 		if !strings.EqualFold(serviceMethod(node.Name()), method) {
 			return true
 		}
@@ -98,8 +99,9 @@ func handleDescribe(ctx context.Context, req *mcp.CallToolRequest, args describe
 		if b := node.Binder(); b != nil {
 			r.Binder = fmt.Sprintf("%T", b)
 		}
-		return false
-	})
+			return false
+		})
+	}
 	if !r.Registered {
 		r.Note = "该路径未注册,先用 routes_list 确认正确路径"
 	} else if r.Master {
