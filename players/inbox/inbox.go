@@ -14,14 +14,14 @@
 // tick 收敛。执行池投满时标记仍在，下个 tick 重新收集（与 disconnect 的「丢掉不丢
 // 状态」同机制）；玩家已释放（Updater 置空）时记录随实例消亡，下次登录重发事件自愈。
 //
-// # CD 门闸（Func 返回值语义：闸住保留、心跳放行）
+// # CD 门闸（Func 返回值语义：闸住丢弃、新事件触发）
 //
-// 返回 0 = 无 CD，每次事件都执行；返回 T>0 = 个人重试门闸：T 之前该事件不再投递给
-// 该玩家。**闸住的记录不丢**——留在 Cache，daemon 每 tick 复查，u.Unix() ≥ T 即执行：
-// 重试时点 = CD 到期 + ≤1 心跳周期（Options.Heartbeat，默认 5s），不等下一次事件。
-// 同批同事件多条：首条执行设新门闸后，后续条目继续闸住保留，逐窗放行——消费方必须
-// 幂等。门闸按事件×玩家隔离（nexts 以事件为 key，同事件的多个监听共享门闸，都设 T
-// 时取更严/大的）。时刻基准 u.Unix()（Trigger 的 Reset 刷新）。
+// 返回 0 = 无 CD，每次事件都执行；返回 T>0 = 个人频率门闸：T 之前收到该事件直接
+// **丢弃**（不缓存不补跑），CD 结束后再收到事件才会触发。CD 是频率控制不是重试队列
+// ——消费方要「到期后再试」的，靠事件源再次发射（如登录事件下次登录必发）。
+// 同批同事件多条：首条执行设新门闸后，后续条目同样丢弃。门闸按事件×玩家隔离
+// （nexts 以事件为 key，同事件的多个监听共享门闸，都设 T 时取更严/大的）。
+// 时刻基准 u.Unix()（Trigger 的 Reset 刷新）。
 //
 // # 状态载体：Updater.Cache
 //
@@ -29,7 +29,8 @@
 // 进程重启即丢。记录点在玩家协程（Emit 发射点恒持玩家锁）、派发点在执行池锁内，不加锁；
 // 待处理标记是对象上的原子量，daemon 扫描无锁读。handler 后台执行没有请求上下文：
 // 不推 S2CUpdate，改动由尾随 Submit 统一落库，客户端靠下次登录/拉取看见。
-// 事件可能重复（登录链路跨天重跑等），handler 必须幂等。
+// 事件可能重复（登录链路跨天重跑等），handler 必须幂等。门闸内到达的事件在 Record
+// 处即丢弃——待处理列表里只有已到期的，不随 CD 时间堆积。
 //
 // # 事件 id 归业务层
 //
@@ -95,7 +96,8 @@ func (a *Inbox) Pending() bool {
 }
 
 // Record 记录事件（players.Emit 调用，须持玩家锁）。
-// 无异步监听的事件零开销直接返回。
+// 无异步监听的事件零开销直接返回。🔴 个人门闸内到达的事件在此丢弃（闸住丢弃、
+// 新事件触发——CD 是频率控制不是重试队列，到期后要再试得靠事件源再次发射）。
 func (a *Inbox) Record(t updater.EventType, args []int32) {
 	if len(handles[t]) == 0 {
 		return
@@ -107,13 +109,16 @@ func (a *Inbox) Record(t updater.EventType, args []int32) {
 	s := u.Cache.LoadOrCreate(u, cacheKey, func(*updater.Updater) any {
 		return &state{nexts: map[updater.EventType]int64{}}
 	}).(*state)
+	if u.Unix() < s.nexts[t] {
+		return //门闸内：丢弃，不进待处理列表（Record 恒在 Reset 后的链内，与 nexts 同基准）
+	}
 	s.events = append(s.events, event{t: t, vs: append([]int32(nil), args...)})
 	a.flag.Store(true)
 }
 
-// due 是否存在到期记录（time.Now 对 nexts 窥探，与 nexts 同为墙钟：nexts 由监听以
-// u.Unix()+T 写入，门闸窗秒级，毫秒偏差无意义）。全未到期则本 tick 不做重活——
-// Trigger 据此跳过 Reset/Submit，门闸期内每 tick 只剩一次轻量复查。
+// due 是否存在待处理记录。Record 已在门闸处丢弃，列表里理论上全是已到期的；
+// 仍保留 nexts 窥探兜同批后置门闸（首条执行设 CD 后，同批后续条目在 flush 里丢弃），
+// 全未到期则本 tick 不做重活——Trigger 据此跳过 Reset/Submit。
 func (a *Inbox) due() bool {
 	u := a.u
 	if u == nil {
@@ -132,9 +137,9 @@ func (a *Inbox) due() bool {
 	return false
 }
 
-// flush 处理全部到期记录（Tick 在玩家锁内调用）。**先清标记再排空**：门闸未到的
-// 记录保留回列表并重新置位，下个 tick 复查放行；监听里嵌套 players.Emit 的新记录
-// 同样重新置位，进下一轮（下个 tick）。
+// flush 处理全部待处理记录（Tick 在玩家锁内调用）。**先清标记再排空**：同批内被
+// 前序执行新设的门闸盖住的条目直接丢弃（同批同事件只跑首条）；监听里嵌套
+// players.Emit 的新记录重新置位，进下一轮（下个 tick）。
 func (a *Inbox) flush() {
 	u := a.u
 	if u == nil {
@@ -151,11 +156,9 @@ func (a *Inbox) flush() {
 	}
 	events := s.events
 	s.events = nil
-	var gated []event
 	for _, ev := range events {
-		//门闸未到：保留待下个 tick 复查（闸住不丢，心跳放行）
+		//被同批前序执行新设的门闸盖住：丢弃（首条已按本次事件执行过）
 		if u.Unix() < s.nexts[ev.t] {
-			gated = append(gated, ev)
 			continue
 		}
 		for _, h := range handles[ev.t] {
@@ -164,10 +167,6 @@ func (a *Inbox) flush() {
 				s.nexts[ev.t] = at
 			}
 		}
-	}
-	if len(gated) > 0 {
-		s.events = append(s.events, gated...)
-		a.flag.Store(true) //闸住保留：标记保持，下个 tick 复查
 	}
 }
 
