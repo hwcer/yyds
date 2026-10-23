@@ -30,11 +30,11 @@ func On(t updater.EventType, handle updater.EventFunc) {
 	updater.RegisterGlobalEvent(t, handle)
 }
 
-// Emit 触发全局系统事件：同步监听（On）立即执行；有异步监听（OnAsync）的事件
-// 当场记录（载荷 vs 只随异步记录走，同步 EventFunc 无参），由 players daemon
-// 心跳经执行池处理（见 async.go）。
+// Emit 触发全局系统事件：同步监听（On）立即执行；有异步监听（Inbox 注册）的事件
+// 当场**无脑缓存**进收件箱（载荷只随异步缓存走，同步 EventFunc 无参），由 players
+// daemon 心跳经执行池处理（见 players/inbox）。
 //
-// 🔴 调用方须持有玩家锁：同步路径读写 Updater 实例事件表、记录路径写 Updater.Cache，
+// 🔴 调用方须持有玩家锁：同步路径读写 Updater 实例事件表、缓存路径写 Updater.Cache，
 // 不持锁调用与请求协程构成数据竞争（框架内发射点 Connected/disconnect/offline 与
 // 业务请求路径均天然持锁）。
 func Emit(p *player.Player, t updater.EventType, args ...int32) {
@@ -42,7 +42,7 @@ func Emit(p *player.Player, t updater.EventType, args ...int32) {
 		p.Updater.Emit(t)
 	}
 	if p.Inbox != nil {
-		p.Inbox.Record(t, args)
+		p.Inbox.Emit(t, args)
 	}
 }
 

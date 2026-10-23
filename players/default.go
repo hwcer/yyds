@@ -14,7 +14,6 @@ var (
 	playersRecycling map[string]*player.Player
 )
 
-
 func Start() error {
 	if !playersState.CompareAndSwap(stateStopped, stateRunning) {
 		return nil
@@ -100,6 +99,17 @@ func Get(uid string, handle player.Handle) error {
 		return err
 	}
 	return get(uid, handle)
+}
+
+// Caller 同Get,但是允许传递参数
+func Caller(uid string, handle player.CallerHandle, args ...any) error {
+	if err := available(); err != nil {
+		return err
+	}
+	var cb = func(p *player.Player) error {
+		return handle(p, args...)
+	}
+	return get(uid, cb)
 }
 
 // Load 加载玩家数据,如果不在线则实时读写数据库。

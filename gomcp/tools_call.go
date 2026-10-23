@@ -68,8 +68,19 @@ func handleDescribe(ctx context.Context, req *mcp.CallToolRequest, args describe
 		path = "/" + path
 	}
 	path = strings.ToLower(path)
-	method := gwcfg.GetServiceMethod(path)
-	per, full := gwcfg.Authorize.Get(gwcfg.ServiceTypeGame, path)
+	//🔴 与 Call 同序:先对**原始路径**拆服务段,再补网关前缀——method 已含 /handle 前缀,
+	//直接喂 serviceFromPath 时首段恒为 handle(非服务名),world/social 路径会错误回落 game
+	svc, methodPath := serviceFromPath(path)
+	method := gwcfg.GetServiceMethod(methodPath)
+	//🔴 非 game 服务强制 Select(与 Call 同口径):非 game 进程读的是框架默认 Authorize 表
+	//(Player),查了必错还误导调用方
+	var per gwcfg.OAuthType
+	var full string
+	if svc == gwcfg.ServiceTypeGame {
+		per, full = gwcfg.Authorize.Get(svc, methodPath)
+	} else {
+		per = gwcfg.OAuthTypeSelect
+	}
 
 	r := &describeReply{
 		Path:       path,
@@ -80,8 +91,7 @@ func handleDescribe(ctx context.Context, req *mcp.CallToolRequest, args describe
 	if r.Permission == "" {
 		r.Permission = fmt.Sprintf("Unknown(%d)", per)
 	}
-	svcName, _ := serviceFromPath(method)
-	if table := lookupService(svcName); table != nil {
+	if table := lookupService(svc); table != nil {
 		table.Range(func(node *registry.Node) bool {
 		//node.Name() 带 ServiceType 前缀,换算成 serviceMethod 后再比
 		if !strings.EqualFold(serviceMethod(node.Name()), method) {

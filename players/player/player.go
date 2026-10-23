@@ -19,9 +19,9 @@ import (
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
-	"github.com/hwcer/yyds/players/inbox"
 	"github.com/hwcer/yyds/players/condition"
 	"github.com/hwcer/yyds/players/emitter"
+	"github.com/hwcer/yyds/players/inbox"
 )
 
 type Message struct {
@@ -29,6 +29,8 @@ type Message struct {
 	Data []byte //*context.Message
 }
 type Handle func(*Player) error
+
+type CallerHandle func(*Player, ...any) error
 
 func New(uid string, test bool) *Player {
 	p := &Player{uid: uid}
