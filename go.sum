@@ -150,10 +150,10 @@ github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8 h1:VXwqYrKa+uYYrf8lw
 github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8/go.mod h1:NbT/COc/u9IKPOyTK+xvMdvGg+EiqJwVSzRo1PK99MI=
 github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451 h1:Kgo0IfagYHjzmeD2604IMlVsebVhCyBen0Hubc4NkmE=
 github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451/go.mod h1:k6zw/tc/C05bwK4kLYzozWUgxmWaABc3FPcPJBvDgjI=
-github.com/hwcer/cosnet v1.4.5-0.20260929012553-1e6600cd247f h1:JjdRpDMS5wqpA6T91aFyrh/N+QCm/uMeyvl5qcMlIec=
-github.com/hwcer/cosnet v1.4.5-0.20260929012553-1e6600cd247f/go.mod h1:V+dGduyBOqxgK5reodfFBioTk4VW3tOdFsUMyrih73o=
-github.com/hwcer/cosrpc v1.4.3-0.20261021062349-3722b9a21c0d h1:ai9r3fzCqJJzhHP81YgqhP7tBYBt2/fO8kt9X6R9c5c=
-github.com/hwcer/cosrpc v1.4.3-0.20261021062349-3722b9a21c0d/go.mod h1:QjHNNKwr8fGMf5WI2jkT/g7tWjdjEcWmoDkzvizwY2Y=
+github.com/hwcer/cosnet v1.4.5-0.20261027030759-aa87477aba95 h1:QBBjDMbARoyF81W/7tzGNkGhxqBWTnHYCe1tG4wgx08=
+github.com/hwcer/cosnet v1.4.5-0.20261027030759-aa87477aba95/go.mod h1:hbCdK14G3lJsDZgStNhBzErXWoYxFl/uOXPFAv2p+RA=
+github.com/hwcer/cosrpc v1.4.3-0.20261027030819-878f11143586 h1:3cD6rE1FefTs5b0GqwCtXoP7G9BIvHk5oRsujr9QRrQ=
+github.com/hwcer/cosrpc v1.4.3-0.20261027030819-878f11143586/go.mod h1:QjHNNKwr8fGMf5WI2jkT/g7tWjdjEcWmoDkzvizwY2Y=
 github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc h1:QrR2X+l3SFP646mxwhfiK9ZemXtV3exeQE6YFRMJBg4=
 github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc/go.mod h1:eIUgoTPkakXQPn8KstRn/rEDOro0dLKDXiFDnFTTDmA=
 github.com/hwcer/gateway v0.2.3-0.20261014110556-ab7c418dd1df h1:2SdFc380YIhhkT4INhaKSxt6j2xkoNRsPXmy58JthBk=

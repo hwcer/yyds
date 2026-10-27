@@ -7,8 +7,8 @@ require (
 	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0
 	github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8
 	github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451
-	github.com/hwcer/cosnet v1.4.5-0.20260929012553-1e6600cd247f
-	github.com/hwcer/cosrpc v1.4.3-0.20261021062349-3722b9a21c0d
+	github.com/hwcer/cosnet v1.4.5-0.20261027030759-aa87477aba95
+	github.com/hwcer/cosrpc v1.4.3-0.20261027030819-878f11143586
 	github.com/hwcer/cosweb v1.4.3-0.20260929012600-447d045d32bc
 	github.com/hwcer/gateway v0.2.3-0.20261014110556-ab7c418dd1df
 	github.com/hwcer/logger v0.2.9-0.20260929015922-b9e86c661538
