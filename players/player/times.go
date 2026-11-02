@@ -37,9 +37,11 @@ func (this *Times) Start(t int64, args []int64) (r int64, err error) {
 
 	switch et {
 	case expire.TimePlayerCreate:
-		role := this.p.Document(RoleIType)
-		create := role.Get(RoleFields.Create)
-		dt := times.Unix(values.ParseInt64(create)).Daily(int(v - 1))
+		role := options.Setting.GetRole(this.p.Updater)
+		if role == nil {
+			return 0, values.Errorf(0, "player role not found")
+		}
+		dt := times.Unix(role.GetCreateTime()).Daily(int(v - 1))
 		return dt.Now().Unix(), nil
 	case expire.TimeServerCreate:
 		dt := times.Unix(options.GetServerTime())
@@ -83,9 +85,11 @@ func (this *Times) Expire(t int64, args []int64) (r int64, err error) {
 	switch et {
 	case expire.TimePlayerCreate:
 		if v > 0 {
-			role := this.p.Document(RoleIType)
-			create := role.Get(RoleFields.Create)
-			dt := times.Unix(values.ParseInt64(create)).Daily(int(v))
+			role := options.Setting.GetRole(this.p.Updater)
+			if role == nil {
+				return 0, values.Errorf(0, "player role not found")
+			}
+			dt := times.Unix(role.GetCreateTime()).Daily(int(v))
 			r = dt.Now().Unix()
 		}
 		return

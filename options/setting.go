@@ -1,11 +1,17 @@
 package options
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/hwcer/updater"
+)
 
 var Setting = struct {
-	Renewal  string //启用跨天
+	Renewal  string                        //启用跨天
+	GetRole  func(u *updater.Updater) Role //获取角色基础模型，游戏服必须设置
 	GetIMax  func(iid int32) (r int64)
 	GetIType func(iid int32) (r int32) //替代config.GetIType
+
 }{
 	Renewal:  "/role/renewal",
 	GetIMax:  getIMaxDefault,
@@ -24,4 +30,10 @@ func getITypeDefault(iid int32) (r int32) {
 	v, _ := strconv.Atoi(s[0:2])
 	r = int32(v)
 	return
+}
+
+// Role 角色基础模型
+type Role interface {
+	GetGuid() string      //游戏账号ID
+	GetCreateTime() int64 //角色创建时间
 }

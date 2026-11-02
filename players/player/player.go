@@ -19,6 +19,7 @@ import (
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
 	"github.com/hwcer/updater"
+	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/condition"
 	"github.com/hwcer/yyds/players/emitter"
 	"github.com/hwcer/yyds/players/inbox"
@@ -196,19 +197,17 @@ func (p *Player) Id() string {
 	return p.uid
 }
 
-// Guid 角色的全局唯一标识,取不到时返回空串,调用方按空串处理(参考 Send)
-// 不做裸类型断言:Updater 已销毁(released)、handle 未注册、字段未加载都会让上一版直接 panic,
-// 而本函数在 gomcp / Send 等路径上会被非业务协程调用
+// Guid 角色的全局唯一标识,取不到时返回空串,调用方按空串处理(参考 Send)。
+// 角色模型由业务注入(options.Setting.GetRole,players.Start 有前置校验),
+// Updater 已销毁(released)或业务返回 nil 时回空串——本函数会被非业务协程调用,不得 panic
 func (p *Player) Guid() string {
 	if p.Updater == nil {
 		return ""
 	}
-	doc := p.Document(RoleIType)
-	if doc == nil {
-		return ""
+	if role := options.Setting.GetRole(p.Updater); role != nil {
+		return role.GetGuid()
 	}
-	guid, _ := doc.Get(RoleFields.Guid).(string)
-	return guid
+	return ""
 }
 
 // Destroy 销毁玩家数据,调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater

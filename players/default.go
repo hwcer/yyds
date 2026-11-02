@@ -5,6 +5,8 @@ import (
 
 	"github.com/hwcer/cosgo/scc"
 	"github.com/hwcer/logger"
+	"github.com/hwcer/yyds/errors"
+	"github.com/hwcer/yyds/options"
 	"github.com/hwcer/yyds/players/player"
 )
 
@@ -15,6 +17,11 @@ var (
 )
 
 func Start() error {
+	//🔴 前置校验必须先于 CAS:翻成 stateRunning 后再失败,daemon/管理器都没起,
+	//状态却是"运行中",重试 Start 还会因 CAS 失败静默返回 nil——失败被永久吞掉
+	if options.Setting.GetRole == nil {
+		return errors.New("必须先设置 yyds/options.Setting.GetRole")
+	}
 	if !playersState.CompareAndSwap(stateStopped, stateRunning) {
 		return nil
 	}
