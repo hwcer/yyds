@@ -2,6 +2,7 @@ package handle
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hwcer/cosgo/registry"
@@ -114,6 +115,11 @@ func (this *character) Create(c *cosrpc.Context) any {
 		v.Attach = values.Values{}
 	}
 	if tx := db.Create(v); tx.Error != nil {
+		//🔴 主键冲突=行已存在=创角的期望终态（重试/重放场景）：幂等成功，
+		//不是错误——旧版把 E11000 回给 game 会让重试链路二次失败（2026-11-02 定）
+		if strings.Contains(tx.Error.Error(), "E11000") {
+			return true
+		}
 		return c.Error(tx.Error)
 	}
 
@@ -130,7 +136,14 @@ func (this *character) Create(c *cosrpc.Context) any {
 	return true
 }
 
-// Online 角色上线
+// Online 角色上线。
+//
+// 🔴 行缺失时**补写而不是报错**（2026-11-02 定）：目录行因人工误删/DB 异常/迁移漏行
+// 丢失后，online 是唯一每次登录必经的入口——天然自愈点。补写走与 Create 相同的
+// 建行 + DAU 打点（create 打点多计一次，3 个月 1 例频率下统计偏差可忽略），
+// game 侧零改动（forwardLocator 链路不再收到 not found）。
+// 旧行为「character not found」直接回错——修复可能性为零：行永久缺失、
+// update 静默 0 行假成功，客户端按 /character 恒判新玩家。
 func (this *character) Online(c *cosrpc.Context) any {
 
 	args := &model.Character{}
@@ -142,7 +155,23 @@ func (this *character) Online(c *cosrpc.Context) any {
 	if tx := db.Select("create", "online", "sid").Find(v, args.Uid); tx.Error != nil {
 		return tx.Error
 	} else if tx.RowsAffected == 0 {
-		return c.Error("character not found")
+		//自愈补写：以本次上报的 uid/sid/guid/attach 建行（缺省值同 Create）
+		v = args
+		if v.Create == 0 {
+			v.Create = time.Now().Unix()
+		}
+		if v.Online == 0 {
+			v.Online = v.Create
+		}
+		if v.Update == 0 {
+			v.Update = v.Create
+		}
+		if len(v.Attach) == 0 {
+			v.Attach = values.Values{}
+		}
+		if tx := db.Create(v); tx.Error != nil {
+			return c.Error(tx.Error)
+		}
 	}
 
 	now := time.Now().Unix()
