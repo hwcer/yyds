@@ -23,9 +23,11 @@
   （业务手动 `u.Verify()` 之后可读），submit 阶段 cache 交给接收器并置空，**那之后再读是空的**。
   「模型没声明 IType、要自己组装协议告诉客户端」的挂载，全靠这条路知情。
 
-## 二、五件套契约与 Upsert 语义
+## 二、四件套契约与 Upsert 语义
 
-`MountModel` 五件套：`TableName` / `Schema` / `Upsert` / `Getter(u, coll, keys)` / `Setter(u, bw, _id, dirty, unset)`。
+`MountModel` 四件套：`TableName` / `Schema` / `Upsert` / `Getter(u, coll, keys)`。
+`Setter(u, bw, _id, dirty, unset)` 已拆为可选（`updater.CollectionWriter`）——不实现即默认
+键级 `$set`/`$unset`（含父子路径冲突防御），仅落库形态特殊时才实现。
 
 - 🔴 **`Upsert` 不会被走到**：Mount 的 parseSet 对未知 OID 直接报错，新行必须显式 `Insert`；
   保留该接口只是签名要求。返回 `true` 与 Collection 侧「Set 未知键自动建」对齐，留作后手。
