@@ -145,6 +145,12 @@ func (p *Player) Send(v any, req values.Metadata) {
 // Loading 加载数据
 // test 是否测试模式
 func (p *Player) Loading(test bool) (err error) {
+	return p.loading(test, false)
+}
+
+// loading Loading 的内部形态：offline 走 updater 的离线档（全部模型按 RAMTypeNone 运行、
+// 不预拉），供 Initialize 补数据用——跨玩家改一个字段不再付整档全量加载的代价。
+func (p *Player) loading(test, offline bool) (err error) {
 	//验证UID是否合法
 	if uid := p.Uid(); !uuid.IsValid(uid) {
 		return fmt.Errorf("player uid(%s) is invalid", uid)
@@ -172,7 +178,16 @@ func (p *Player) Loading(test bool) (err error) {
 		//玩家域即 Default 域;包级 New() 现在是造域(返回 *Manage),实例经 Manage.New(e) 取
 		p.Updater = updater.Default.New(p)
 	}
-	if err = p.Updater.Loading(p.createComponents); err != nil {
+	//组件建立先于首次 Loading（updater.Loading 已不带回调）：Emit(EventTypeInit) 时组件
+	//就绪，与旧回调形态的时序等价。无条件调用是安全的——createComponents 自身幂等
+	//(Times 已建即返回)，自愈路径与离线档重拉起都不重复建、不丢已注册监听
+	p.createComponents()
+	if offline {
+		_, err = p.Updater.Loading(true)
+	} else {
+		_, err = p.Updater.Loading()
+	}
+	if err != nil {
 		return err
 	}
 	if test {
@@ -236,13 +251,17 @@ func (p *Player) Destroy() error {
 // now 是零值,只有 Reset 会设,漏掉就得到一个"能用但时间基准是 1 年"的 Updater,
 // 不报错也不 panic,是最难查的那类问题。
 //
+// 走 updater 的**离线档**（全部模型按 RAMTypeNone 运行：不预拉，Data 按需拉触碰的键，
+// save 绝对值 $set）:跨玩家补数据的轻量形态。登录路径（Loading 无参全量预拉）不受影响——
+// 该玩家登录时无参 Loading 自动清掉 offline 并 tryLoad 重新整档预拉（转正）。
+//
 // 幂等:Updater 已就绪(init=true,或 init=false 时玩家本就在内存、框架已 Reset 过)
 // 直接返回。Release 由框架的 defer 负责,调用方不必管。
 func (p *Player) Initialize() error {
 	if p.Updater != nil {
 		return nil
 	}
-	if err := p.Loading(false); err != nil {
+	if err := p.loading(false, true); err != nil {
 		return err
 	}
 	p.Reset()
