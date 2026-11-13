@@ -54,7 +54,7 @@ func (this *Context) GetPlayer(uid string, handle player.Handle) (err error) {
 	}
 
 	if err = players.Get(uid, handle); err != nil && errors.Is(err, errors.ErrNotOnline) {
-		err = players.Load(uid, true, handle)
+		err = players.Load(uid, false, handle)
 	}
 	return
 }
@@ -62,9 +62,9 @@ func (this *Context) GetPlayer(uid string, handle player.Handle) (err error) {
 // Mutex 玩家互斥锁，需要同时获得多个用户锁时使用
 // 可以防止死锁，不需要手动解锁
 //
-// 🔴 **拿到的玩家不一定在线，也不一定有数据**：批量锁只负责「取得操作权限」，
-// 不在内存的玩家给的是**空壳**（p.Updater == nil），直接读写就是当场 nil panic，
-// 需要数据请按需手动加载。完整契约见 player.Locker 接口上的说明。
+// 🔴 **读玩家数据时要假设玩家不在线**：每个玩家都有 Updater，不在内存的以 updater 懒加载建
+// （不预拉）——读之前必须 Select + Data（没拉的键读到零值），Range/Len/All 等扫描报错。
+// 完整契约见 player.Locker 接口上的说明。
 func (this *Context) Mutex() *Mutex {
 	return &Mutex{ctx: this}
 }
@@ -77,7 +77,7 @@ type Mutex struct {
 //
 //	uids    要取得的玩家;取锁阶段整批成败,任何一个取不到整个回调都不会执行
 //	args    原样传给 handle
-//	handle  取得权限后的回调,拿到的是 player.Locker(空壳契约见上面 Mutex 的说明)
+//	handle  取得权限后的回调,拿到的是 player.Locker(懒加载契约见上面 Mutex 的说明)
 //	next    回调结束、锁全部归还之后要执行的收尾,追加在"锁回自己"之后
 //
 // 🔴 `this.ctx.Player != nil` 就等于「我此刻持有它」,不需要另立标记。

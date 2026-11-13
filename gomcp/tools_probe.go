@@ -166,7 +166,7 @@ func playersOnline(ctx context.Context, req *mcp.CallToolRequest, args onlineArg
 	}
 	//两段式:Range 只持有 Manage 读锁,不持玩家锁,回调里只能碰不可变字段(uid)。
 	//Guid 要读 Updater 的 dataset,而业务协程正持锁改它,released() 又会在
-	//Destroy(Updater=nil) 之后、ps.Delete 之前留下窗口(Delete 还被本次 Range 的读锁挡着,
+	//Unload(Updater=nil) 之后、ps.Delete 之前留下窗口(Delete 还被本次 Range 的读锁挡着,
 	//窗口反而被撑大)。裸读轻则空指针 panic,重则撞上 dirty map 的
 	//concurrent map read and write —— 那是 fatal error,recover 拦不住,直接打挂进程。
 	//另外不能在 Range 内加玩家锁:持 Manage 读锁去抢玩家锁就是 worker() 刚拆掉的锁序倒置。
@@ -184,13 +184,13 @@ func playersOnline(ctx context.Context, req *mcp.CallToolRequest, args onlineArg
 	//会 Emit 事件并推进 u.last(影响跨天重置判定),调试工具不该有这种副作用。
 	r := make([]*onlineItem, 0, len(ps))
 	for _, p := range ps {
-		//锁外快筛:Locked 的锁被 Loading 持着(含 DB 读),Released 的锁被 Destroy 持着
+		//锁外快筛:Locked 的锁被 Loading 持着(含 DB 读),Released 的锁被 Unload 持着
 		//(脏玩家含一次 BulkWrite),都可能几十毫秒。先跳过就不必排队等一把注定用不上的锁
 		if p.Denied() {
 			continue
 		}
 		p.Lock()
-		//锁内复查:等锁期间 released() 可能已经跑完 Destroy,此时读到的是残值
+		//锁内复查:等锁期间 released() 可能已经跑完 Unload,此时读到的是残值
 		status := atomic.LoadInt32(&p.Status)
 		if p.Denied(status) {
 			p.Unlock()
@@ -266,7 +266,7 @@ func playerDump(ctx context.Context, req *mcp.CallToolRequest, args dumpArgs) (*
 		return fill(p)
 	}); err != nil {
 		r.Online = false
-		if e := players.Load(args.Uid, true, fill); e != nil {
+		if e := players.Load(args.Uid, false, fill); e != nil {
 			return nil, nil, e
 		}
 	}

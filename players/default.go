@@ -119,44 +119,42 @@ func Caller(uid string, handle player.CallerHandle, args ...any) error {
 	return get(uid, cb)
 }
 
-// Load 加载玩家数据,如果不在线则实时读写数据库。
+// Load 加载玩家并在锁内执行 handle。回调里的 p.Updater **一定非 nil**、已为本次调用 Reset 过。
 //
-// init 传 **false** 表示「只占锁位,不加载数据」:玩家不在内存时只放一个
-// 空壳进管理器占住锁位,回调里拿到的 p.Updater 是 **nil**。用于「数据不经 Updater、但仍要
-// 与玩家其它操作互斥」的场景——运营后台 / GM 工具直连数据库改档、离线数据修复等。这类操作
-// 本来就不读内存数据,按默认走一遍等于白白从库里拉一遍全量、还把离线玩家长期驻留进内存。
+//	lazy=false  整档加载:玩家不在内存就从库整档拉进来;已在内存的懒加载实例就地转正
+//	lazy=true   懒加载:玩家不在内存时以 updater 懒加载建 Updater(不预拉、不付整档全量加载 +
+//	            长期驻留的代价),与批量锁同一套行为与契约(见 player.Locker)——读之前必须
+//	            Select + Data,扫描报错;玩家本就整档在内存则直接用现成的
 //
-// 空壳**留在管理器里**,不会用完就删——处理期间别人(登录 / Get / Load)可能已经拿到同一个
-// 指针正在等锁,删掉等于让它在管理器之外操作孤儿对象,打拒绝态则会把一次合法登录拒了。
-// 空壳的归宿是**自愈**:谁需要数据谁调 Loading 把它补全(本方法 init=true 时天然如此),
-// 没人来就由 daemon 正常回收。Get 把空壳认作"不在线"返回 ErrNotOnline,于是既有的
-// 「Get 失败 → 退回 Load」降级链会自动完成这次自愈。
+// lazy 与 Player.Loading / updater.Loading 的同名参数同义(2026-11-13 由 init 改名,布尔取反)。
 //
-// init=false 与 init=true 的唯一差别是**不预加载数据**,不是"对象处于半初始化状态":
-// Reset/Release 照常执行(对空壳是空操作)。所以回调里:
-//   - p.Updater == nil 表示玩家不在内存 —— 用它就是当场 nil panic,不会静默出错
-//   - p.Updater != nil 表示玩家本就在内存,且**已为本次调用 Reset 过**,可以正常使用
-//   - 中途发现需要数据 → 调 **p.Initialize()**(Loading + Reset 一次做完,幂等),
-//     别只调 Loading:Updater 由 New 创建时 now 是零值,漏了 Reset 会得到一个
-//     "能用但时间基准是 1 年"的对象,不报错也不 panic
+// lazy=true 适合「只改一两个字段 / 直连数据库改档、但要与玩家其它操作互斥」的场景(运营后台、
+// GM 工具、离线数据修复)。判断对方是否整档在内存用 p.Updater.Loaded():整档在内存的改完库要
+// Reload / 踢下线让内存跟上,懒加载的不用(它没有常驻的整档数据)。
+//
+// 懒加载的对象**留在管理器里**,不会用完就删——处理期间别人(登录 / Get / Load)可能已经拿到
+// 同一个指针正在等锁,删掉等于让它在管理器之外操作孤儿对象。之后登录由 Loading 转正,没人来
+// 就由 daemon 正常回收。Get 把它认作"不在线"返回 ErrNotOnline,「Get 失败 → 退回 Load」
+// 降级链会自动完成转正。
 //
 // **不要**用 Connected 去"补数据":它是登录入口,会把玩家标成在线(在线数 +1、发
 // EventConnect),GM / 后台场景下那是一次假上线。它内部确实也会先 Loading,但那是为了
 // 保证"凡是 Connected 的玩家一定有数据"这条不变式,不是给别人当自愈入口用的。
-func Load(uid string, init bool, handle player.Handle) (err error) {
+func Load(uid string, lazy bool, handle player.Handle) (err error) {
 	if err = available(); err != nil {
 		return err
 	}
-	return load(uid, false, init, handle)
+	return load(uid, false, lazy, handle)
 }
 
 // Login 登录成功,只能在登录时调用
-// test 为 true 时以测试模式登录（不写库）
+// test 为 true 时用独立的测试对象(key "~uid"),不与真实玩家共用同一个对象;
+// 框架不替你开测试模式——要「只改内存不写库」,在 handle 里调 p.Updater.Testing(true)
 func Login(uid string, test bool, meta map[string]string, handle player.Handle) (err error) {
 	if err = available(); err != nil {
 		return err
 	}
-	err = load(uid, test, true, func(p *player.Player) error {
+	err = load(uid, test, false, func(p *player.Player) error {
 		if e := Connected(p, meta); e != nil {
 			return e
 		}
@@ -177,8 +175,8 @@ func Login(uid string, test bool, meta map[string]string, handle player.Handle) 
 // ⚠ 取锁阶段整批成败:uids 里任何一个取不到(非法 uid / 拒绝态 / 排队超时),
 // 整个回调都不会执行 —— 包括那些本来没问题的玩家。
 //
-// 回调里拿到的是 player.Locker:**不保证玩家在线、也不保证有数据**,不在内存的给的是
-// 空壳(p.Updater == nil),完整契约见 player.Locker 接口上的说明。
+// 回调里拿到的是 player.Locker:每个玩家都有 Updater,不在内存的以懒加载建(不预拉)——
+// **读玩家数据时要假设玩家不在线**:读前 Select + Data,扫描报错,完整契约见 player.Locker 接口上的说明。
 func Locker(uid []string, args any, handle player.LockerHandle, done ...func()) (any, error) {
 	if err := available(); err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ import (
 // daemon 是**单协程**,而三种迁移都要抢玩家锁,并且都可能很慢:
 //
 //	disconnect / offline  持锁 Emit 业务事件(离线结算之类,快慢由业务决定)
-//	released              持锁 Reset + Destroy,而 Destroy 里是一次真实的 BulkWrite 落库
+//	released              持锁 Reset + Unload,而 Unload 里是一次真实的 BulkWrite 落库
 //
 // 串行跑的话,一次退潮 N 个玩家就是 N 次「等锁 + DB 往返」首尾相接,daemon 的扫描周期直接被
 // 最慢的那个玩家决定 —— 心跳判定、掉线判定、回收判定全部顺延。所以 daemon 只负责判断

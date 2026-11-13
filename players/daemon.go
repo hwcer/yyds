@@ -29,10 +29,10 @@ func Connected(p *player.Player, meta values.Metadata) (err error) {
 	}
 
 	//上线前先确保数据就绪。Connected 只管"算不算在线",数据一向由 Loading 负责;
-	//正常登录路径(Login = Load(init=true) + Connected)早已加载过,Loading 幂等、零成本。
-	//这里兜的是 Load(init=false) 留下的空壳被直接激活的情况——没有这一步就会出现
-	//"在线却没有数据"的玩家:它在在线数里占一个、Send 也会尝试发包,却要等第一个业务
-	//请求经「Get 失败 → 退回 Load(init=true)」降级链才把数据补上。
+	//正常登录路径(Login = Load(lazy=false) + Connected)早已加载过,Loading 幂等、零成本。
+	//这里兜的是懒加载对象(批量锁 / Load(lazy=true) 建的)被直接激活的情况——没有这一步就会出现
+	//"在线却没有整档数据"的玩家:它在在线数里占一个、Send 也会尝试发包,却要等第一个业务
+	//请求经「Get 失败 → 退回 Load(lazy=false)」降级链才转正。
 	//放在 gateway 校验之后:那是纯内存判断,不该为一个注定失败的上线去读一次库。
 	if e := p.Loading(false); e != nil {
 		logger.Debug("player loading failed on connected:%v,%v", p.Uid(), e)
@@ -133,7 +133,7 @@ func released(p *player.Player) {
 		return
 	}
 	p.Reset()
-	if err := p.Destroy(); err != nil {
+	if err := p.Unload(); err != nil {
 		atomic.StoreInt32(&p.Status, status) //还原成进来时的状态,Terminated 不能退化成 Offline 被复活
 		logger.Alert("Players.release uid:%v,err:%v", p.Uid(), err)
 		return
@@ -232,7 +232,7 @@ func worker() {
 	next := map[string]*player.Player{}
 	for _, p := range dict {
 		if ct > Options.MemoryPlayer && freed < Options.ReleaseBatch {
-			//🔴 投出去就从回收站摘掉,**不等结果**:释放失败(Destroy 报错)时 released 会把状态
+			//🔴 投出去就从回收站摘掉,**不等结果**:释放失败(Unload 报错)时 released 会把状态
 			//还原成 Offline,下一个 tick 的扫描会把他重新收进回收站 —— 自愈,不必在这里等。
 			if migratePost(&migrateTask{p: p, handles: []migrateFunc{released}}) {
 				ct--

@@ -126,7 +126,7 @@ func (a *Inbox) Emit(t updater.EventType, args []int32) {
 	}
 	u := a.u
 	if u == nil {
-		return //空壳/已释放不产生事件
+		return //无 Updater / 已卸载不产生事件
 	}
 	s := u.Cache.LoadOrCreate(u, cacheKey, func(*updater.Updater) any {
 		return &state{nexts: map[gateKey]int64{}}
@@ -175,7 +175,7 @@ func (a *Inbox) flush() {
 // 看见）。
 func (a *Inbox) Trigger() {
 	if a.u == nil {
-		return //空壳/已释放：缓存随实例消亡，等下次登录
+		return //无 Updater / 已卸载：缓存随实例消亡，等下次登录
 	}
 	if !a.Pending() {
 		return

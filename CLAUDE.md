@@ -483,7 +483,7 @@ handler 返回后才 `Data→Verify→Submit`；一旦提交期失败回滚（�
      `Receive` 进去，后续读写才全是缓存命中。
    - **卸载粒度是整张表**：同一玩家可能同时有多条在途记录，摘掉一条会把另一条的缓存一起端掉。
      短命（请求内用完）`defer Unmount`；长命（跨请求，如下单→支付→回来核销）**不卸载**，
-     靠玩家下线时 `Destroy` 刷盘，但单条走到终态要 `Remove`，否则长在线玩家会一直堆历史记录。
+     靠玩家下线时 `Unload` 刷盘，但单条走到终态要 `Remove`，否则长在线玩家会一直堆历史记录。
    - ⚠ **要写的字段必须在模型 schema 里声明**：`dataset.Document.Set` 查不到字段名就**直接丢掉**
      （只打一行 Alert）。直连 DB 写 map 时没人在乎有没有声明，**一改成挂载就会静静少写一个字段**。
      给每张 MountModel 补一个"字段声明齐全"的单测钉住。
@@ -748,12 +748,14 @@ handler 要改**别的玩家**（送礼、好友互踢、组队、公会）时�
 
 | | 语义 | 谁能用 |
 |---|---|---|
-| `players.Get(uid,h)` | 只取在线玩家，不在内存回 `ErrNotOnline` | **只在没有 Context、也不持任何玩家锁的入口第一层**：内网 RPC 接收端、运营接口、daemon |
-| `players.Load(uid,init,h)` | 不在线则实时读写库；`init=false` = **只占锁位不加载数据**（回调里 `p.Updater` 是 nil） | 后台直连库改档这类"不读内存数据、但要与该玩家其它操作互斥"的场景 |
-| `players.Login(uid,test,meta,h)` | ⚠ **是真正的登录**：`test` 只管写不写库，内部 `init=true` 拉全量 + `Connected` **标在线**（在线数 +1、发 `EventConnect`） | **只有登录接口**。拿它当"补数据"用就是一次**假上线** |
+| `players.Get(uid,h)` | 只取**整档在内存**的玩家，不在内存或只是懒加载（`!Loaded()`）回 `ErrNotOnline` | **只在没有 Context、也不持任何玩家锁的入口第一层**：内网 RPC 接收端、运营接口、daemon |
+| `players.Load(uid,lazy,h)` | 回调里 `p.Updater` **一定非 nil**。`lazy=false` 整档加载；`lazy=true` = **懒加载**（不预拉，读前 `Select`+`Data`，扫描报错，契约同批量锁 `player.Locker`） | `lazy=true`：只改一两个字段 / 后台直连库改档这类"要与该玩家其它操作互斥、用不上整档"的场景 |
+| `players.Login(uid,test,meta,h)` | ⚠ **是真正的登录**：内部整档加载（`lazy=false`）+ `Connected` **标在线**（在线数 +1、发 `EventConnect`）。`test` 只选对象（`~uid` 独立测试对象），不写库要在回调里自己 `p.Updater.Testing(true)` | **只有登录接口**。拿它当"补数据"用就是一次**假上线** |
 
-⚠ 第二个参数别看错：`Load` 是 `init`、`Login` 是 `test`，语义完全不同。
-"只占锁位"是 `Load(uid,false,h)`，**不是** `Login(uid,false,...)`。
+⚠ 第二个参数别看错：`Load` 是 `lazy`、`Login` 是 `test`，语义完全不同。
+懒加载是 `Load(uid,true,h)`，**不是** `Login(uid,true,...)`。`lazy` 与 `Player.Loading` / `updater.Loading` 的同名参数同义。
+🔴 2026-11-13 起 `Load` 第二个参数由 `init` 改为 `lazy`，**布尔取反**（旧 `Load(uid,true,h)` = 新 `Load(uid,false,h)`）。
+不再有 `Updater == nil` 的空壳：「对方是否整档在内存」一律看 `p.Updater.Loaded()`。
 
 > 真实事故：某项目写过一个 `helper.GetPlayer(c, uid, handle)`，两处都做反了——攥着自己的锁直接
 > `players.Get(别人)`（ABBA），离线时用 `players.Login` 把对方**假上线**。它零调用者却比没有更危险：

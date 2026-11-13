@@ -2,39 +2,29 @@ package player
 
 // Locker 批量玩家锁的回调句柄(context.Mutex().Lock / Async 交给业务的那个对象)
 //
-// # 🔴 批量锁只保证「取得操作权限」,不保证玩家在线、也不保证有数据
+// # 🔴 批量锁兼容离线操作:每个玩家都有 Updater,但**读玩家数据时要假设玩家不在线**
 //
-// 这里拿到的 *Player 分两种,**用之前必须先判**:
+// 回调里拿到的每个 *Player 都有可用的 p.Updater(已 Reset),不再有空壳:
 //
-//	p.Updater != nil   玩家本就在内存(在线,或离线未回收)。已 Reset,可以正常读写
-//	p.Updater == nil   玩家不在内存(必然离线)。这是**空壳**,只占住了锁位没有任何数据,
-//	                   直接拿它读写(cache.GetRole(p.Updater) 之类)就是当场 nil panic
+//	玩家本就在内存   用现成的(在线,或离线未回收),数据完整
+//	玩家不在内存     批量锁以 updater **懒加载**给他建 Updater(Loading(lazy=true)):不预拉任何数据,
+//	                 不付「整档六张表全量加载 + 长期驻留」的代价
 //
-// 空壳不是缺陷是设计:批量锁的典型用途是"改对方一两个字段、给对方发条消息",
-// 而 Loading 会把该玩家**全部常驻模型整表拉一遍**(本项目 6 张表,含整个背包),
-// 还把这份存档长期留在内存(回收要等缓存总量越过 MemoryPlayer+MemoryRelease)。
-// 为一个字段付这份钱不合算,所以锁归锁、数据归数据。
+// 业务**不要**去分辨是哪一种(在线与否会在取锁后、回调前变化),一律按「对方不在线、懒加载」写:
 //
-// # 需要数据时按需手动加载,两条路按代价选
+//	读   读之前必须 Select + Data(locker.Select + locker.Data 或 p.Updater 上逐句柄 Select);
+//	     没拉的键读到**零值**——「读出来判定再写绝对值」漏了这一步,就会用零值覆盖对方存档
+//	写   照常 Add / Sub / Set,写会自己 Select 触碰的键;结束前 locker.Submit()(Async 必须显式提交)
+//	扫描 Range / Len / All / 不可叠加道具的 Count 懒加载下报错(u.Error),不要在批量锁里用
+//	派生 依赖 EventTypeLoaded 建的派生状态(项目的物品索引、域级缓存里的统计)懒加载下为空,
+//	     不要依赖;需要整档数据的逻辑不要放进批量锁
 //
-//	p.Initialize()   = 离线档 Loading + Reset,幂等。**离线档**下全部模型按 RAMTypeNone 运行:
-//	                   不预拉不驻留,请求内照常完整流水线(Data 按需拉触碰的键、校验/溢出全保留,
-//	                   save 绝对值 $set)——跨玩家补数据的轻量形态,业务层调用形态不变。
-//	                   边界:Collection.Count 被拦;要复杂判定(溢出分解等)先读够再写。
-//	                   详见 updater 仓 CLAUDE.md「离线档」
-//	直连 DB 改字段     空壳已经把并发的 Get / Load / 登录挡在门外——互斥性正是空壳给的保证。
-//	                   ⚠ 写必须发生在**锁内**(回调返回前),否则与并发登录的 Loading 抢顺序
+// 只改一两个顶层标量、且不读任何数据时,锁内直连 DB(UpdateMany,读零次)仍是最省的,
+// 判据用 !p.Updater.Loaded()(懒加载);⚠ 写必须发生在**锁内**,否则与并发登录的 Loading 抢顺序。
 //
-// # 空壳会自愈,不必也不该手动清理
-//
-// 空壳留在 Manage 里等人来补:登录走 Players.Load(init=true) / Login / Connected,
-// 它们见 Updater==nil 就 New 一个并加载。期间别人可能已经拿到同一个指针在等锁,
-// 删掉它等于让人在 Manage 之外操作孤儿对象。没人来就由 daemon 正常回收。
-//
-// # 下面几个聚合方法对空壳一律跳过
-//
-// Select / Data / Verify / Submit 遇到空壳直接 continue:它没有 Updater,
-// 也就没有待拉取的 key、没有待提交的操作。跳过是正确语义,不是掩盖错误。
+// 懒加载玩家留在 Manage 里:之后登录(Players.Load(lazy=false) / Login / Connected)由 Loading
+// 自动转正为整档在线;Players.Get 把未转正的视为不在线(ErrNotOnline),走「Get 失败 → Load」
+// 降级链完成转正。没人来就由 daemon 正常回收。
 type Locker interface {
 	Get(uid string) *Player
 	Data() error
@@ -48,9 +38,9 @@ type AsyncHandle func(locker Locker, args any)
 
 type LockerHandle func(locker Locker, args any) (any, error)
 
-// Reset 空壳(Updater==nil,见 players.Lock)上是空操作:没有数据可重置。
-// 与 Release/Destroy 一起构成空壳流经全部路径的收敛点——Get/跨玩家 Locker/daemon 回收/
-// 停服保存都经由这三个方法碰 Updater,守在这里一处顶五处。
+// Reset Updater==nil 时是空操作。经 Get / Load / 批量锁交给业务的玩家一定有 Updater(不再有空壳),
+// nil 只剩新对象在 acquire 之后、prepare 之前那一瞬(锁内)与 Unload 之后——判 nil 是防御:
+// Get/跨玩家 Locker/daemon 回收/停服保存都经由 Reset/Release/Unload 碰 Updater,守在这里一处顶五处。
 func (p *Player) Reset() {
 	if p.Updater == nil {
 		return
@@ -58,7 +48,7 @@ func (p *Player) Reset() {
 	p.Updater.Reset()
 }
 
-// Release 同 Reset,空壳上是空操作
+// Release 同 Reset,Updater==nil 时是空操作
 func (p *Player) Release() {
 	if p.Updater == nil {
 		return

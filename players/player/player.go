@@ -93,7 +93,7 @@ func (p *Player) createComponents() {
 // rp  req |  path
 //
 // 调用方必须持有玩家锁。开头那次状态判定是锁外快筛,后面读 Binder/Gateway 和调 Guid()
-// (要碰 Updater 的 dataset)都没有复查:不持锁时 released() 可能刚好在这中间跑完 Destroy,
+// (要碰 Updater 的 dataset)都没有复查:不持锁时 released() 可能刚好在这中间跑完 Unload,
 // 读到的是残值,并发改 dataset 更可能撞上 concurrent map read and write 这种 fatal error。
 // 目前调用方都在 players.Get 回调里(context.Send / master.Send),天然满足;
 // 若要从 daemon、定时器或别的玩家协程里推消息,请套 players.Get(uid, func(p){ p.Send(...) })。
@@ -142,15 +142,14 @@ func (p *Player) Send(v any, req values.Metadata) {
 	}
 }
 
-// Loading 加载数据
-// test 是否测试模式
-func (p *Player) Loading(test bool) (err error) {
-	return p.loading(test, false)
-}
-
-// loading Loading 的内部形态：offline 走 updater 的离线档（全部模型按 RAMTypeNone 运行、
-// 不预拉），供 Initialize 补数据用——跨玩家改一个字段不再付整档全量加载的代价。
-func (p *Player) loading(test, offline bool) (err error) {
+// Loading 加载数据,调用方负责随后 Reset;要测试模式(只改内存不写库)的,加载后自己调
+// p.Updater.Testing(true)。
+//
+//	lazy  懒加载:不预拉任何数据(updater 懒加载),供批量锁给不在内存的玩家建 Updater。
+//	      读之前必须 Select + Data(没拉的键读到零值),扫描类接口报错,契约见 player.Locker
+//	      与 updater 仓 CLAUDE.md「懒加载」。已整档加载的实例传 true 无效;懒加载的实例再以
+//	      lazy=false 调用即转正(整档预拉)
+func (p *Player) Loading(lazy bool) (err error) {
 	//验证UID是否合法
 	if uid := p.Uid(); !uuid.IsValid(uid) {
 		return fmt.Errorf("player uid(%s) is invalid", uid)
@@ -163,36 +162,33 @@ func (p *Player) loading(test, offline bool) (err error) {
 	if !atomic.CompareAndSwapInt32(&p.Status, status, StatusLocked) {
 		return fmt.Errorf("player status change")
 	}
+	//🔴 失败后的状态分两种:新建 Updater 失败 / panic → Released(拒绝态),由调用方摘出 Manage
+	//(players.load、batch.loading);已有 Updater 的转正失败(如批量锁里对懒加载玩家 Loading(false))
+	//→ 恢复原状态——updater 已退回懒加载,对象仍可用。打成 Released 而调用方又摘不掉(业务侧
+	//拿不到 Manage)的话,daemon 不回收拒绝态,该玩家此后进不了任何批量锁、登录也要先失败一次。
+	fresh := p.Updater == nil
+	panicked := false
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("%v", e)
+			panicked = true
 			logger.Error(e)
 		}
-		if err != nil {
+		if err != nil && (fresh || panicked) {
 			atomic.StoreInt32(&p.Status, StatusReleased)
 		} else {
 			atomic.StoreInt32(&p.Status, status)
 		}
 	}()
-	if p.Updater == nil {
+	if fresh {
 		//玩家域即 Default 域;包级 New() 现在是造域(返回 *Manage),实例经 Manage.New(e) 取
 		p.Updater = updater.Default.New(p)
 	}
 	//组件建立先于首次 Loading（updater.Loading 已不带回调）：Emit(EventTypeInit) 时组件
 	//就绪，与旧回调形态的时序等价。无条件调用是安全的——createComponents 自身幂等
-	//(Times 已建即返回)，自愈路径与离线档重拉起都不重复建、不丢已注册监听
+	//(Times 已建即返回)，自愈路径与懒加载重拉起都不重复建、不丢已注册监听
 	p.createComponents()
-	if offline {
-		_, err = p.Updater.Loading(true)
-	} else {
-		_, err = p.Updater.Loading()
-	}
-	if err != nil {
-		return err
-	}
-	if test {
-		err = p.Updater.Testing(true)
-	}
+	_, err = p.Updater.Loading(lazy)
 	return
 }
 
@@ -225,46 +221,33 @@ func (p *Player) Guid() string {
 	return ""
 }
 
-// Destroy 销毁玩家数据,调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater
-func (p *Player) Destroy() error {
-	//空壳(Updater==nil,见 players.Lock)没有数据要销毁,直接算成功。
-	//不能返回 error:daemon 的 released 收到 error 会还原状态、下个 tick 重试,
-	//空壳每次都失败就成了死循环。
-	if p.Updater == nil {
-		p.Pending = Pending{}
-		p.Emitter = nil
-		p.Inbox = nil
-		return nil
+// Unload 卸载玩家:未落库的改动刷进数据库,成功后把 Updater 与组件从内存拆掉(库里的数据不动)。
+// 调用者必须持有玩家锁(p.Lock),否则会与在途业务调用竞态置空 Updater。
+//
+// 🔴 **仅供 players daemon 回收调用**:要求状态已是 StatusReleased(daemon 在锁外 CAS 置好再调),
+// 否则直接返回错误、什么都不做。业务层在正常状态下误调用的话,Updater 被抽走——本次 handler 后续
+// 代码与框架收尾的 Submit 当场 nil panic,对象还留在 Manage 里成了在线的空壳——所以宁可报错。
+// 要让内存跟上带外改库用 p.Updater.Reload();要整个退役用 players.Terminate。
+func (p *Player) Unload() error {
+	if s := atomic.LoadInt32(&p.Status); s != StatusReleased {
+		return fmt.Errorf("player unload denied: status %v is not released(uid:%s)", s, p.uid)
 	}
-	if err := p.Updater.Destroy(); err != nil {
-		return err
+	//Updater==nil(没有数据要卸载,如新对象建 Updater 失败)直接算成功。
+	//不能返回 error:daemon 的 released 收到 error 会还原状态、下个 tick 重试,
+	//每次都失败就成了死循环。
+	if p.Updater != nil {
+		if err := p.Updater.Unload(); err != nil {
+			return err
+		}
 	}
 	p.Updater = nil
 	p.Pending = Pending{}
 	p.Emitter = nil
-	return nil
-}
-
-// Initialize 把玩家初始化到可用状态,供 Load(init=false) 的回调「中途发现需要数据」时调用。
-//
-// 它把 Loading 与 Reset 一次做完 —— 单调 Loading 是不够的:Updater 由 New 创建时
-// now 是零值,只有 Reset 会设,漏掉就得到一个"能用但时间基准是 1 年"的 Updater,
-// 不报错也不 panic,是最难查的那类问题。
-//
-// 走 updater 的**离线档**（全部模型按 RAMTypeNone 运行：不预拉，Data 按需拉触碰的键，
-// save 绝对值 $set）:跨玩家补数据的轻量形态。登录路径（Loading 无参全量预拉）不受影响——
-// 该玩家登录时无参 Loading 自动清掉 offline 并 tryLoad 重新整档预拉（转正）。
-//
-// 幂等:Updater 已就绪(init=true,或 init=false 时玩家本就在内存、框架已 Reset 过)
-// 直接返回。Release 由框架的 defer 负责,调用方不必管。
-func (p *Player) Initialize() error {
-	if p.Updater != nil {
-		return nil
-	}
-	if err := p.loading(false, true); err != nil {
-		return err
-	}
-	p.Reset()
+	p.Inbox = nil
+	//组件与 Updater 一起丢:createComponents 以 Times 判「已建」,不清的话对象万一被复用重新 Loading,
+	//Condition / Emitter / Inbox 不会重建,之后一 Emit 就 nil panic
+	p.Times = nil
+	p.Condition = nil
 	return nil
 }
 

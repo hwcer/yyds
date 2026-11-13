@@ -66,14 +66,17 @@ Go 在 send 时把值直接交给队首等待者，后到的抢不走；零额�
 
 ### 批量取得多个玩家
 
-`context.Mutex().Lock/Async` 只保证「取得操作权限」，**不保证玩家在线、也不保证有数据**：
+`context.Mutex().Lock/Async` 兼容离线操作：回调里**每个玩家都有 Updater**（已 Reset）。
+玩家在内存用现成的；不在内存的以 updater **懒加载**建 Updater（`Loading(true)`，lazy 懒加载，不预拉）——
+不付「整档全量加载 + 长期驻留」的代价，批量锁的典型用途（改对方一两个字段）用不上整档。
 
-- `p.Updater != nil` — 玩家在内存（在线，或离线未回收），已 Reset，可正常读写；
-- `p.Updater == nil` — 玩家不在内存（必然离线），这是**空壳**，直接读写就是当场 nil panic。
+🔴 **在批量锁中读玩家数据时要假设玩家不在线**：读之前必须 `Select` + `Data`（没拉的键读到零值，
+「读出来判定再写绝对值」漏了就是零值覆盖存档）；`Range` / `Len` / `All` 等扫描在懒加载下报错；
+依赖 `EventTypeLoaded` 的派生状态（如物品索引）不可用。只改一两个字段、不读数据时，锁内直连 DB
+（判据 `!p.Updater.Loaded()`）仍最省。完整契约见 `player.Locker` 接口上的注释。
 
-空壳是设计不是缺陷：批量锁的典型用途是"改对方一两个字段、发条消息"，而 `Loading` 会把该玩家
-全部常驻模型整表拉一遍并长期留在内存。需要数据时按需加载（`p.Initialize()`），
-只改一两个字段就直连 DB —— 完整契约见 `player.Locker` 接口上的注释。
+懒加载玩家之后登录由 `Loading` 自动转正为整档在线；`players.Get` 把未转正的视为不在线（`ErrNotOnline`），
+走「Get 失败 → Load」降级链完成转正。
 
 ## 玩家状态
 
@@ -131,7 +134,7 @@ Connected ──(ConnectedTime 120s 无心跳)──→ Disconnect    触发 Eve
                                          (内存压力触发)
                                               │
                                               ↓
-                                     Released → Destroy    释放资源，从内存移除
+                                     Released → Unload    释放资源，从内存移除
 ```
 
 每次状态转换都会重置心跳时间（`KeepAlive`），下一阶段的计时从零开始。从最后一次心跳到进入回收站，最少需要 **300 秒（5 分钟）**。
@@ -173,12 +176,12 @@ Connected ──(ConnectedTime 120s 无心跳)──→ Disconnect    触发 Eve
 
 分批是因为每个脏玩家一次 BulkWrite——一次退潮把上千个的落库同时压给数据库不是好主意，状态迁移执行池的队列也吃不下。⚠ `ReleaseBatch` 的零值是致命的（一个都放不掉，内存只涨不跌），`Start` 里有兜底。一批放满了仍有积压时会打一条 `logger.Trace`，避免从监控指标上看像是「清不动」。
 
-释放过程：CAS 置 `StatusReleased`（接受 `StatusOffline` / `StatusTerminated`）→ 取玩家锁（等待在途业务调用结束）→ `Reset`（重置数据）→ `Destroy`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除。如果 `Destroy` 失败，状态还原成进来时那个，下次重试。
+释放过程：CAS 置 `StatusReleased`（接受 `StatusOffline` / `StatusTerminated`）→ 取玩家锁（等待在途业务调用结束）→ `Reset`（重置数据）→ `Unload`（销毁 Updater、清理内存）→ 解锁 → 从管理器中删除。如果 `Unload` 失败，状态还原成进来时那个，下次重试。
 
 顺序上有两个约束不能调换：
 
-- **必须持锁才能 `Destroy`**：`Destroy` 会把 `Updater` 置空，不加锁就可能在业务协程执行 `handle` 期间抽走它，对端 `defer Release()` 直接 nil panic。相应地 `Get` 也必须**先判 `Denied` 再 `Reset`**。
-- **CAS 放在取锁之前**：状态提前翻成 `StatusReleased`，后来的 `Get` 拿到锁就能立刻按拒绝态返回，不必排队等一把注定用不上的锁；而 `Destroy` 仍在锁内，不会和正在跑的业务协程撞上。
+- **必须持锁才能 `Unload`**：`Unload` 会把 `Updater` 置空，不加锁就可能在业务协程执行 `handle` 期间抽走它，对端 `defer Release()` 直接 nil panic。相应地 `Get` 也必须**先判 `Denied` 再 `Reset`**。
+- **CAS 放在取锁之前**：状态提前翻成 `StatusReleased`，后来的 `Get` 拿到锁就能立刻按拒绝态返回，不必排队等一把注定用不上的锁；而 `Unload` 仍在锁内，不会和正在跑的业务协程撞上。
 - **失败时不能硬编码还原成 `StatusOffline`**：`StatusTerminated` 退化成 `Offline` 会被 `Connected()` 复活，踢/封标记就丢了。
 - **`ps.Delete` 必须在解锁之后**：`Delete` 要取管理器写锁，持着玩家锁去抢它，会和"持管理器读锁等玩家锁"的一方成环（`shutdown` 的 `Range` 就是那一方）。这也是这段不能用 `defer` 解锁的原因。
 

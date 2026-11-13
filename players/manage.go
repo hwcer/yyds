@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hwcer/cosgo/await"
+	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/yyds/errors"
 	"github.com/hwcer/yyds/players/player"
 )
@@ -59,11 +60,12 @@ func get(uid string, handle player.Handle) error {
 	}
 	p.Lock()
 	defer p.Unlock()
-	//必须先判状态再 Reset:拿到锁时可能已经被 released 销毁。
-	//Updater==nil 是"只占锁位"留下的空壳(见 load 的 init=false 分支):它按定义就不是在线玩家,
-	//这里必须挡住,否则会把 nil Updater 交给业务。返回 ErrNotOnline 也正好让 context/locker.go
-	//与 gomcp 那两条「Get 失败→退回 Load」的降级链继续成立,由 load 的 Loading 去自愈它。
-	if p.Denied(atomic.LoadInt32(&p.Status)) || p.Updater == nil {
+	//必须先判状态再 Reset:拿到锁时可能已经被 released 卸载。
+	//!Loaded() 是懒加载的 Updater(批量锁 / Load(lazy=true) 建的,未整档加载,读要 Select+Data、
+	//扫描报错)——它不是可当在线玩家交给业务的对象,这里必须挡住。返回 ErrNotOnline 也正好让
+	//context/locker.go 与 gomcp 那两条「Get 失败→退回 Load」的降级链继续成立,由 load 转正它。
+	//Updater==nil 只剩 acquire 之后、prepare 之前那一瞬(锁内),拿到锁时不会再看到,判它只是防御。
+	if p.Denied(atomic.LoadInt32(&p.Status)) || p.Updater == nil || !p.Updater.Loaded() {
 		return errors.ErrNotOnline
 	}
 	p.Reset()
@@ -71,47 +73,79 @@ func get(uid string, handle player.Handle) error {
 	return handle(p)
 }
 
-// load 加载玩家;init=false 时只占锁位不加载数据。公开入口见 Load / Login
-func load(uid string, test, init bool, handle player.Handle) (err error) {
-	r := player.New(uid, test)
-	r.Lock()
-	i, loaded := manage.LoadOrStore(r.Key(), r)
-	if loaded {
-		r.Unlock()
-		r = i
-		r.Lock()
-	} else if !init {
-		//空壳必须补一次心跳:player.New 不设 heartbeat(恒 0),而 daemon 按
-		//Heartbeat()<offlineTime 判回收、内存压力下又按 heartbeat 升序决定先放谁——
-		//不刷的话它是全场最先被释放的对象,等不到有人来自愈。preload 同款做法。
-		r.KeepAlive(0)
+// load 加载玩家并在锁内执行 handle。公开入口见 Load / Login
+//
+//	test        只选对象:true 用独立的测试对象(key "~uid",见 player.New),不与真实玩家共用;
+//	            是否「只改内存不写库」由业务在 handle 里自己调 p.Updater.Testing(true)
+//	lazy=false  整档加载(懒加载实例就地转正,已整档的不重拉)
+//	lazy=true   懒加载:不预拉任何数据,读前 Select + Data(契约同批量锁,见 player.Locker)
+//
+// lazy 与 Player.Loading / updater.Loading 的同名参数同义。
+func load(uid string, test, lazy bool, handle player.Handle) (err error) {
+	r, err := acquire(uid, test)
+	if err != nil {
+		return err
 	}
 	defer r.Unlock()
-	if !init {
-		//只占锁位:不 Loading。空壳留在管理器里等人自愈,不删不打拒绝态——处理期间别人
-		//可能已经拿到同一个指针正在等锁,删掉等于让它在管理器之外操作孤儿对象。
-		//Reset/Release 仍照做(对空壳是空操作):玩家本就在内存时少了这一步,会给出一个
-		//"非 nil 但 now 是零值"的 Updater——能用、不报错、时间全错。
-		//
-		//📌 这里判的**不是**"在不在线":Denied 只含 Locked/Released/Terminated
-		//(见 player/status.go),离线的 None/Disconnect/Offline 一律放行 ——
-		//本方法对离线玩家本来就是可用的。误导人的是错误码叫 ErrNotOnline,
-		//它的实际语义是"这个对象暂时不能操作(正在加载 / 已销毁 / 已被踢)"。
-		if r.Denied() {
-			return errors.ErrNotOnline
-		}
-		r.Reset()
-		defer r.Release()
-		return handle(r)
+	if err = prepare(r, lazy); err != nil {
+		return err
 	}
-	if err = r.Loading(test); err != nil {
-		//加载失败时 Loading 会把状态置成 StatusReleased,而 daemon 只回收
-		//None/Offline/Terminated —— 不摘出去的话这个对象会永远留在管理器里且恒为拒绝态,
-		//该玩家从此登录不进来,要等进程重启才恢复。
-		manage.Delete(r.Key())
-		return
-	}
+	//Reset 必做:少了这一步会给出一个"非 nil 但 now 是零值"的 Updater——能用、不报错、时间全错
 	r.Reset()
 	defer r.Release()
 	return handle(r)
+}
+
+// acquire 取得 uid 的玩家锁位,返回时**已持有该玩家的锁**(调用方负责 Unlock)。
+// 玩家在内存就用现成的(先判拒绝态);不在内存放入一个新对象。数据由 prepare 负责。
+// Load / Login 与批量锁共用这一份,两条路「不在内存」的处理从此一致。
+func acquire(uid string, test bool) (*player.Player, error) {
+	//🔴 uid 合法性必须在这里挡:漏掉的后果不是报错而是**静默**——任何一个字符串都会在 Manage
+	//里种下一个对象,占着内存等 daemon 回收,而调用方以为自己操作成功了
+	if !uuid.IsValid(uid) {
+		return nil, errors.ErrArgEmpty
+	}
+	r := player.New(uid, test)
+	r.Lock()
+	if i, loaded := manage.LoadOrStore(r.Key(), r); loaded {
+		i.Lock()
+		r.Unlock()
+		r = i
+		//已在内存的也要判拒绝态:Released 的对象 Updater 已被卸载、Terminated 的已被踢。
+		//📌 判的**不是**"在不在线":Denied 只含 Locked/Released/Terminated(见 player/status.go),
+		//离线的 None/Disconnect/Offline 一律放行。错误码叫 ErrNotOnline 是历史叫法,
+		//实际语义是"这个对象暂时不能操作(正在加载 / 已卸载 / 已被踢)"
+		if r.Denied() {
+			r.Unlock()
+			return nil, errors.ErrNotOnline
+		}
+	} else {
+		//新对象必须补一次心跳:player.New 不设 heartbeat(恒 0),而 daemon 按
+		//Heartbeat()<offlineTime 判回收、内存压力下又按 heartbeat 升序决定先放谁——
+		//不刷的话它是全场最先被释放的对象。preload 同款做法。
+		r.KeepAlive(0)
+	}
+	return r, nil
+}
+
+// prepare 保证玩家有可用的 Updater(调用方持锁):lazy=true 至少懒加载(已有 Updater 的不动);
+// lazy=false 整档(懒加载实例就地转正,已整档的跳过)。
+//
+// 失败时对象若落到拒绝态(新建 Updater 失败 / panic,见 Player.Loading)就摘出 Manage:daemon 只回收
+// None/Offline/Terminated,不摘的话这个对象恒为拒绝态,该玩家要等进程重启才登录得进来。
+// 懒加载实例转正失败时状态已恢复、对象仍可用(updater 退回懒加载),不摘:它可能带着
+// 未提交成功的 BulkWrite 队列,摘了就丢了。
+// 懒加载玩家**留在 Manage 里不删**:处理期间别人可能已经拿到同一个指针正在等锁,删掉等于让它
+// 在 Manage 之外操作孤儿对象。之后登录由 Loading 转正,没人来就由 daemon 回收。
+func prepare(r *player.Player, lazy bool) error {
+	if r.Updater != nil && (lazy || r.Updater.Loaded()) {
+		return nil
+	}
+	if err := r.Loading(lazy); err != nil {
+		if r.Denied() {
+			manage.Delete(r.Key())
+		}
+		return err
+	}
+	return nil
 }

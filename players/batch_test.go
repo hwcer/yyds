@@ -15,20 +15,30 @@ func testUid(index uint64) string {
 	return uuid.NewUUID(1, 1, index).String(uuid.BaseSize)
 }
 
-// 本文件钉住一条契约：**批量锁只取得操作权限，不加载数据**。
+// 本文件钉住一条契约：**批量锁兼容离线操作——每个玩家都有 Updater，不在内存的以懒加载建、不预拉**。
 //
-// 它是静默失效的重灾区 —— 一旦有人在 loading 里把 Loading 加回去，
-// 功能全部照常，只是每次跨玩家操作都多读六张表、还把离线玩家长期钉在内存里，
-// 压测之前根本看不出来。所以用测试钉，不靠注释。
+// 两个方向都是静默失效的重灾区：一旦有人在 loading 里换成整档 Loading，功能全部照常，
+// 只是每次跨玩家操作都多读六张表、还把离线玩家长期钉在内存里；反过来退回空壳（Updater==nil），
+// 业务就又得自己补数据。所以用测试钉，不靠注释。
+
+type nopBulk struct{}
+
+func (nopBulk) Update(any, any, ...any) {}
+func (nopBulk) Insert(any, ...any)      {}
+func (nopBulk) Delete(any, ...any)      {}
+func (nopBulk) Submit() error           { return nil }
+func (nopBulk) String() string          { return "nop" }
 
 func init() {
 	newManage() //初始化批量锁队列与管理器
+	//updater.Loading 首载要求配了 BulkWrite(开服自检),懒加载也不例外
+	updater.Config.BulkWrite = func(*updater.Updater) updater.BulkWrite { return nopBulk{} }
 }
 
-// TestLockerShellForOfflinePlayer 玩家不在内存时给的是空壳：Updater 为 nil。
+// TestLockerOfflineUpdaterForOfflinePlayer 玩家不在内存时以懒加载建 Updater：非 nil、未整档加载。
 //
-// 🔴 这是本次改动的核心断言。若这里拿到非 nil，说明 loading 又在加载数据了。
-func TestLockerShellForOfflinePlayer(t *testing.T) {
+// 🔴 核心断言：Updater==nil 说明又退回了空壳；Loaded()==true 说明在整档加载数据。
+func TestLockerOfflineUpdaterForOfflinePlayer(t *testing.T) {
 	uid := testUid(1)
 	var got *player.Player
 	_, err := newBatch([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
@@ -38,27 +48,28 @@ func TestLockerShellForOfflinePlayer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("批量锁不该因为玩家不在内存而失败,实得 %v", err)
 	}
-	if got == nil {
-		t.Fatal("回调里应拿到玩家对象(空壳也是对象)")
+	if got == nil || got.Updater == nil {
+		t.Fatal("玩家不在内存时批量锁必须给出可用的 Updater(懒加载),不能是空壳")
 	}
-	if got.Updater != nil {
-		t.Fatal("玩家不在内存时必须是空壳(Updater==nil);拿到非 nil 说明 loading 又在加载数据了")
+	if got.Updater.Loaded() {
+		t.Fatal("懒加载不得整档加载数据(Loaded 应为 false)")
 	}
-	//空壳要留在 Manage 里等人自愈,不能用完就删 —— 别人可能已经拿到同一个指针在等锁
+	//留在 Manage 里等登录转正,不能用完就删 —— 别人可能已经拿到同一个指针在等锁
 	if _, ok := manage.Load(uid); !ok {
-		t.Fatal("空壳必须留在 Manage 里(占锁位 + 等自愈)")
+		t.Fatal("懒加载玩家必须留在 Manage 里(占锁位 + 等转正)")
 	}
 	//心跳必须补:player.New 不设 heartbeat(恒 0),不刷的话它是 daemon 眼里全场最先被回收的
 	if p, _ := manage.Load(uid); p.Heartbeat() == 0 {
-		t.Fatal("空壳必须补一次心跳,否则会被 daemon 抢在自愈之前回收")
+		t.Fatal("必须补一次心跳,否则会被 daemon 抢在转正之前回收")
+	}
+	//Get 只交出整档在线的玩家:懒加载要走「Get 失败 → Load」降级链转正
+	if err := get(uid, func(*player.Player) error { return nil }); err != errors.ErrNotOnline {
+		t.Fatalf("Get 应把懒加载玩家视为不在线(ErrNotOnline),实得 %v", err)
 	}
 }
 
-// TestLockerAggregatesSkipShell 四个聚合方法遇到空壳一律跳过，不 panic。
-//
-// Submit 尤其要钉：它原本是裸 p.Updater.Submit()，空壳流过就是 nil panic，
-// 而这条路只在「被操作者恰好离线」时才走到，测不出来就等着线上炸。
-func TestLockerAggregatesSkipShell(t *testing.T) {
+// TestLockerAggregatesOnOfflinePlayer 四个聚合方法对懒加载玩家照常工作，不 panic。
+func TestLockerAggregatesOnOfflinePlayer(t *testing.T) {
 	uid := testUid(2)
 	_, err := newBatch([]string{uid}, nil, func(l player.Locker, _ any) (any, error) {
 		l.Select("guild")
@@ -71,7 +82,26 @@ func TestLockerAggregatesSkipShell(t *testing.T) {
 		return nil, l.Submit()
 	})
 	if err != nil {
-		t.Fatalf("空壳上跑聚合方法应全部安全跳过,实得 %v", err)
+		t.Fatalf("懒加载玩家上跑聚合方法应全部成功,实得 %v", err)
+	}
+}
+
+// TestLoadLazyMatchesLocker Load(lazy=true) 与批量锁同一套行为：不在内存的以懒加载建 Updater，
+// 不再给 Updater==nil 的空壳；非法 uid 同样当场拒掉（acquire 共用）。
+func TestLoadLazyMatchesLocker(t *testing.T) {
+	uid := testUid(5)
+	var got *player.Player
+	if err := load(uid, false, true, func(p *player.Player) error { got = p; return nil }); err != nil {
+		t.Fatalf("Load(lazy=true) 不该因为玩家不在内存而失败,实得 %v", err)
+	}
+	if got == nil || got.Updater == nil || got.Updater.Loaded() {
+		t.Fatal("Load(lazy=true) 必须给出懒加载 Updater(非 nil、未整档),不能是空壳")
+	}
+	if err := load("not-a-valid-uid", false, true, func(*player.Player) error {
+		t.Fatal("非法 uid 不该进到回调里")
+		return nil
+	}); err != errors.ErrArgEmpty {
+		t.Fatalf("Load 非法 uid 应回 ErrArgEmpty,实得 %v", err)
 	}
 }
 
