@@ -2,7 +2,6 @@ package rank
 
 import (
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/hwcer/cosgo/redis"
@@ -10,12 +9,6 @@ import (
 
 // eraYear 开服时间戳，Statement 未指定开始时间时的兜底值
 var eraYear int64
-
-// started Start 之后禁止再注册排行榜
-//
-// Master 是裸 map,心跳协程会遍历它,业务协程会读它,
-// 启动后再写入等于并发读写 map,会直接 fatal 而不是可恢复的竞态
-var started atomic.Bool
 
 const layout = "2006-01-02 15:04:05-0700"
 
@@ -29,8 +22,6 @@ func Start(redis *redis.Client, sharId string, serverId int32) (err error) {
 	client = redis
 	Options.ShareId = sharId
 	Options.ServerId = serverId
-	//置位后 Register 不再接受新注册,Master 自此只读
-	started.Store(true)
 
 	et, err := time.Parse(layout, Options.StartTime)
 	if err != nil {
@@ -45,7 +36,9 @@ func GetBucket(name any) *Bucket {
 	return Master.Get(name)
 }
 
-// Register 注册排行榜,只能在 init 阶段(Start 之前)调用
+// Register 注册排行榜。Start 之前、之后均可调用(Master 写时复制,读路径无锁):
+// 启动后注册的桶当场建好当前届并检查未结算届,下一轮心跳起即被驱动。
+// 同名重复注册 Fatal——运行期按配置增榜的业务先用 Get 判断是否已注册。
 //
 // opts 可选项,如 WithoutTiebreak() 关闭同分tiebreak(令 score 保持纯整数)
 func Register(name any, zMax, zScore int64, zType SortType, plugs Handle, opts ...Option) {

@@ -18,8 +18,8 @@ func TestNotStartedReturnsError(t *testing.T) {
 	t.Cleanup(func() { client = old })
 
 	b := NewBucket("startedtest", "startedtest", 0, ScoreUnlimited, SortTypeDesc, swapHandle{})
-	Master["startedtest"] = b
-	t.Cleanup(func() { delete(Master, "startedtest") })
+	testPut("startedtest", b)
+	t.Cleanup(func() { Master.remove("startedtest") })
 
 	// Get 仍能取到桶——这正是它不能用来判「能不能用」的原因
 	if Get("startedtest") == nil {
@@ -56,8 +56,8 @@ func TestCycleWorksWithoutRedis(t *testing.T) {
 	t.Cleanup(func() { client = old })
 
 	b := NewBucket("cycletest", "cycletest", 0, ScoreUnlimited, SortTypeDesc, swapHandle{})
-	Master["cycletest"] = b
-	t.Cleanup(func() { delete(Master, "cycletest") })
+	testPut("cycletest", b)
+	t.Cleanup(func() { Master.remove("cycletest") })
 
 	if c := Cycle("cycletest", 0); c != 1 {
 		t.Errorf("未启动时 Cycle 仍应算得出来, 实际 %v", c)
@@ -76,9 +76,9 @@ func TestServiceAPIWorksWhenStarted(t *testing.T) {
 	setupRedis(t)
 	b := NewBucket("svcapitest", "svcapitest", 0, ScoreUnlimited, SortTypeDesc, swapHandle{}, WithoutTiebreak())
 	b.zStmt.Store(NewStatement(1, 0, 0))
-	Master["svcapitest"] = b
+	testPut("svcapitest", b)
 	t.Cleanup(func() {
-		delete(Master, "svcapitest")
+		Master.remove("svcapitest")
 		client.Del(context.Background(), b.RedisRankKey(1))
 	})
 	client.Del(context.Background(), b.RedisRankKey(1))
