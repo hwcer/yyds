@@ -3,13 +3,14 @@ package rank
 import (
 	"math"
 	"testing"
-	"time"
+
+	"github.com/hwcer/cosgo/times"
 )
 
 // newStmt 构造一个"已过 elapsed 秒、总时长 d 秒"的 Statement。
 // elapsed 允许为负或超过 d,用于覆盖 formatScore 里的两个钳位分支。
 func newStmt(elapsed, d int64) *Statement {
-	now := time.Now().Unix()
+	now := times.Now().Unix()
 	return &Statement{zTime: now - elapsed, zExpire: now - elapsed + d}
 }
 
@@ -89,7 +90,7 @@ func TestFormatScoreClamp(t *testing.T) {
 // 时长无效时不做 tiebreak
 func TestFormatScoreNoDuration(t *testing.T) {
 	w := &Bucket{zType: SortTypeDesc}
-	now := time.Now().Unix() //必须取一次,两次调用可能跨秒导致时长变成 d+1
+	now := times.Now().Unix() //必须取一次,两次调用可能跨秒导致时长变成 d+1
 	for _, d := range []int64{0, 1, -100} {
 		st := &Statement{zTime: now, zExpire: now + d}
 		if got := st.formatScore(w, 12345); got != 12345 {

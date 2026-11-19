@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hwcer/cosgo/binder"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/logger"
@@ -150,7 +151,7 @@ func worker() {
 	if playersRecycling == nil {
 		playersRecycling = map[string]*player.Player{}
 	}
-	now := time.Now().Unix()
+	now := times.Now().Unix()
 	connectedTime := now - Options.ConnectedTime
 	disconnectTime := now - Options.DisconnectTime
 	offlineTime := now - Options.OfflineTime
@@ -263,9 +264,9 @@ func daemon(ctx context.Context) {
 		case <-timer.C:
 			//扣除 worker 自身耗时,让扫描周期稳定在 t,而不是 t+worker 耗时;
 			//worker 超时也不 back-to-back 连跑,留一个调度间隙
-			start := time.Now()
+			start := times.Now()
 			worker()
-			if d := t - time.Since(start); d > 0 {
+			if d := t - times.Now().Sub(start); d > 0 {
 				timer.Reset(d)
 			} else {
 				timer.Reset(time.Millisecond)
@@ -280,7 +281,7 @@ func shutdown() {
 		return
 	}
 	logger.Alert("收到退出信号，正在保存所有玩家数据")
-	start := time.Now()
+	start := times.Now()
 
 	//先等执行池排空退出:那批在途的迁移正持着玩家锁在补下线事件、在落库(见 migrateWait);
 	//再自己兜一次底 —— ctx 触发时 daemon 可能正好在投递,而池已经退出了(见 migrateDrain)。
@@ -322,8 +323,8 @@ func shutdown() {
 	//没释放成功的只可能是 StatusLocked(正在 Loading)或已经 Released 过的。
 	//必须留痕:停服时"有几个玩家没落库"是事后唯一能查的线索。
 	if failed > 0 {
-		logger.Alert("玩家数据保存完成:共 %d 个,其中 %d 个未能释放,耗时 %v", len(rel), failed, time.Since(start))
+		logger.Alert("玩家数据保存完成:共 %d 个,其中 %d 个未能释放,耗时 %v", len(rel), failed, times.Now().Sub(start))
 	} else {
-		logger.Alert("玩家数据保存完成:共 %d 个,耗时 %v", len(rel), time.Since(start))
+		logger.Alert("玩家数据保存完成:共 %d 个,耗时 %v", len(rel), times.Now().Sub(start))
 	}
 }

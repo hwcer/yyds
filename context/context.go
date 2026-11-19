@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosrpc"
 	"github.com/hwcer/gateway/gwcfg"
 	"github.com/hwcer/yyds/config"
@@ -61,7 +62,7 @@ func (this *Context) Now() time.Time {
 	if this.Player != nil {
 		return this.Player.Now()
 	}
-	return time.Now()
+	return times.Now()
 }
 
 // Unix 秒级时间戳,语义见 Now
@@ -69,7 +70,7 @@ func (this *Context) Unix() int64 {
 	if this.Player != nil {
 		return this.Player.Unix()
 	}
-	return time.Now().Unix()
+	return times.Now().Unix()
 }
 
 // Milli 毫秒级时间戳,语义见 Now
@@ -77,7 +78,7 @@ func (this *Context) Milli() int64 {
 	if this.Player != nil {
 		return this.Player.Milli()
 	}
-	return time.Now().UnixMilli()
+	return times.Now().UnixMilli()
 }
 
 func (this *Context) Permission() gwcfg.OAuthType {

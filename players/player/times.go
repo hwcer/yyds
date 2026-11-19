@@ -2,7 +2,6 @@ package player
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
@@ -115,7 +114,7 @@ func (this *Times) Expire(t int64, args []int64) (r int64, err error) {
 func (this *Times) Verify(args []int64) (t [2]int64, err error) {
 	arr := []int64{0, 0, 0}
 	copy(arr, args)
-	now := time.Now().Unix()
+	now := times.Now().Unix()
 	if t[0], err = this.Start(arr[0], arr[1:]); err != nil {
 		return
 	} else if t[0] > now {

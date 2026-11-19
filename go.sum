@@ -146,8 +146,8 @@ github.com/hashicorp/mdns v1.0.1/go.mod h1:4gW7WsVCke5TE7EPeYliwHlRUyBtfCwuFwuMg
 github.com/hashicorp/memberlist v0.2.2/go.mod h1:MS2lj3INKhZjWNqd3N0m3J+Jxf3DAOnAH9VT3Sh9MUE=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
-github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8 h1:VXwqYrKa+uYYrf8lwrQCw4+urj+v8GkWM9RX1Nqhv78=
-github.com/hwcer/cosgo v1.8.4-0.20260929074315-7f81d5a19ba8/go.mod h1:NbT/COc/u9IKPOyTK+xvMdvGg+EiqJwVSzRo1PK99MI=
+github.com/hwcer/cosgo v1.8.4-0.20261119055727-e4575e8dbad4 h1:RzNYKeAN2BREUcr4SdSZ+JQah2Lk4d2XrRmdpUrmrz4=
+github.com/hwcer/cosgo v1.8.4-0.20261119055727-e4575e8dbad4/go.mod h1:NbT/COc/u9IKPOyTK+xvMdvGg+EiqJwVSzRo1PK99MI=
 github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451 h1:Kgo0IfagYHjzmeD2604IMlVsebVhCyBen0Hubc4NkmE=
 github.com/hwcer/cosmo v1.4.2-0.20260929012606-ae42feef5451/go.mod h1:k6zw/tc/C05bwK4kLYzozWUgxmWaABc3FPcPJBvDgjI=
 github.com/hwcer/cosnet v1.4.5-0.20261027030759-aa87477aba95 h1:QBBjDMbARoyF81W/7tzGNkGhxqBWTnHYCe1tG4wgx08=
@@ -168,12 +168,6 @@ github.com/hwcer/pubsub/redis v0.0.0-20260920082343-816f154f6954 h1:NrvvmND+ynIO
 github.com/hwcer/pubsub/redis v0.0.0-20260920082343-816f154f6954/go.mod h1:mJUnNaBZKIUkOArc1oxdwPw+1Vqdls+1Ad6iHJpHn8M=
 github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954 h1:C2dGS1mjM+BKvFKDO21HFpgd6p4JYFuPMnzqr5Vfk24=
 github.com/hwcer/pubsub/transport v0.0.0-20260920082343-816f154f6954/go.mod h1:XnCB7P4o9Wj4YW0C3VoFHGnI08GiEPHCRfsC6LUOEXY=
-github.com/hwcer/updater v1.5.1-0.20261014084202-dcbc7bc55c2d h1:gJudpvfSZNJPcyNI+LXsoMtG68OLu3VA/xFmWim+JtY=
-github.com/hwcer/updater v1.5.1-0.20261014084202-dcbc7bc55c2d/go.mod h1:CuGThFSX642FbmrH6ESQqPx5YvIHjrrGXMokiWtZmqo=
-github.com/hwcer/updater v1.5.1-0.20261104135512-563119be2dcb h1:pOSETxllOkR9Ccijau8lYZ4R+deT7ydtBQaNjoSJvLE=
-github.com/hwcer/updater v1.5.1-0.20261104135512-563119be2dcb/go.mod h1:CuGThFSX642FbmrH6ESQqPx5YvIHjrrGXMokiWtZmqo=
-github.com/hwcer/updater v1.5.1-0.20261105073847-78b6e8581beb h1:l9DjxOk9EJCNMnatuerdI/uS/f+1yUs8LZxe8C/0ggI=
-github.com/hwcer/updater v1.5.1-0.20261105073847-78b6e8581beb/go.mod h1:kqKaRzfId86UxLMenS1c/HBNxU/xafMPI9IX6926qyw=
 github.com/hwcer/updater v1.5.1-0.20261113105020-0aae43e2af3a h1:3DBJ+Pepi1YIXXiPnhSniSBjfFkFI608Nveeh7rsHGk=
 github.com/hwcer/updater v1.5.1-0.20261113105020-0aae43e2af3a/go.mod h1:kqKaRzfId86UxLMenS1c/HBNxU/xafMPI9IX6926qyw=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=

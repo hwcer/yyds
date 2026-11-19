@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
+
+	"github.com/hwcer/cosgo/times"
 )
 
 func newAddsBucket(t *testing.T, zMax int64, zScore int64, st SortType, opts ...Option) *Bucket {
@@ -141,21 +142,21 @@ func TestZAddsFasterThanLoop(t *testing.T) {
 	ms := seatMembers(n)
 
 	b1 := newAddsBucket(t, 0, ScoreUnlimited, SortTypeAsc, WithoutTiebreak())
-	t0 := time.Now()
+	t0 := times.Now()
 	for i := range ms {
 		if err := b1.ZAdd(1, ms[i].Uid, ms[i].Score); err != nil {
 			t.Fatal(err)
 		}
 	}
-	loop := time.Since(t0)
+	loop := times.Now().Sub(t0)
 	client.Del(context.Background(), b1.RedisRankKey(1))
 
 	b2 := newAddsBucket(t, 0, ScoreUnlimited, SortTypeAsc, WithoutTiebreak())
-	t0 = time.Now()
+	t0 = times.Now()
 	if _, err := b2.ZAdds(1, ms); err != nil {
 		t.Fatal(err)
 	}
-	batch := time.Since(t0)
+	batch := times.Now().Sub(t0)
 
 	t.Logf("%d 条: 逐条 %v / 批量 %v (分片 %d)", n, loop, batch, zAddsChunk)
 	if batch > loop {

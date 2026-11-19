@@ -2,7 +2,8 @@ package chat
 
 import (
 	"fmt"
-	"time"
+
+	"github.com/hwcer/cosgo/times"
 )
 
 // Message 聊天消息
@@ -39,7 +40,7 @@ func (this *defaultFactory) New(id uint64, text string, args map[string]any, cha
 		Id:      id,
 		Text:    text,
 		Args:    args,
-		Time:    time.Now().Unix(),
+		Time:    times.Now().Unix(),
 		Channel: channel,
 	}
 }

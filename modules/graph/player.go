@@ -1,8 +1,7 @@
 package graph
 
 import (
-	"time"
-
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 )
 
@@ -26,7 +25,7 @@ func (p *Player) Uid() string {
 
 func (p *Player) Set(key string, val any) {
 	p.Values.Set(key, val)
-	p.Update = time.Now().Unix()
+	p.Update = times.Now().Unix()
 }
 
 func (p *Player) Has(fid string, relation Relation) bool {

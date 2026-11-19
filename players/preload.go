@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/logger"
 )
@@ -109,7 +110,7 @@ func (this *Progress) player(uid string) {
 	p := NewPlayer(uid, false)
 	if e := p.Loading(false); e == nil {
 		manage.Store(p.Key(), p)
-		p.KeepAlive(time.Now().Unix())
+		p.KeepAlive(times.Now().Unix())
 	}
 }
 

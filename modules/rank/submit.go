@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/logger"
 )
 
@@ -105,7 +106,7 @@ func (this *Bucket) maySubmit(stmt *Statement) {
 	}
 	// 按 Submit 返回的删除时间设置过期,过期时间无效时使用默认保留时长兜底
 	rk := this.RedisRankKey(cycle)
-	if expire > time.Now().Unix() {
+	if expire > times.Now().Unix() {
 		err = client.ExpireAt(context.Background(), rk, time.Unix(expire, 0)).Err()
 	} else {
 		err = client.Expire(context.Background(), rk, DefaultRetention).Err()

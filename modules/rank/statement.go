@@ -3,7 +3,8 @@ package rank
 import (
 	"math"
 	"sync/atomic"
-	"time"
+
+	"github.com/hwcer/cosgo/times"
 )
 
 func NewStatement(zCycle, zTime, zExpire int64) *Statement {
@@ -42,7 +43,7 @@ func (this *Statement) formatScore(w *Bucket, score int64) float64 {
 	if d <= 1 {
 		return base //时长无效,不做时间tiebreak
 	}
-	elapsed := time.Now().Unix() - this.zTime
+	elapsed := times.Now().Unix() - this.zTime
 	if elapsed < 0 {
 		elapsed = 0
 	} else if elapsed > d-1 {

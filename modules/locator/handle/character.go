@@ -3,7 +3,6 @@ package handle
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/hwcer/cosgo/registry"
 	"github.com/hwcer/cosgo/times"
@@ -103,7 +102,7 @@ func (this *character) Create(c *cosrpc.Context) any {
 		return c.Error("uid or guid required")
 	}
 	if v.Create == 0 {
-		v.Create = time.Now().Unix()
+		v.Create = times.Now().Unix()
 	}
 	if v.Online == 0 {
 		v.Online = v.Create
@@ -158,7 +157,7 @@ func (this *character) Online(c *cosrpc.Context) any {
 		//自愈补写：以本次上报的 uid/sid/guid/attach 建行（缺省值同 Create）
 		v = args
 		if v.Create == 0 {
-			v.Create = time.Now().Unix()
+			v.Create = times.Now().Unix()
 		}
 		if v.Online == 0 {
 			v.Online = v.Create
@@ -174,7 +173,7 @@ func (this *character) Online(c *cosrpc.Context) any {
 		}
 	}
 
-	now := time.Now().Unix()
+	now := times.Now().Unix()
 	u := args.GetUpdate()
 	u["online"] = now
 

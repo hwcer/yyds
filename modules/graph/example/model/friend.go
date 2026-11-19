@@ -2,8 +2,8 @@ package model
 
 import (
 	"fmt"
-	"time"
 
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/values"
 	"github.com/hwcer/cosmo"
 	"github.com/hwcer/cosmo/update"
@@ -29,13 +29,13 @@ func NewFriend(uid, fid string) *Friend {
 	r := &Friend{Uid: uid}
 	r.Fid = fid
 	r.Id = r.ObjectId(uid, fid)
-	r.Create = time.Now().Unix()
+	r.Create = times.Now().Unix()
 	return r
 }
 
 func (f *Friend) BulkWrite(bw *cosmo.BulkWrite) {
 	up := update.Update{}
-	now := time.Now().Unix()
+	now := times.Now().Unix()
 	up.Set("update", now)
 	up.SetOnInsert("uid", f.Uid)
 	up.SetOnInsert("fid", f.Fid)

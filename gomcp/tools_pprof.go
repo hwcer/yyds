@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/pprof/profile"
+	"github.com/hwcer/cosgo/times"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -530,7 +531,7 @@ func dump(name string, raw []byte) (string, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", err
 	}
-	file := filepath.Join(dir, fmt.Sprintf("%s-%s.pb.gz", name, time.Now().Format("20060102-150405")))
+	file := filepath.Join(dir, fmt.Sprintf("%s-%s.pb.gz", name, times.Now().Format("20060102-150405")))
 	if err := os.WriteFile(file, raw, 0644); err != nil {
 		return "", err
 	}

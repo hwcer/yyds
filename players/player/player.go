@@ -6,11 +6,11 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/hwcer/cosgo/binder"
 	"github.com/hwcer/cosgo/random"
 	"github.com/hwcer/cosgo/slice"
+	"github.com/hwcer/cosgo/times"
 	"github.com/hwcer/cosgo/utils"
 	"github.com/hwcer/cosgo/uuid"
 	"github.com/hwcer/cosgo/values"
@@ -281,7 +281,7 @@ func (p *Player) Heartbeat() int64 {
 // 在相邻几个 tick 内一路走完,120s 的断线重连宽限期形同虚设。
 func (p *Player) KeepAlive(t int64) {
 	if t == 0 {
-		t = time.Now().Unix()
+		t = times.Now().Unix()
 	}
 	p.heartbeat.Store(t)
 }
