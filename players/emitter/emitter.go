@@ -8,7 +8,7 @@ import (
 
 // listener 业务逻辑层面普通任务事件,返回false时将移除
 // 挂载在 player
-type emitterValues []int32
+type emitterValues []int64
 
 func New(u *updater.Updater) *Emitter {
 	i := &Emitter{u: u}
@@ -39,8 +39,8 @@ func (e *Emitter) On(t int32, judge condition.Judge, handle Callback) (r *Contex
 // 🔴 系统事件（连接/断线等玩家生命周期）不走 emitter：一律走 updater
 //（players.Emit → u.Emit，见 players/events.go）；此处请求尚未过验证，
 // 提前跑惰性（可能写数据）破坏"随事务派发"的语义。
-func (e *Emitter) Emit(name int32, v int32, args ...int32) {
-	vs := make([]int32, 0, len(args)+1)
+func (e *Emitter) Emit(name int32, v int64, args ...int64) {
+	vs := make([]int64, 0, len(args)+1)
 	vs = append(vs, v)
 	vs = append(vs, args...)
 	trigger(e.u, name, vs...)
@@ -98,7 +98,7 @@ func (e *Emitter) release(_ *updater.Updater) bool {
 
 // dispatch  派发本玩家监听。
 // 另一时机的监听原样保留；本次执行的按 caller 返回值决定去留（false=移除）。
-func (e *Emitter) dispatch(t int32, v int32, args []int32) {
+func (e *Emitter) dispatch(t int32, v int64, args []int64) {
 	if len(e.events[t]) == 0 {
 		return
 	}

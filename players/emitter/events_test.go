@@ -17,10 +17,10 @@ func TestOnAfterSealed(t *testing.T) {
 
 	const ev int32 = -9001
 	var n atomic.Int32
-	On(ev, func(_ *updater.Updater, vs ...int32) { n.Add(vs[0]) })
-	On(ev, func(_ *updater.Updater, vs ...int32) { n.Add(vs[0]) }, true)
-	dispatch(nil, ev, []int32{2}, false)
-	dispatch(nil, ev, []int32{3}, true)
+	On(ev, func(_ *updater.Updater, vs ...int64) { n.Add(int32(vs[0])) })
+	On(ev, func(_ *updater.Updater, vs ...int64) { n.Add(int32(vs[0])) }, true)
+	dispatch(nil, ev, []int64{2}, false)
+	dispatch(nil, ev, []int64{3}, true)
 	if n.Load() != 5 {
 		t.Fatalf("封板后注册的惰性 / 急切监听都应生效, 实际累计 %v", n.Load())
 	}
@@ -29,10 +29,10 @@ func TestOnAfterSealed(t *testing.T) {
 // TestOnSnapshotImmutable 已发布的快照不被后续注册改动(派发中的协程读的是旧快照)。
 func TestOnSnapshotImmutable(t *testing.T) {
 	const ev int32 = -9002
-	On(ev, func(*updater.Updater, ...int32) {})
+	On(ev, func(*updater.Updater, ...int64) {})
 	snap := *events.Load()
 	before := len(snap[ev])
-	On(ev, func(*updater.Updater, ...int32) {})
+	On(ev, func(*updater.Updater, ...int64) {})
 	if len(snap[ev]) != before {
 		t.Fatal("旧快照里的监听切片不应被追加")
 	}
@@ -55,13 +55,13 @@ func TestOnConcurrentDispatch(t *testing.T) {
 				case <-stop:
 					return
 				default:
-					dispatch(nil, ev, []int32{1}, false)
+					dispatch(nil, ev, []int64{1}, false)
 				}
 			}
 		}()
 	}
 	for i := 0; i < 100; i++ {
-		On(ev, func(*updater.Updater, ...int32) {})
+		On(ev, func(*updater.Updater, ...int64) {})
 	}
 	close(stop)
 	wg.Wait()

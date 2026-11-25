@@ -9,7 +9,7 @@ import (
 
 var triggers []triggerFunc
 
-type triggerFunc func(u *updater.Updater, name int32, vs ...int32)
+type triggerFunc func(u *updater.Updater, name int32, vs ...int64)
 
 // Register 注册全局触发器。与 Listen 同规：启动后禁止注册
 func Register(handle triggerFunc) {
@@ -20,7 +20,7 @@ func Register(handle triggerFunc) {
 	triggers = append(triggers, handle)
 }
 
-func trigger(u *updater.Updater, name int32, vs ...int32) {
+func trigger(u *updater.Updater, name int32, vs ...int64) {
 	for _, handle := range triggers {
 		handle(u, name, vs...)
 	}

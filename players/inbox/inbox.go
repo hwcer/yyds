@@ -58,7 +58,7 @@ import (
 // Func 异步系统事件监听。返回 0 = 无 CD；返回 T>0 = **本监听**下次允许执行的
 // 绝对时刻（unix 秒，基准 u.Unix()）。门闸按事件×监听×玩家隔离,同事件多个监听
 // 各管各的 CD,互不干扰。闸住丢弃、新事件触发,语义见包注释。
-type Func func(u *updater.Updater, vs ...int32) int64
+type Func func(u *updater.Updater, vs ...int64) int64
 
 // listener 注册期包装:idx 是事件内稳定下标(handles 启动期封板后只读),
 // 作为门闸 nexts 的 key 组成部分。
@@ -87,7 +87,7 @@ const cacheKey = "players_inbox"
 // event 待处理记录的最小载荷。
 type event struct {
 	t  updater.EventType
-	vs []int32
+	vs []int64
 }
 
 // gateKey 门闸键：事件 × 监听下标。同事件各监听各管各的 CD。
@@ -120,7 +120,7 @@ func (a *Inbox) Pending() bool {
 // Emit 缓存事件（players.Emit 调用，须持玩家锁）。
 // 🔴 无脑缓存:只判「该事件有没有异步监听」,有就入列置标记——不做任何门闸判断,
 // 门闸是监听的事,分发时(flush)才管。无异步监听的事件零开销直接返回。
-func (a *Inbox) Emit(t updater.EventType, args []int32) {
+func (a *Inbox) Emit(t updater.EventType, args []int64) {
 	if len(handles[t]) == 0 {
 		return
 	}
@@ -131,7 +131,7 @@ func (a *Inbox) Emit(t updater.EventType, args []int32) {
 	s := u.Cache.LoadOrCreate(u, cacheKey, func(*updater.Updater) any {
 		return &state{nexts: map[gateKey]int64{}}
 	}).(*state)
-	s.events = append(s.events, event{t: t, vs: append([]int32(nil), args...)})
+	s.events = append(s.events, event{t: t, vs: append([]int64(nil), args...)})
 	a.flag.Store(true)
 }
 
@@ -188,7 +188,7 @@ func (a *Inbox) Trigger() {
 }
 
 // invoke 独立 recover 执行单个监听；panic 按「无 CD」处理（不闸死误伤后续重试）。
-func invoke(h Func, u *updater.Updater, uid string, id updater.EventType, vs []int32) (next int64) {
+func invoke(h Func, u *updater.Updater, uid string, id updater.EventType, vs []int64) (next int64) {
 	defer func() {
 		if e := recover(); e != nil {
 			logger.Alert("players inbox panic event:%v uid:%v err:%v", id, uid, e)

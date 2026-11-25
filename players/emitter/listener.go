@@ -6,10 +6,10 @@ import (
 	"github.com/hwcer/yyds/players/condition"
 )
 
-type Callback func(att values.Values, val int32) bool //满足条件后的更新器,返回false移除监听
+type Callback func(att values.Values, val int64) bool //满足条件后的更新器,返回false移除监听
 
 type Listener interface {
-	Listener(u *updater.Updater, att values.Values, val int32) bool
+	Listener(u *updater.Updater, att values.Values, val int64) bool
 }
 
 type Context struct {
@@ -35,9 +35,9 @@ func (l *Context) Name() string {
 	return l.name
 }
 
-func (l *Context) caller(u *updater.Updater, v int32, args []int32) bool {
+func (l *Context) caller(u *updater.Updater, v int64, args []int64) bool {
 	if l.judge != nil && l.judge.GetJudge() != condition.JudgeNone {
-		v = condition.JudgeCompare(l.judge, args...)
+		v = int64(condition.JudgeCompare(l.judge, args...))
 	}
 	if l.callback != nil {
 		return l.callback(l.Attach, v)

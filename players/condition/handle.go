@@ -29,7 +29,7 @@ func value(u *updater.Updater, target Target) (r int64) {
 	if judge, ok := target.(Judge); ok && t != TypeMethod {
 		if j := judge.GetJudge(); j == JudgeNone {
 			//保持原值，不进行裁决
-		} else if taskJudgeCompare(j, int32(r), judge.GetArgs()) {
+		} else if taskJudgeCompare(j, r, judge.GetArgs()) {
 			r = 1
 		} else {
 			r = 0
@@ -110,26 +110,26 @@ func taskTargetHandleHistory(u *updater.Updater, target Target) (r int64) {
 }
 
 // taskJudgeCompare 根据 Judge 类型将 val 与 args 比较，返回成功或者失败
-func taskJudgeCompare(judge int32, val int32, args []int32) bool {
+func taskJudgeCompare(judge int32, val int64, args []int32) bool {
 	var ok bool
 	switch judge {
 	case JudgeNone:
 		ok = true
 	case JudgeEqual:
-		ok = len(args) > 0 && val == args[0]
+		ok = len(args) > 0 && val == int64(args[0])
 	case JudgeGte:
-		ok = len(args) > 0 && val >= (args[0])
+		ok = len(args) > 0 && val >= int64(args[0])
 	case JudgeLte:
-		ok = len(args) > 0 && val <= (args[0])
+		ok = len(args) > 0 && val <= int64(args[0])
 	case JudgeContains:
 		for _, arg := range args {
-			if val == (arg) {
+			if val == int64(arg) {
 				ok = true
 				break
 			}
 		}
 	case JudgeRange:
-		ok = len(args) > 1 && val >= (args[0]) && val <= (args[1])
+		ok = len(args) > 1 && val >= int64(args[0]) && val <= int64(args[1])
 	default:
 		//与上面 value() 对未知 Condition 的处理对称：fail-closed 之后表现是"条件永远不达成"，
 		//不打日志就只能靠猜。绝大多数是配表 Judge 列填错。

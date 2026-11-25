@@ -8,7 +8,7 @@ import (
 )
 
 // 全局业务事件
-type EventsFunc func(u *updater.Updater, vs ...int32)
+type EventsFunc func(u *updater.Updater, vs ...int64)
 
 // 全局监听表:写时复制(COW)。
 //
@@ -59,7 +59,7 @@ func Listen(t int32, handle EventsFunc, eager ...bool) {
 }
 
 // dispatch 按 eager 标记派发（eagerOnly=true 跑急切监听，false 跑惰性监听）。
-func dispatch(u *updater.Updater, t int32, args []int32, eager bool) {
+func dispatch(u *updater.Updater, t int32, args []int64, eager bool) {
 	table := &events
 	if eager {
 		table = &eagerness

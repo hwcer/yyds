@@ -256,7 +256,7 @@ func (p *Player) On(t int32, judge condition.Judge, handle emitter.Callback) (r 
 	return p.Emitter.On(t, judge, handle)
 }
 
-func (p *Player) Emit(t int32, v int32, args ...int32) {
+func (p *Player) Emit(t int32, v int64, args ...int64) {
 	p.Emitter.Emit(t, v, args...)
 }
 

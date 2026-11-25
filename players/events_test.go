@@ -17,9 +17,9 @@ func TestEmitSyncAndAsyncCoexist(t *testing.T) {
 	syncCalled := false
 	updater.RegisterGlobalEvent(testEventEmit, func(u *updater.Updater) { syncCalled = true })
 
-	var got []int32
-	inbox.On(testEventEmit, func(_ *updater.Updater, vs ...int32) int64 {
-		got = append([]int32(nil), vs...)
+	var got []int64
+	inbox.On(testEventEmit, func(_ *updater.Updater, vs ...int64) int64 {
+		got = append([]int64(nil), vs...)
 		return 0
 	})
 

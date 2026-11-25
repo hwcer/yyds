@@ -54,7 +54,7 @@ type GetCompare interface {
 }
 
 // JudgeCompare 返回成功裁决的value个数
-func JudgeCompare(judge Judge, value ...int32) (r int32) {
+func JudgeCompare(judge Judge, value ...int64) (r int32) {
 	if judge == nil {
 		return 0
 	}
