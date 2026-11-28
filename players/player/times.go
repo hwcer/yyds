@@ -61,7 +61,7 @@ func (this *Times) Start(t int64, args []int64) (r int64, err error) {
 // 该时间点【本身不属于】本届：判定有效一律用 now < expire，判定过期用 now >= expire。
 // 口径与 cosgo/times.Times.Expire 一致，勿在调用方用 <= / >= 判定，否则会晚一个单位过期。
 //
-//	args [开始，结束]
+//	args [开始，结束];只给一个参数时它就是结束(时长),没有开始时间
 func (this *Times) Expire(t int64, args []int64) (r int64, err error) {
 	if t == 0 {
 		return 0, nil
@@ -69,7 +69,9 @@ func (this *Times) Expire(t int64, args []int64) (r int64, err error) {
 	//args 缺结束时间时按 0 处理,与配置行 end=0 同语义:daily/weekly/monthly 由
 	//cosgo 归一为"默认1天/周/月",second 为立即过期,8/9 为无结束时间
 	v := int64(0)
-	if len(args) >= 2 {
+	if len(args) == 1 {
+		v = args[0]
+	} else if len(args) >= 2 {
 		v = args[1]
 	}
 
